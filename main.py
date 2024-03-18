@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QMessageBox,
 )
-from PyQt6.QtCore import QSettings, QSize
+from PyQt6.QtCore import QSettings, QSize, QIODevice, QTimer
 from PyQt6.QtGui import *
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
@@ -198,6 +198,12 @@ class MainWindow(QMainWindow):
         self.serial_connect.clicked.connect(self.connect_to_port)
         self.serial_grid.addWidget(self.serial_connect, 0, 5)
 
+
+        self.serial_background_timer = QTimer()
+        self.serial_background_timer.timeout.connect(lambda: print(self.serial.isOpen()))
+        self.serial_background_timer.setInterval(1000)
+        self.serial_background_timer.start()
+
         self.show()
 
     def select_transfer_dir(self):
@@ -236,6 +242,20 @@ class MainWindow(QMainWindow):
 
         if f"{port.portName()} - {port.description()}" != self.serial_port.currentText():
             self.show_port_ref_error()
+            return
+        
+        self.serial.setPort(port)
+        ok = self.serial.open(QIODevice.ReadWrite)
+        if not ok:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Serial connect operation failed\n"
+                        "Common issues:\n"
+                        "1. Your user account does not have appropriate rights\n"
+                        "2. Another application is using the serial port")
+            msg.setWindowTitle("Can't connect")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
 
     def show_port_ref_error(self):
         msg = QMessageBox()
