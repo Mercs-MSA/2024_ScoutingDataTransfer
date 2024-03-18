@@ -234,7 +234,8 @@ class MainWindow(QMainWindow):
                 self.serial_port.addItem(f"{port.portName()} - {port.description()}")
 
     def connect_to_port(self):
-        ports = [port for port in QSerialPortInfo.availablePorts() if not port.portName().startswith("ttyS")]
+        ports = [port for port in QSerialPortInfo.availablePorts()
+                 if not port.portName().startswith("ttyS")]
 
         if len(ports) < 1:
             self.show_port_ref_error()
