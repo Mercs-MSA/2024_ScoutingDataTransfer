@@ -9,7 +9,7 @@ import json
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QHBoxLayout, QVBoxLayout,
                              QWidget, QSplitter, QLineEdit, QPushButton, QLabel,
-                             QFileDialog)
+                             QFileDialog, QStyle)
 from PyQt6.QtCore import QSettings, QSize
 from PyQt6.QtGui import *
 import qdarktheme
@@ -147,6 +147,6 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     settings = QSettings('Mercs', 'ScoutingDataTransfer')
-    qdarktheme.setup_theme(additional_qss="#big_dropdown{height: 56px}")
+    # qdarktheme.setup_theme(additional_qss="#big_dropdown{height: 56px}")
     win = MainWindow()
     sys.exit(app.exec())

@@ -64,7 +64,7 @@ class DiskMgmtWidget(QWidget):
 
         self._disks_dropdown = QComboBox()
         self._disks_dropdown.setIconSize(QSize(48, 48))
-        self._disks_dropdown.setMinimumHeight(128)
+        self._disks_dropdown.setMinimumHeight(56)
         self._disks_dropdown.setObjectName("big_dropdown")
         self._disks_dropdown.currentTextChanged.connect(self._send_focused_disk)
         self._main_layout.addWidget(self._disks_dropdown)
