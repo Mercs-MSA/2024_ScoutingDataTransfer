@@ -115,6 +115,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("6369 Scouting Data Transfer")
 
         self.serial = QSerialPort()
+        self.serial.errorOccurred.connect(self.on_serial_error)
+        self.serial.aboutToClose.connect(self.serial_close)
 
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
@@ -261,6 +263,30 @@ class MainWindow(QMainWindow):
             msg.setWindowTitle("Can't connect")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
+
+    def on_serial_error(self):
+        print("gah!")
+        if self.serial.isOpen():
+            self.serial.close()
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText(f"{self.serial.error().name}\nError occured during serial operation")
+            msg.setWindowTitle("Serial error")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+
+    def serial_close(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setText("Serial controller shut down")
+        msg.setWindowTitle("Serial")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
+
+        self.serial_port.setEnabled(True)
+        self.serial_connect.setEnabled(True)
+        self.serial_refresh.setEnabled(True)
+        self.serial_port.setEnabled(True)
 
     def show_port_ref_error(self):
         msg = QMessageBox()
