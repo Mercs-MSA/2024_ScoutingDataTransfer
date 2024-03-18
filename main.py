@@ -7,9 +7,18 @@ import sys
 import os
 import json
 
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QHBoxLayout, QVBoxLayout,
-                             QWidget, QSplitter, QLineEdit, QPushButton, QLabel,
-                             QFileDialog, QStyle)
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QHBoxLayout,
+    QVBoxLayout,
+    QWidget,
+    QSplitter,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+    QFileDialog,
+)
 from PyQt6.QtCore import QSettings, QSize
 from PyQt6.QtGui import *
 import qdarktheme
@@ -73,6 +82,9 @@ def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
     return False, "", "??"
 
 
+settings: QSettings | None = None
+
+
 class MainWindow(QMainWindow):
     """Main Window"""
 
@@ -88,7 +100,6 @@ class MainWindow(QMainWindow):
 
         self.splitter = QSplitter()
         self.root_layout.addWidget(self.splitter)
-
 
         # Data manager (left side)
         self.drive_widget = QWidget()
@@ -106,7 +117,11 @@ class MainWindow(QMainWindow):
         self.drive_layout.addLayout(self.transfer_dir_layout)
 
         self.transfer_dir_textbox = QLineEdit()
-        self.transfer_dir_textbox.textChanged.connect(self.validate_transfer_dir)
+
+        if settings.contains("transferDir"):
+            self.transfer_dir_textbox.setText(settings.value("transferDir"))
+
+        self.transfer_dir_textbox.textChanged.connect(self.update_transfer_dir)
         self.transfer_dir_layout.addWidget(self.transfer_dir_textbox)
 
         self.transfer_dir_picker = QPushButton("Pick Dir")
@@ -114,12 +129,25 @@ class MainWindow(QMainWindow):
         self.transfer_dir_layout.addWidget(self.transfer_dir_picker)
 
         self.transfer_dir_icon = QLabel()
-        self.transfer_dir_icon.setPixmap(qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24)))
         self.transfer_dir_layout.addWidget(self.transfer_dir_icon)
+
+        valid = os.path.isdir(self.transfer_dir_textbox.text())
+        if valid:
+            self.transfer_dir_icon.setPixmap(
+                qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
+                    QSize(24, 24)
+                )
+            )
+        else:
+            self.transfer_dir_icon.setPixmap(
+                qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
+            )
 
         self.drive_layout.addStretch()
 
-        self.disk_widget = DiskMgmtWidget.DiskMgmtWidget(predicate=scouting_disk_predicate)
+        self.disk_widget = DiskMgmtWidget.DiskMgmtWidget(
+            predicate=scouting_disk_predicate
+        )
         self.drive_layout.addWidget(self.disk_widget)
 
         self.drive_layout.addStretch()
@@ -134,19 +162,28 @@ class MainWindow(QMainWindow):
         self.show()
 
     def select_transfer_dir(self):
-        self.transfer_dir_textbox.setText(str(QFileDialog.getExistingDirectory(self, "Select Directory")))
+        self.transfer_dir_textbox.setText(
+            str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+        )
 
-    def validate_transfer_dir(self):
+    def update_transfer_dir(self):
         valid = os.path.isdir(self.transfer_dir_textbox.text())
         if valid:
-            self.transfer_dir_icon.setPixmap(qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(QSize(24, 24)))
+            self.transfer_dir_icon.setPixmap(
+                qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
+                    QSize(24, 24)
+                )
+            )
         else:
-            self.transfer_dir_icon.setPixmap(qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24)))
+            self.transfer_dir_icon.setPixmap(
+                qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
+            )
+        settings.setValue("transferDir", self.transfer_dir_textbox.text())
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    settings = QSettings('Mercs', 'ScoutingDataTransfer')
-    # qdarktheme.setup_theme(additional_qss="#big_dropdown{height: 56px}")
+    settings = QSettings("Mercs", "ScoutingDataTransfer")
+    qdarktheme.setup_theme(additional_qss="#big_dropdown {min-height: 56px}")
     win = MainWindow()
     sys.exit(app.exec())

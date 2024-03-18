@@ -8,7 +8,6 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 
-from carousel import DiskWidget, CarouselWidget
 import disk_detector
 from disk_detector import Disk
 
@@ -64,7 +63,6 @@ class DiskMgmtWidget(QWidget):
 
         self._disks_dropdown = QComboBox()
         self._disks_dropdown.setIconSize(QSize(48, 48))
-        self._disks_dropdown.setMinimumHeight(56)
         self._disks_dropdown.setObjectName("big_dropdown")
         self._disks_dropdown.currentTextChanged.connect(self._send_focused_disk)
         self._main_layout.addWidget(self._disks_dropdown)
@@ -93,8 +91,6 @@ class DiskMgmtWidget(QWidget):
         if self._disks:
             for disk in self._disks:
                 if self._predicate(disk)[0]:
-                    widget = DiskWidget.DiskWidget()
-                    widget.setMountpoint(self._predicate(disk)[1])
                     if self._predicate(disk)[2] in ICON_ID_PAIRS:
                         icon = ICON_ID_PAIRS[self._predicate(disk)[2]]
                     else:
