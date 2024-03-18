@@ -18,14 +18,36 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLabel,
     QFileDialog,
+    QGridLayout,
+    QComboBox,
+    QMessageBox,
 )
 from PyQt6.QtCore import QSettings, QSize
 from PyQt6.QtGui import *
+from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
 
 import DiskMgmtWidget
 import disk_detector
+
+BAUDS = [
+    300,
+    600,
+    900,
+    1200,
+    2400,
+    3200,
+    4800,
+    9600,
+    19200,
+    38400,
+    57600,
+    115200,
+    230400,
+    460800,
+    921600,
+]
 
 
 # https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
@@ -92,6 +114,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("6369 Scouting Data Transfer")
 
+        self.serial = QSerialPort()
+
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
 
@@ -148,6 +172,7 @@ class MainWindow(QMainWindow):
         self.disk_widget = DiskMgmtWidget.DiskMgmtWidget(
             predicate=scouting_disk_predicate
         )
+        self.disk_widget.set_select_visible(False)
         self.drive_layout.addWidget(self.disk_widget)
 
         self.drive_layout.addStretch()
@@ -158,6 +183,20 @@ class MainWindow(QMainWindow):
 
         self.scanner_layout = QVBoxLayout()
         self.scanner_widget.setLayout(self.scanner_layout)
+
+        self.serial_grid = QGridLayout()
+        self.scanner_layout.addLayout(self.serial_grid)
+
+        self.serial_port = QComboBox()
+        self.serial_grid.addWidget(self.serial_port, 0, 0, 1, 3)
+
+        self.serial_refresh = QPushButton("Refresh")
+        self.serial_refresh.clicked.connect(self.update_serial_ports)
+        self.serial_grid.addWidget(self.serial_refresh, 0, 4)
+
+        self.serial_connect = QPushButton("Connect")
+        self.serial_connect.clicked.connect(self.connect_to_port)
+        self.serial_grid.addWidget(self.serial_connect, 0, 5)
 
         self.show()
 
@@ -179,6 +218,32 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
         settings.setValue("transferDir", self.transfer_dir_textbox.text())
+
+    def update_serial_ports(self):
+        self.serial_port.clear()
+        for port in QSerialPortInfo.availablePorts():
+            if not port.portName().startswith("ttyS"):
+                self.serial_port.addItem(f"{port.portName()} - {port.description()}")
+
+    def connect_to_port(self):
+        ports = [port for port in QSerialPortInfo.availablePorts() if not port.portName().startswith("ttyS")]
+
+        if len(ports) < 1:
+            self.show_port_ref_error()
+            return
+
+        port = ports[self.serial_port.currentIndex()]
+
+        if f"{port.portName()} - {port.description()}" != self.serial_port.currentText():
+            self.show_port_ref_error()
+
+    def show_port_ref_error(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setText("Port refresh required")
+        msg.setWindowTitle("Can't connect")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
 
 
 if __name__ == "__main__":

@@ -127,6 +127,9 @@ class DiskMgmtWidget(QWidget):
             return self._filtered_disks[self._disks_dropdown.currentIndex()]
         else:
             return None
+        
+    def set_select_visible(self, visible: bool) -> None:
+        self._select.setVisible(visible)
 
     def _send_focused_disk(self) -> None:
         if not self._filtered_disks:
