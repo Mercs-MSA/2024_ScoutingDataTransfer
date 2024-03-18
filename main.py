@@ -246,7 +246,12 @@ class MainWindow(QMainWindow):
         
         self.serial.setPort(port)
         ok = self.serial.open(QIODevice.ReadWrite)
-        if not ok:
+        if ok:
+            self.serial_port.setEnabled(False)
+            self.serial_connect.setEnabled(False)
+            self.serial_refresh.setEnabled(False)
+            self.serial_port.setEnabled(False)
+        else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Serial connect operation failed\n"
