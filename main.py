@@ -50,10 +50,24 @@ BAUDS = [
 ]
 
 DATA_BITS = {
-    "5-Bit": QSerialPort.DataBits.Data5,
-    "6-Bit": QSerialPort.DataBits.Data6,
-    "7-Bit": QSerialPort.DataBits.Data7,
-    "8-Bit": QSerialPort.DataBits.Data8
+    "5 Data Bits": QSerialPort.DataBits.Data5,
+    "6 Data Bits": QSerialPort.DataBits.Data6,
+    "7 Data Bits": QSerialPort.DataBits.Data7,
+    "8 Data Bits": QSerialPort.DataBits.Data8
+}
+
+STOP_BITS = {
+    "1 Stop Bits": QSerialPort.StopBits.OneStop,
+    "1.5 Stop Bits": QSerialPort.StopBits.OneAndHalfStop,
+    "2 Stop Bits": QSerialPort.StopBits.TwoStop,
+}
+
+PARITY = {
+    "No Parity": QSerialPort.Parity.NoParity,
+    "Even Parity": QSerialPort.Parity.EvenParity,
+    "Odd Parity": QSerialPort.Parity.OddParity,
+    "Mark Parity": QSerialPort.Parity.MarkParity,
+    "Space Parity": QSerialPort.Parity.SpaceParity,
 }
 
 FLOW_CONTROL = {
@@ -203,17 +217,18 @@ class MainWindow(QMainWindow):
         self.scanner_layout.addLayout(self.serial_grid)
 
         self.serial_port = QComboBox()
-        self.serial_grid.addWidget(self.serial_port, 0, 0, 1, 3)
+        self.serial_grid.addWidget(self.serial_port, 0, 0, 1, 4)
 
         self.serial_refresh = QPushButton("Refresh")
         self.serial_refresh.clicked.connect(self.update_serial_ports)
-        self.serial_grid.addWidget(self.serial_refresh, 0, 3)
+        self.serial_grid.addWidget(self.serial_refresh, 0, 5)
 
         self.serial_connect = QPushButton("Connect")
         self.serial_connect.clicked.connect(self.connect_to_port)
-        self.serial_grid.addWidget(self.serial_connect, 0, 4)
+        self.serial_grid.addWidget(self.serial_connect, 0, 6)
 
         self.serial_baud = QComboBox()
+        self.serial_baud.setMinimumWidth(90)
         self.serial_baud.addItems([str(baud) for baud in BAUDS])
 
         if settings.contains("baud"):
@@ -223,6 +238,7 @@ class MainWindow(QMainWindow):
         self.serial_grid.addWidget(self.serial_baud, 1, 0)
 
         self.serial_bits = QComboBox()
+        self.serial_bits.setMinimumWidth(110)
         self.serial_bits.addItems([str(key) for key in DATA_BITS])
 
         if settings.contains("databits"):
@@ -231,20 +247,40 @@ class MainWindow(QMainWindow):
         self.serial_bits.currentTextChanged.connect(self.change_data_bits)
         self.serial_grid.addWidget(self.serial_bits, 1, 1)
 
+        self.serial_stop = QComboBox()
+        self.serial_stop.setMinimumWidth(110)
+        self.serial_stop.addItems([str(key) for key in STOP_BITS])
+
+        if settings.contains("stopbits"):
+            self.serial_stop.setCurrentText(settings.value("stopbits"))
+
+        self.serial_stop.currentTextChanged.connect(self.change_stop_bits)
+        self.serial_grid.addWidget(self.serial_stop, 1, 2)
+
         self.serial_flow = QComboBox()
+        self.serial_flow.setMinimumWidth(140)
         self.serial_flow.addItems([str(key) for key in FLOW_CONTROL])
 
         if settings.contains("flow"):
             self.serial_flow.setCurrentText(settings.value("flow"))
 
         self.serial_flow.currentTextChanged.connect(self.change_flow)
-        self.serial_grid.addWidget(self.serial_flow, 1, 2)
+        self.serial_grid.addWidget(self.serial_flow, 1, 3)
 
+        self.serial_parity = QComboBox()
+        self.serial_parity.setMinimumWidth(140)
+        self.serial_parity.addItems([str(key) for key in PARITY])
+
+        if settings.contains("parity"):
+            self.serial_parity.setCurrentText(settings.value("parity"))
+
+        self.serial_parity.currentTextChanged.connect(self.change_parity)
+        self.serial_grid.addWidget(self.serial_parity, 1, 4)
 
         self.serial_disconnect = QPushButton("Disconnect")
         self.serial_disconnect.clicked.connect(self.disconnect_port)
         self.serial_disconnect.setEnabled(False)
-        self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 5)
+        self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 7)
 
         # Background Timers
         self.serial_background_timer = QTimer()
@@ -289,11 +325,20 @@ class MainWindow(QMainWindow):
         self.serial.setDataBits(bits)
         settings.setValue("databits", self.serial_bits.currentText())
 
+    def change_stop_bits(self):
+        stop_bits = STOP_BITS[self.serial_stop.currentText()]
+        self.serial.setStopBits(stop_bits)
+        settings.setValue("stopbits", self.serial_stop.currentText())
 
     def change_flow(self):
         flow = FLOW_CONTROL[self.serial_flow.currentText()]
         self.serial.setFlowControl(flow)
         settings.setValue("flow", self.serial_flow.currentText())
+
+    def change_parity(self):
+        parity = PARITY[self.serial_parity.currentText()]
+        self.serial.setParity(parity)
+        settings.setValue("parity", self.serial_parity.currentText())
 
     def connect_to_port(self):
         ports = [port for port in QSerialPortInfo.availablePorts()
@@ -317,8 +362,14 @@ class MainWindow(QMainWindow):
         bits = DATA_BITS[self.serial_bits.currentText()]
         self.serial.setDataBits(bits)
 
+        stop_bits = STOP_BITS[self.serial_stop.currentText()]
+        self.serial.setStopBits(stop_bits)
+
         flow = FLOW_CONTROL[self.serial_flow.currentText()]
         self.serial.setFlowControl(flow)
+
+        parity = PARITY[self.serial_parity.currentText()]
+        self.serial.setParity(parity)
 
         ok = self.serial.open(QIODevice.ReadWrite)
         if ok:
@@ -382,7 +433,9 @@ class MainWindow(QMainWindow):
         self.serial_port.setEnabled(ena)
         self.serial_baud.setEnabled(ena)
         self.serial_bits.setEnabled(ena)
+        self.serial_stop.setEnabled(ena)
         self.serial_flow.setEnabled(ena)
+        self.serial_parity.setEnabled(ena)
         self.serial_disconnect.setEnabled(not ena)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None: # pylint: disable=invalid-name
