@@ -57,9 +57,9 @@ DATA_BITS = {
 }
 
 FLOW_CONTROL = {
-    "No FC": QSerialPort.FlowControl.NoFlowControl,
-    "Software": QSerialPort.FlowControl.SoftwareControl,
-    "Hardware": QSerialPort.FlowControl.HardwareControl
+    "No Flow Control": QSerialPort.FlowControl.NoFlowControl,
+    "Software FC": QSerialPort.FlowControl.SoftwareControl,
+    "Hardware FC": QSerialPort.FlowControl.HardwareControl
 }
 
 
@@ -231,6 +231,15 @@ class MainWindow(QMainWindow):
         self.serial_bits.currentTextChanged.connect(self.change_data_bits)
         self.serial_grid.addWidget(self.serial_bits, 1, 1)
 
+        self.serial_flow = QComboBox()
+        self.serial_flow.addItems([str(key) for key in FLOW_CONTROL])
+
+        if settings.contains("flow"):
+            self.serial_flow.setCurrentText(settings.value("flow"))
+
+        self.serial_flow.currentTextChanged.connect(self.change_flow)
+        self.serial_grid.addWidget(self.serial_flow, 1, 2)
+
 
         self.serial_background_timer = QTimer()
         self.serial_background_timer.timeout.connect(lambda: print(self.serial.isOpen()))
@@ -274,6 +283,12 @@ class MainWindow(QMainWindow):
         self.serial.setDataBits(bits)
         settings.setValue("databits", self.serial_bits.currentText())
 
+
+    def change_flow(self):
+        flow = FLOW_CONTROL[self.serial_flow.currentText()]
+        self.serial.setFlowControl(flow)
+        settings.setValue("flow", self.serial_flow.currentText())
+
     def connect_to_port(self):
         ports = [port for port in QSerialPortInfo.availablePorts()
                  if not port.portName().startswith("ttyS")]
@@ -296,6 +311,9 @@ class MainWindow(QMainWindow):
         bits = DATA_BITS[self.serial_bits.currentText()]
         self.serial.setDataBits(bits)
 
+        flow = FLOW_CONTROL[self.serial_flow.currentText()]
+        self.serial.setFlowControl(flow)
+
         ok = self.serial.open(QIODevice.ReadWrite)
         if ok:
             self.serial_port.setEnabled(False)
@@ -304,6 +322,7 @@ class MainWindow(QMainWindow):
             self.serial_port.setEnabled(False)
             self.serial_baud.setEnabled(False)
             self.serial_bits.setEnabled(False)
+            self.serial_flow.setEnabled(False)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
@@ -348,6 +367,7 @@ class MainWindow(QMainWindow):
         self.serial_port.setEnabled(True)
         self.serial_baud.setEnabled(True)
         self.serial_bits.setEnabled(True)
+        self.serial_flow.setEnabled(True)
 
     def show_port_ref_error(self):
         msg = QMessageBox()
