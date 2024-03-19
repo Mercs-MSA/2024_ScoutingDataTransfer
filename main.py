@@ -199,19 +199,21 @@ class MainWindow(QMainWindow):
         self.scanner_layout.addLayout(self.serial_grid)
 
         self.serial_port = QComboBox()
-        self.serial_grid.addWidget(self.serial_port, 0, 0, 1, 4)
+        self.serial_grid.addWidget(self.serial_port, 0, 0, 1, 5)
 
         self.serial_refresh = QPushButton("Refresh")
         self.serial_refresh.clicked.connect(self.update_serial_ports)
-        self.serial_grid.addWidget(self.serial_refresh, 0, 5)
+        self.serial_grid.addWidget(self.serial_refresh, 1, 5)
 
         self.serial_connect = QPushButton("Connect")
         self.serial_connect.clicked.connect(self.connect_to_port)
-        self.serial_grid.addWidget(self.serial_connect, 0, 6)
+        self.serial_grid.addWidget(self.serial_connect, 0, 5)
 
         self.serial_baud = QComboBox()
         self.serial_baud.setMinimumWidth(90)
         self.serial_baud.addItems([str(baud) for baud in BAUDS])
+
+        self.serial.setC
 
         if settings.contains("baud"):
             self.serial_baud.setCurrentText(str(settings.value("baud")))
@@ -262,7 +264,7 @@ class MainWindow(QMainWindow):
         self.serial_disconnect = QPushButton("Disconnect")
         self.serial_disconnect.clicked.connect(self.disconnect_port)
         self.serial_disconnect.setEnabled(False)
-        self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 7)
+        self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 6)
 
         # Background Timers
         self.serial_background_timer = QTimer()
