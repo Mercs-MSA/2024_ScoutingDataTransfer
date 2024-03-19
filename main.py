@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import QSettings, QSize, QIODevice, QTimer
-from PyQt6.QtGui import *
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -48,6 +48,19 @@ BAUDS = [
     460800,
     921600,
 ]
+
+DATA_BITS = {
+    "5-Bit": QSerialPort.DataBits.Data5,
+    "6-Bit": QSerialPort.DataBits.Data6,
+    "7-Bit": QSerialPort.DataBits.Data7,
+    "8-Bit": QSerialPort.DataBits.Data8
+}
+
+FLOW_CONTROL = {
+    "No FC": QSerialPort.FlowControl.NoFlowControl,
+    "Software": QSerialPort.FlowControl.SoftwareControl,
+    "Hardware": QSerialPort.FlowControl.HardwareControl
+}
 
 
 # https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
@@ -200,6 +213,24 @@ class MainWindow(QMainWindow):
         self.serial_connect.clicked.connect(self.connect_to_port)
         self.serial_grid.addWidget(self.serial_connect, 0, 5)
 
+        self.serial_baud = QComboBox()
+        self.serial_baud.addItems([str(baud) for baud in BAUDS])
+
+        if settings.contains("baud"):
+            self.serial_baud.setCurrentText(str(settings.value("baud")))
+
+        self.serial_baud.currentTextChanged.connect(self.change_baud)
+        self.serial_grid.addWidget(self.serial_baud, 1, 0)
+
+        self.serial_bits = QComboBox()
+        self.serial_bits.addItems([str(key) for key in DATA_BITS])
+
+        if settings.contains("databits"):
+            self.serial_bits.setCurrentText(settings.value("databits"))
+
+        self.serial_bits.currentTextChanged.connect(self.change_data_bits)
+        self.serial_grid.addWidget(self.serial_bits, 1, 1)
+
 
         self.serial_background_timer = QTimer()
         self.serial_background_timer.timeout.connect(lambda: print(self.serial.isOpen()))
@@ -233,6 +264,16 @@ class MainWindow(QMainWindow):
             if not port.portName().startswith("ttyS"):
                 self.serial_port.addItem(f"{port.portName()} - {port.description()}")
 
+    def change_baud(self):
+        baud = int(self.serial_baud.currentText())
+        self.serial.setBaudRate(baud)
+        settings.setValue("baud", baud)
+
+    def change_data_bits(self):
+        bits = DATA_BITS[self.serial_bits.currentText()]
+        self.serial.setDataBits(bits)
+        settings.setValue("databits", self.serial_bits.currentText())
+
     def connect_to_port(self):
         ports = [port for port in QSerialPortInfo.availablePorts()
                  if not port.portName().startswith("ttyS")]
@@ -246,14 +287,23 @@ class MainWindow(QMainWindow):
         if f"{port.portName()} - {port.description()}" != self.serial_port.currentText():
             self.show_port_ref_error()
             return
-        
+
         self.serial.setPort(port)
+
+        baud = int(self.serial_baud.currentText())
+        self.serial.setBaudRate(baud)
+
+        bits = DATA_BITS[self.serial_bits.currentText()]
+        self.serial.setDataBits(bits)
+
         ok = self.serial.open(QIODevice.ReadWrite)
         if ok:
             self.serial_port.setEnabled(False)
             self.serial_connect.setEnabled(False)
             self.serial_refresh.setEnabled(False)
             self.serial_port.setEnabled(False)
+            self.serial_baud.setEnabled(False)
+            self.serial_bits.setEnabled(False)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
@@ -266,7 +316,15 @@ class MainWindow(QMainWindow):
             msg.exec()
 
     def on_serial_error(self):
-        print("gah!")
+        if self.serial.error() == QSerialPort.SerialPortError.NoError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText("Connection Successful!")
+            msg.setWindowTitle("Serial")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+
         if self.serial.isOpen():
             self.serial.close()
             msg = QMessageBox()
@@ -288,6 +346,8 @@ class MainWindow(QMainWindow):
         self.serial_connect.setEnabled(True)
         self.serial_refresh.setEnabled(True)
         self.serial_port.setEnabled(True)
+        self.serial_baud.setEnabled(True)
+        self.serial_bits.setEnabled(True)
 
     def show_port_ref_error(self):
         msg = QMessageBox()
@@ -296,6 +356,10 @@ class MainWindow(QMainWindow):
         msg.setWindowTitle("Can't connect")
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
+
+    def closeEvent(self, a0: QCloseEvent | None) -> None: # pylint: disable=invalid-name
+        self.serial.disconnect()
+        return super().closeEvent(a0)
 
 
 if __name__ == "__main__":
