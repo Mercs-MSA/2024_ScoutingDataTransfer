@@ -213,8 +213,6 @@ class MainWindow(QMainWindow):
         self.serial_baud.setMinimumWidth(90)
         self.serial_baud.addItems([str(baud) for baud in BAUDS])
 
-        self.serial.setC
-
         if settings.contains("baud"):
             self.serial_baud.setCurrentText(str(settings.value("baud")))
 
