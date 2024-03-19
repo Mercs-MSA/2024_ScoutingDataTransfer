@@ -207,11 +207,11 @@ class MainWindow(QMainWindow):
 
         self.serial_refresh = QPushButton("Refresh")
         self.serial_refresh.clicked.connect(self.update_serial_ports)
-        self.serial_grid.addWidget(self.serial_refresh, 0, 4)
+        self.serial_grid.addWidget(self.serial_refresh, 0, 3)
 
         self.serial_connect = QPushButton("Connect")
         self.serial_connect.clicked.connect(self.connect_to_port)
-        self.serial_grid.addWidget(self.serial_connect, 0, 5)
+        self.serial_grid.addWidget(self.serial_connect, 0, 4)
 
         self.serial_baud = QComboBox()
         self.serial_baud.addItems([str(baud) for baud in BAUDS])
@@ -241,6 +241,12 @@ class MainWindow(QMainWindow):
         self.serial_grid.addWidget(self.serial_flow, 1, 2)
 
 
+        self.serial_disconnect = QPushButton("Disconnect")
+        self.serial_disconnect.clicked.connect(self.disconnect_port)
+        self.serial_disconnect.setEnabled(False)
+        self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 5)
+
+        # Background Timers
         self.serial_background_timer = QTimer()
         self.serial_background_timer.timeout.connect(lambda: print(self.serial.isOpen()))
         self.serial_background_timer.setInterval(1000)
@@ -316,13 +322,7 @@ class MainWindow(QMainWindow):
 
         ok = self.serial.open(QIODevice.ReadWrite)
         if ok:
-            self.serial_port.setEnabled(False)
-            self.serial_connect.setEnabled(False)
-            self.serial_refresh.setEnabled(False)
-            self.serial_port.setEnabled(False)
-            self.serial_baud.setEnabled(False)
-            self.serial_bits.setEnabled(False)
-            self.serial_flow.setEnabled(False)
+            self.set_serial_options_enabled(False)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
@@ -333,6 +333,10 @@ class MainWindow(QMainWindow):
             msg.setWindowTitle("Can't connect")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
+
+    def disconnect_port(self):
+        self.serial.close()
+        self.set_serial_options_enabled(True)
 
     def on_serial_error(self):
         if self.serial.error() == QSerialPort.SerialPortError.NoError:
@@ -361,13 +365,7 @@ class MainWindow(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
-        self.serial_port.setEnabled(True)
-        self.serial_connect.setEnabled(True)
-        self.serial_refresh.setEnabled(True)
-        self.serial_port.setEnabled(True)
-        self.serial_baud.setEnabled(True)
-        self.serial_bits.setEnabled(True)
-        self.serial_flow.setEnabled(True)
+        self.set_serial_options_enabled(True)
 
     def show_port_ref_error(self):
         msg = QMessageBox()
@@ -376,6 +374,16 @@ class MainWindow(QMainWindow):
         msg.setWindowTitle("Can't connect")
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
+
+    def set_serial_options_enabled(self, ena: bool):
+        self.serial_port.setEnabled(ena)
+        self.serial_connect.setEnabled(ena)
+        self.serial_refresh.setEnabled(ena)
+        self.serial_port.setEnabled(ena)
+        self.serial_baud.setEnabled(ena)
+        self.serial_bits.setEnabled(ena)
+        self.serial_flow.setEnabled(ena)
+        self.serial_disconnect.setEnabled(not ena)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None: # pylint: disable=invalid-name
         self.serial.disconnect()
