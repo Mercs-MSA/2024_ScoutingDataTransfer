@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QMessageBox,
 )
-from PyQt6.QtCore import QSettings, QSize, QIODevice, QTimer
+from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
@@ -264,6 +264,17 @@ class MainWindow(QMainWindow):
         self.serial_disconnect.setEnabled(False)
         self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 6)
 
+        self.scanner_layout.addStretch()
+
+        self.connection_icon = QLabel()
+        self.connection_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.connection_icon.setPixmap(
+            qtawesome.icon("mdi6.serial-port").pixmap(256, 256)
+        )
+        self.scanner_layout.addWidget(self.connection_icon)
+
+        self.scanner_layout.addStretch()
+
         self.show()
 
     def select_transfer_dir(self) -> None:
@@ -386,6 +397,9 @@ class MainWindow(QMainWindow):
         ok = self.serial.open(QIODevice.ReadWrite)
         if ok:
             self.set_serial_options_enabled(False)
+            self.connection_icon.setPixmap(
+                qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
+            )
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
@@ -404,6 +418,9 @@ class MainWindow(QMainWindow):
 
         self.serial.close()
         self.set_serial_options_enabled(True)
+        self.connection_icon.setPixmap(
+            qtawesome.icon("mdi6.serial-port").pixmap(256, 256)
+        )
 
     def on_serial_error(self):
         """
@@ -427,6 +444,10 @@ class MainWindow(QMainWindow):
             msg.setWindowTitle("Serial error")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
+
+            self.connection_icon.setPixmap(
+                qtawesome.icon("mdi6.alert-decagram", color="#f44336").pixmap(256, 256)
+            )
 
     def serial_close(self):
         """
@@ -485,5 +506,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     settings = QSettings("Mercs", "ScoutingDataTransfer")
     qdarktheme.setup_theme(additional_qss="#big_dropdown {min-height: 56px}")
+    qtawesome.dark(app)
     win = MainWindow()
     sys.exit(app.exec())
