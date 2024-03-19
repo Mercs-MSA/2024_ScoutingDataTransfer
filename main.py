@@ -30,6 +30,7 @@ import qtawesome
 
 import disk_widget
 import disk_detector
+import utils
 
 BAUDS = [
     300,
@@ -76,26 +77,6 @@ FLOW_CONTROL = {
     "Hardware FC": QSerialPort.FlowControl.HardwareControl
 }
 
-
-# https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
-def format_bytes(size: int) -> str:
-    """Convert bytes to str of KB, MB, etc
-
-    Args:
-        size (int): bytes
-
-    Returns:
-        str: Size string
-    """
-    power = 2**10
-    n = 0
-    power_labels = {0: "", 1: "K", 2: "M", 3: "G", 4: "T"}
-    while size > power:
-        size /= power
-        n += 1
-    return f"{size:.1f}{power_labels[n] + 'B'}"
-
-
 def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
     """Disk detection predicate
 
@@ -118,13 +99,14 @@ def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
             return (
                 True,
                 f"ID: {opts['id']} {disk.mountpoint} fs:{disk.fstype} "
-                f"cap:{format_bytes(disk.capacity)}",
+                f"cap:{utils.format_bytes(disk.capacity)}",
                 str(opts["id"]),
             )
         if opts["display"]:
             return (
                 True,
-                f"ID: ?? {disk.mountpoint} fs:{disk.fstype} cap:{format_bytes(disk.capacity)}",
+                f"ID: ?? {disk.mountpoint} fs:{disk.fstype} "
+                 "cap:{utils.format_bytes(disk.capacity)}",
                 "0",
             )
 
@@ -290,12 +272,20 @@ class MainWindow(QMainWindow):
 
         self.show()
 
-    def select_transfer_dir(self):
+    def select_transfer_dir(self) -> None:
+        """
+        Pick file for transfer directory
+        """
+
         self.transfer_dir_textbox.setText(
             str(QFileDialog.getExistingDirectory(self, "Select Directory"))
         )
 
-    def update_transfer_dir(self):
+    def update_transfer_dir(self) -> None:
+        """
+        Check if transfer dir is valid and set to persistent storage
+        """
+
         valid = os.path.isdir(self.transfer_dir_textbox.text())
         if valid:
             self.transfer_dir_icon.setPixmap(
@@ -310,37 +300,65 @@ class MainWindow(QMainWindow):
         settings.setValue("transferDir", self.transfer_dir_textbox.text())
 
     def update_serial_ports(self):
+        """
+        Refresh list of available serial ports
+        """
+
         self.serial_port.clear()
         for port in QSerialPortInfo.availablePorts():
             if not port.portName().startswith("ttyS"):
                 self.serial_port.addItem(f"{port.portName()} - {port.description()}")
 
     def change_baud(self):
+        """
+        Set baud rate from combo box
+        """
+
         baud = int(self.serial_baud.currentText())
         self.serial.setBaudRate(baud)
         settings.setValue("baud", baud)
 
     def change_data_bits(self):
+        """
+        Set data bits from combo box
+        """
+
         bits = DATA_BITS[self.serial_bits.currentText()]
         self.serial.setDataBits(bits)
         settings.setValue("databits", self.serial_bits.currentText())
 
     def change_stop_bits(self):
+        """
+        Set stop bits from combo box
+        """
+
         stop_bits = STOP_BITS[self.serial_stop.currentText()]
         self.serial.setStopBits(stop_bits)
         settings.setValue("stopbits", self.serial_stop.currentText())
 
     def change_flow(self):
+        """
+        Set flow control from combo box
+        """
+
         flow = FLOW_CONTROL[self.serial_flow.currentText()]
         self.serial.setFlowControl(flow)
         settings.setValue("flow", self.serial_flow.currentText())
 
     def change_parity(self):
+        """
+        Set parity type from combo box
+        """
+
         parity = PARITY[self.serial_parity.currentText()]
         self.serial.setParity(parity)
         settings.setValue("parity", self.serial_parity.currentText())
 
     def connect_to_port(self):
+        """
+        Attempt to connect to serial port
+        """
+
         ports = [port for port in QSerialPortInfo.availablePorts()
                  if not port.portName().startswith("ttyS")]
 
@@ -386,10 +404,18 @@ class MainWindow(QMainWindow):
             msg.exec()
 
     def disconnect_port(self):
+        """
+        Disconnect from serial port
+        """
+
         self.serial.close()
         self.set_serial_options_enabled(True)
 
     def on_serial_error(self):
+        """
+        Serial error callback
+        """
+
         if self.serial.error() == QSerialPort.SerialPortError.NoError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Information)
@@ -409,6 +435,10 @@ class MainWindow(QMainWindow):
             msg.exec()
 
     def serial_close(self):
+        """
+        Serial shutdown callback
+        """
+
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Information)
         msg.setText("Serial controller shut down")
@@ -419,6 +449,10 @@ class MainWindow(QMainWindow):
         self.set_serial_options_enabled(True)
 
     def show_port_ref_error(self):
+        """
+        Display a serial port list refresh error
+        """
+
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText("Port refresh required")
@@ -427,6 +461,10 @@ class MainWindow(QMainWindow):
         msg.exec()
 
     def set_serial_options_enabled(self, ena: bool):
+        """
+        Set whether to disable serial options
+        """
+
         self.serial_port.setEnabled(ena)
         self.serial_connect.setEnabled(ena)
         self.serial_refresh.setEnabled(ena)
@@ -439,6 +477,12 @@ class MainWindow(QMainWindow):
         self.serial_disconnect.setEnabled(not ena)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None: # pylint: disable=invalid-name
+        """
+        Application close event
+
+        Args:
+            a0 (QCloseEvent | None): Qt close event
+        """
         self.serial.disconnect()
         return super().closeEvent(a0)
 
