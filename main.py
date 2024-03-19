@@ -28,7 +28,7 @@ from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
 
-import DiskMgmtWidget
+import disk_widget
 import disk_detector
 
 BAUDS = [
@@ -198,7 +198,7 @@ class MainWindow(QMainWindow):
 
         self.drive_layout.addStretch()
 
-        self.disk_widget = DiskMgmtWidget.DiskMgmtWidget(
+        self.disk_widget = disk_widget.DiskMgmtWidget(
             predicate=scouting_disk_predicate
         )
         self.disk_widget.set_select_visible(False)
