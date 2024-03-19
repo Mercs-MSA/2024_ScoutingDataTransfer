@@ -264,12 +264,6 @@ class MainWindow(QMainWindow):
         self.serial_disconnect.setEnabled(False)
         self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 6)
 
-        # Background Timers
-        self.serial_background_timer = QTimer()
-        self.serial_background_timer.timeout.connect(lambda: print(self.serial.isOpen()))
-        self.serial_background_timer.setInterval(1000)
-        self.serial_background_timer.start()
-
         self.show()
 
     def select_transfer_dir(self) -> None:
