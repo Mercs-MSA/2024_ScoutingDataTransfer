@@ -126,7 +126,9 @@ class MainWindow(QMainWindow):
         self.serial = QSerialPort()
         self.serial.errorOccurred.connect(self.on_serial_error)
         self.serial.aboutToClose.connect(self.serial_close)
-        self.serial.readyRead.connect(self.read_data)
+        self.serial.readyRead.connect(self.on_serial_recieve)
+
+        self.data_buffer = "" # data may come in split up
 
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
@@ -464,8 +466,21 @@ class MainWindow(QMainWindow):
 
         self.set_serial_options_enabled(True)
 
-    def read_data(self):
-        data = self.serial.readAll()
+    def on_serial_recieve(self):
+        self.connection_icon.setPixmap(
+                qtawesome.icon("mdi6.timer-sand", color="#03a9f4").pixmap(256, 256)
+            )
+        data = self.serial.readLine()
+        self.data_buffer += data.data().decode()
+        if self.data_buffer.endswith("\r\n"):
+            self.on_data_retrieved(self.data_buffer)
+            self.data_buffer = ""
+            
+
+    def on_data_retrieved(self, data: str):
+        self.connection_icon.setPixmap(
+                qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
+            )
         print(data)
 
     def show_port_ref_error(self):
