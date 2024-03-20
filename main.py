@@ -6,6 +6,8 @@ Transfer data form scouting tablets using qr code scanner
 import sys
 import os
 import json
+import time
+import traceback
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -22,7 +24,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QMessageBox,
 )
-from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt
+from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
@@ -116,6 +118,20 @@ def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
 settings: QSettings | None = None
 
 
+class DataWorker(QObject):
+    finished = pyqtSignal()
+    def __init__(self, data: str, savedir: str, savedisk: str | None) -> None:
+        super().__init__()
+
+        self.data = data
+        self.savedir = savedir
+        self.savedisk = savedisk
+
+    def run(self):
+        """ Here is where all data processing must occur """
+        print(self.data)
+        self.finished.emit()
+
 class MainWindow(QMainWindow):
     """Main Window"""
 
@@ -127,6 +143,11 @@ class MainWindow(QMainWindow):
         self.serial.errorOccurred.connect(self.on_serial_error)
         self.serial.aboutToClose.connect(self.serial_close)
         self.serial.readyRead.connect(self.on_serial_recieve)
+
+        self.data_worker = None
+        self.worker_thread = None
+
+        self.is_scanning = False
 
         self.data_buffer = "" # data may come in split up
 
@@ -478,10 +499,37 @@ class MainWindow(QMainWindow):
             
 
     def on_data_retrieved(self, data: str):
-        self.connection_icon.setPixmap(
-                qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
+        if not self.is_scanning:
+            self.is_scanning = True
+
+            if self.disk_widget.get_selected_disk() is None:
+                disk = None
+            else:
+                disk = self.disk_widget.get_selected_disk().mountpoint
+
+            self.worker_thread = QThread()
+
+            self.data_worker = DataWorker(
+                data,
+                self.transfer_dir_textbox.text(),
+                disk
             )
-        print(data)
+            self.data_worker.finished.connect(self.on_data_transfer_complete)
+            self.data_worker.moveToThread(self.worker_thread)
+            self.worker_thread.started.connect(self.data_worker.run)
+
+            self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+            self.data_worker.finished.connect(self.worker_thread.quit)
+            self.data_worker.finished.connect(self.data_worker.deleteLater)
+            
+            self.worker_thread.start()
+
+    def on_data_transfer_complete(self):
+        self.connection_icon.setPixmap(
+            qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
+        )
+
+        self.is_scanning = False
 
     def show_port_ref_error(self):
         """
