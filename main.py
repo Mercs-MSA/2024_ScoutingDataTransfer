@@ -126,6 +126,7 @@ class MainWindow(QMainWindow):
         self.serial = QSerialPort()
         self.serial.errorOccurred.connect(self.on_serial_error)
         self.serial.aboutToClose.connect(self.serial_close)
+        self.serial.readyRead.connect(self.read_data)
 
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
@@ -462,6 +463,10 @@ class MainWindow(QMainWindow):
         msg.exec()
 
         self.set_serial_options_enabled(True)
+
+    def read_data(self):
+        data = self.serial.readAll()
+        print(data)
 
     def show_port_ref_error(self):
         """
