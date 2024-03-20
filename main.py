@@ -6,8 +6,7 @@ Transfer data form scouting tablets using qr code scanner
 import sys
 import os
 import json
-import time
-import traceback
+import csv
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -18,11 +17,13 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QLineEdit,
     QPushButton,
+    QToolButton,
     QLabel,
     QFileDialog,
     QGridLayout,
     QComboBox,
     QMessageBox,
+    QStackedWidget,
 )
 from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QCloseEvent
@@ -135,6 +136,8 @@ class DataWorker(QObject):
 class MainWindow(QMainWindow):
     """Main Window"""
 
+    HOME_IDX, SETTINGS_IDX, ABOUT_IDX = range(3)
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("6369 Scouting Data Transfer")
@@ -154,11 +157,44 @@ class MainWindow(QMainWindow):
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
 
-        self.root_layout = QHBoxLayout()
+        self.root_layout = QVBoxLayout()
         self.root_widget.setLayout(self.root_layout)
 
+        # App navigation
+        
+        self.nav_layout = QHBoxLayout()
+        self.root_layout.addLayout(self.nav_layout)
+
+        self.navigation_buttons: list[QToolButton] = []
+
+        self.nav_button_home = QToolButton()
+        self.nav_button_home.setCheckable(True)
+        self.nav_button_home.setText("Home")
+        self.nav_button_home.setChecked(True)
+        self.nav_button_home.clicked.connect(lambda: self.nav(self.HOME_IDX))
+        self.nav_layout.addWidget(self.nav_button_home)
+        self.navigation_buttons.append(self.nav_button_home)
+
+        self.nav_button_settings = QToolButton()
+        self.nav_button_settings.setCheckable(True)
+        self.nav_button_settings.setText("Settings")
+        self.nav_button_settings.clicked.connect(lambda: self.nav(self.SETTINGS_IDX))
+        self.nav_layout.addWidget(self.nav_button_settings)
+        self.navigation_buttons.append(self.nav_button_settings)
+
+        self.app_widget = QStackedWidget()
+        self.root_layout.addWidget(self.app_widget)
+
+        # * HOME * #
+
+        self.home_widget = QWidget()
+        self.app_widget.insertWidget(self.HOME_IDX, self.home_widget)
+
+        self.home_layout = QHBoxLayout()
+        self.home_widget.setLayout(self.home_layout)
+
         self.splitter = QSplitter()
-        self.root_layout.addWidget(self.splitter)
+        self.home_layout.addWidget(self.splitter)
 
         # Data manager (left side)
         self.drive_widget = QWidget()
@@ -299,7 +335,19 @@ class MainWindow(QMainWindow):
 
         self.scanner_layout.addStretch()
 
+        # * SETTINGS * #
+        self.settings_widget = QWidget()
+        self.app_widget.insertWidget(self.SETTINGS_IDX, self.settings_widget)
+
         self.show()
+
+    def nav(self, page: int):
+
+        for button in self.navigation_buttons:
+            button.setChecked(False)
+
+        self.app_widget.setCurrentIndex(page)
+        self.navigation_buttons[page].setChecked(True)
 
     def select_transfer_dir(self) -> None:
         """
