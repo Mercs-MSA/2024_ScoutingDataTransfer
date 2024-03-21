@@ -8,6 +8,7 @@ import sys
 import os
 import json
 import pandas
+import logging
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -246,28 +247,45 @@ class DataWorker(QObject):
         self.savedir = savedir
         self.savedisk = savedisk
 
-    def run(self, data_frames: pandas.DataFrame):
+    def run(self, data_frames: pandas.DataFrame, directory: str, disk: disk_detector.Disk, event_id: str):
+        if not os.path.exists(directory):
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText(
+                f"Directory {directory}\ndoes not exist\nData import cancelled"
+            )
+            msg.setWindowTitle("Data Error")
+            msg.setStandardButtons(
+                QMessageBox.StandardButton.Ok
+            )
+            msg.exec()
+            self.finished.emit(data_frames)
+            return
         data = self.data.split("||")
         form = data[0]
-        print(f"Form Type: {form}")
+        logging.info("Data transfer started on form %s", str(form))
 
         if form == "pit":
             header = PIT_DATA_HEADER
             if len(data) != len(header):
                 self.on_data_error.emit(DataError.DATA_MALFORMED)
+                self.finished.emit(data_frames)
                 return
         elif form == "qual":
             header = QUAL_DATA_HEADER
             if len(data) != len(header):
                 self.on_data_error.emit(DataError.DATA_MALFORMED)
+                self.finished.emit(data_frames)
                 return
         elif form == "playoff":
             header = PLAYOFF_DATA_HEADER
             if len(data) != len(header):
                 self.on_data_error.emit(DataError.DATA_MALFORMED)
+                self.finished.emit(data_frames)
                 return
         else:
             self.on_data_error.emit(DataError.UNKNOWN_FORM)
+            self.finished.emit(data_frames)
             return
 
         df = pandas.DataFrame([data], columns=header)
@@ -277,10 +295,7 @@ class DataWorker(QObject):
         # form type
         if form == "pit":
             # check for repeats
-            if (
-                df["teamNumber"].iloc[0]
-                in data_frames["pit"]["teamNumber"].to_list()
-            ):
+            if df["teamNumber"].iloc[0] in data_frames["pit"]["teamNumber"].to_list():
                 if (
                     self.on_repeated_data("pit", df["teamNumber"].iloc[0])
                     == QMessageBox.StandardButton.No
@@ -289,8 +304,7 @@ class DataWorker(QObject):
         elif form == "qual":
             # check for repeats
             if (
-                df["teamNumber"].iloc[0]
-                in data_frames["qual"]["teamNumber"].to_list()
+                df["teamNumber"].iloc[0] in data_frames["qual"]["teamNumber"].to_list()
             ) or (
                 df["matchNumber"].iloc[0]
                 in data_frames["qual"]["matchNumber"].to_list()
@@ -318,6 +332,15 @@ class DataWorker(QObject):
         if add_to_df:
             data_frames[form] = pandas.concat([data_frames[form], df])
 
+        logging.info("transfering data to %s", directory)
+
+        # create directory structure
+        for form in data_frames:
+            if not os.path.exists(os.path.join(directory, form)):
+                os.mkdir(os.path.join(directory, form))
+
+            data_frames[form].to_csv(os.path.join(directory, form, f"{event_id}_{form}_total.csv"), index=False)
+
         self.finished.emit(data_frames)
 
     def on_repeated_data(self, form: str, team: int):
@@ -327,7 +350,9 @@ class DataWorker(QObject):
 
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Warning)
-        msg.setText(f"Repeated data import for {form} form.\nTeam Number: {team}\nImport anyway?")
+        msg.setText(
+            f"Repeated data import for {form} form.\nTeam Number: {team}\nImport anyway?"
+        )
         msg.setWindowTitle("Data Error")
         msg.setStandardButtons(
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
@@ -545,6 +570,9 @@ class MainWindow(QMainWindow):
         self.settings_widget = QWidget()
         self.app_widget.insertWidget(self.SETTINGS_IDX, self.settings_widget)
 
+        # * LOAD CSV *#
+        self.attempt_load_csv()
+
         self.show()
 
     def nav(self, page: int):
@@ -581,6 +609,20 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
         settings.setValue("transferDir", self.transfer_dir_textbox.text())
+
+        self.attempt_load_csv()
+
+    def attempt_load_csv(self):
+        self.data_frames = {
+            "pit": pandas.DataFrame(columns=PIT_DATA_HEADER),
+            "qual": pandas.DataFrame(columns=QUAL_DATA_HEADER),
+            "playoff": pandas.DataFrame(columns=PLAYOFF_DATA_HEADER),
+        }
+
+        event_id = "2024txtest"
+        for form in self.data_frames:
+            if os.path.exists(os.path.join(self.transfer_dir_textbox.text(), form, f"{event_id}_{form}_total.csv")):
+                self.data_frames[form] = pandas.read_csv(os.path.join(self.transfer_dir_textbox.text(), form, f"{event_id}_{form}_total.csv"))
 
     def update_serial_ports(self):
         """
@@ -753,8 +795,8 @@ class MainWindow(QMainWindow):
 
     def on_serial_recieve(self):
         self.connection_icon.setPixmap(
-                qtawesome.icon("mdi6.timer-sand", color="#03a9f4").pixmap(256, 256)
-            )
+            qtawesome.icon("mdi6.timer-sand", color="#03a9f4").pixmap(256, 256)
+        )
         data = self.serial.readLine()
         self.data_buffer += data.data().decode()
         if self.data_buffer.endswith("\r\n"):
@@ -776,7 +818,14 @@ class MainWindow(QMainWindow):
             self.data_worker.finished.connect(self.on_data_transfer_complete)
             self.data_worker.on_data_error.connect(self.on_data_error)
             self.data_worker.moveToThread(self.worker_thread)
-            self.worker_thread.started.connect(lambda: self.data_worker.run(self.data_frames))
+            self.worker_thread.started.connect(
+                lambda: self.data_worker.run(
+                    self.data_frames,
+                    self.transfer_dir_textbox.text(),
+                    self.disk_widget.get_selected_disk(),
+                    "2024txtest"
+                )
+            )
 
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
             self.data_worker.finished.connect(self.worker_thread.quit)
@@ -790,7 +839,6 @@ class MainWindow(QMainWindow):
         )
 
         self.data_frames = df
-        print(self.data_frames)
 
         self.is_scanning = False
 
@@ -806,10 +854,11 @@ class MainWindow(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
-    def on_data_error(self):
+    def on_data_error(self, errcode: DataError):
         """
         Display a data rx error
         """
+        logging.error("Data rx error: %s", errcode.name)
 
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Critical)
@@ -848,6 +897,8 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
     app = QApplication(sys.argv)
     settings = QSettings("Mercs", "ScoutingDataTransfer")
     qdarktheme.setup_theme(additional_qss="#big_dropdown {min-height: 56px}")
