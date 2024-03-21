@@ -261,7 +261,7 @@ class DataWorker(QObject):
             msg.exec()
             self.finished.emit(data_frames)
             return
-        data = self.data.split("||")
+        data = self.data.strip("\r\n").split("||")
         form = data[0]
         logging.info("Data transfer started on form %s", str(form))
 
@@ -295,7 +295,7 @@ class DataWorker(QObject):
         # form type
         if form == "pit":
             # check for repeats
-            if df["teamNumber"].iloc[0] in data_frames["pit"]["teamNumber"].to_list():
+            if int(df["teamNumber"].iloc[0]) in [int(x) for x in data_frames["pit"]["teamNumber"].to_list()]:
                 if (
                     self.on_repeated_data("pit", df["teamNumber"].iloc[0])
                     == QMessageBox.StandardButton.No
@@ -304,10 +304,10 @@ class DataWorker(QObject):
         elif form == "qual":
             # check for repeats
             if (
-                df["teamNumber"].iloc[0] in data_frames["qual"]["teamNumber"].to_list()
+                int(df["teamNumber"].iloc[0]) in [int(x) for x in data_frames["qual"]["teamNumber"].to_list()]
             ) or (
-                df["matchNumber"].iloc[0]
-                in data_frames["qual"]["matchNumber"].to_list()
+                int(df["matchNumber"].iloc[0])
+                in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
             ):
                 if (
                     self.on_repeated_data("qual", int(df["teamNumber"].iloc[0]))
@@ -317,11 +317,11 @@ class DataWorker(QObject):
         elif form == "playoff":
             # check for repeats
             if (
-                df["teamNumber"].iloc[0]
-                in data_frames["playoff"]["teamNumber"].to_list()
+                int(df["teamNumber"].iloc[0])
+                in [int(x) for x in data_frames["playoff"]["teamNumber"].to_list()]
             ) or (
-                df["matchNumber"].iloc[0]
-                in data_frames["playoff"]["matchNumber"].to_list()
+                int(df["matchNumber"].iloc[0])
+                in [int(x) for x in data_frames["playoff"]["matchNumber"].to_list()]
             ):
                 if (
                     self.on_repeated_data("playoff", int(df["teamNumber"].iloc[0]))
