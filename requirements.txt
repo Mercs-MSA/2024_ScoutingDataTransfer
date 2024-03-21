@@ -1,4 +1,5 @@
 psutil~=5.9.7
 PyQt6~=6.6.1
 pyqtdarktheme
-qt_material
+qtawesome
+pandas

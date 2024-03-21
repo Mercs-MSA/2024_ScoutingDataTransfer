@@ -3,10 +3,11 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
+import enum
 import sys
 import os
 import json
-import csv
+import pandas
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -57,7 +58,7 @@ DATA_BITS = {
     "5 Data Bits": QSerialPort.DataBits.Data5,
     "6 Data Bits": QSerialPort.DataBits.Data6,
     "7 Data Bits": QSerialPort.DataBits.Data7,
-    "8 Data Bits": QSerialPort.DataBits.Data8
+    "8 Data Bits": QSerialPort.DataBits.Data8,
 }
 
 STOP_BITS = {
@@ -77,8 +78,9 @@ PARITY = {
 FLOW_CONTROL = {
     "No Flow Control": QSerialPort.FlowControl.NoFlowControl,
     "Software FC": QSerialPort.FlowControl.SoftwareControl,
-    "Hardware FC": QSerialPort.FlowControl.HardwareControl
+    "Hardware FC": QSerialPort.FlowControl.HardwareControl,
 }
+
 
 def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
     """Disk detection predicate
@@ -109,7 +111,7 @@ def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
             return (
                 True,
                 f"ID: ?? {disk.mountpoint} fs:{disk.fstype} "
-                 "cap:{utils.format_bytes(disk.capacity)}",
+                "cap:{utils.format_bytes(disk.capacity)}",
                 "0",
             )
 
@@ -118,20 +120,220 @@ def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
 
 settings: QSettings | None = None
 
+PIT_DATA_HEADER = [
+    "form",
+    "teamNumber",
+    "botLength",
+    "botWidth",
+    "botHeight",
+    "botWeight",
+    "drivebase",
+    "drivebaseAlt",
+    "climber",
+    "climberAlt",
+    "isKitbot",
+    "intakeInBumper",
+    "speakerScore",
+    "ampScore",
+    "trapScore",
+    "groundPickup",
+    "sourcePickup",
+    "turretShoot",
+    "extendShoot",
+    "hasBlocker",
+    "hasAuton",
+    "autonSpeakerNotes",
+    "autonAmpNotes",
+    "autonConsistency",
+    "autonVersatility",
+    "autonRoutes",
+    "autonPrefStart",
+    "autonStrat",
+    "hasAuton",
+    "repairability",
+    "maneuverability",
+    "teleopStrat",
+]
+QUAL_DATA_HEADER = [
+    "form",
+    "teamNumber",
+    "matchNumber",
+    "startingPosition",
+    "hasAuton",
+    "autonLeave",
+    "autonCrossCenter",
+    "autonAStop",
+    "autonPreload",
+    "autonSpeakerNotesScored",
+    "autonSpeakerNotesMissed",
+    "autonAmpNotesScored",
+    "autonAmpNotesMissed",
+    "autonWingNotes",
+    "autonCenterNotes",
+    "teleopFloorPickup",
+    "teleopSourcePickup",
+    "teleopAmpScored",
+    "teleopAmpMissed",
+    "teleopSpeakerScored",
+    "teleopSpeakerMissed",
+    "teleopDroppedNotes",
+    "teleopFedNotes",
+    "teleopAmps",
+    "endgameDidTheyClimb",
+    "endgameDidTheyTrap",
+    "endgameDidTheyHarmony",
+    "endgameDefenseBot",
+    "endgameDriverRating",
+    "endgameDefenseRating",
+    "endgameHighnote",
+    "endgameCoOp",
+    "endgameDidTheyGetACard",
+    "endgameDidTheyNoShow",
+    "endgameComments",
+]
+
+PLAYOFF_DATA_HEADER = [
+    "form",
+    "teamNumber",
+    "matchNumber",
+    "startingPosition",
+    "hasAuton",
+    "autonLeave",
+    "autonCrossCenter",
+    "autonAStop",
+    "autonPreload",
+    "autonSpeakerNotesScored",
+    "autonSpeakerNotesMissed",
+    "autonAmpNotesScored",
+    "autonAmpNotesMissed",
+    "autonWingNotes",
+    "autonCenterNotes",
+    "teleopFloorPickup",
+    "teleopSourcePickup",
+    "teleopAmpScored",
+    "teleopAmpMissed",
+    "teleopSpeakerScored",
+    "teleopSpeakerMissed",
+    "teleopDroppedNotes",
+    "teleopFedNotes",
+    "teleopAmps",
+    "endgameDidTheyClimb",
+    "endgameDidTheyTrap",
+    "endgameDidTheyHarmony",
+    "endgameDefenseBot",
+    "endgameDriverRating",
+    "endgameDefenseRating",
+    "endgameHighnote",
+    "endgameCoOp",
+    "endgameDidTheyGetACard",
+    "endgameDidTheyNoShow",
+    "endgameComments",
+]
+
+
+class DataError(enum.Enum):
+    DATA_MALFORMED = 0
+    UNKNOWN_FORM = 1
+
 
 class DataWorker(QObject):
-    finished = pyqtSignal()
+    finished = pyqtSignal(dict)
+    on_data_error = pyqtSignal(DataError)
+
     def __init__(self, data: str, savedir: str, savedisk: str | None) -> None:
         super().__init__()
-
         self.data = data
         self.savedir = savedir
         self.savedisk = savedisk
 
-    def run(self):
-        """ Here is where all data processing must occur """
-        print(self.data)
-        self.finished.emit()
+    def run(self, data_frames: pandas.DataFrame):
+        data = self.data.split("||")
+        form = data[0]
+        print(f"Form Type: {form}")
+
+        if form == "pit":
+            header = PIT_DATA_HEADER
+            if len(data) != len(header):
+                self.on_data_error.emit(DataError.DATA_MALFORMED)
+                return
+        elif form == "qual":
+            header = QUAL_DATA_HEADER
+            if len(data) != len(header):
+                self.on_data_error.emit(DataError.DATA_MALFORMED)
+                return
+        elif form == "playoff":
+            header = PLAYOFF_DATA_HEADER
+            if len(data) != len(header):
+                self.on_data_error.emit(DataError.DATA_MALFORMED)
+                return
+        else:
+            self.on_data_error.emit(DataError.UNKNOWN_FORM)
+            return
+
+        df = pandas.DataFrame([data], columns=header)
+
+        add_to_df = True
+
+        # form type
+        if form == "pit":
+            # check for repeats
+            if (
+                df["teamNumber"].iloc[0]
+                in data_frames["pit"]["teamNumber"].to_list()
+            ):
+                if (
+                    self.on_repeated_data("pit", df["teamNumber"].iloc[0])
+                    == QMessageBox.StandardButton.No
+                ):
+                    add_to_df = False
+        elif form == "qual":
+            # check for repeats
+            if (
+                df["teamNumber"].iloc[0]
+                in data_frames["qual"]["teamNumber"].to_list()
+            ) or (
+                df["matchNumber"].iloc[0]
+                in data_frames["qual"]["matchNumber"].to_list()
+            ):
+                if (
+                    self.on_repeated_data("qual", int(df["teamNumber"].iloc[0]))
+                    == QMessageBox.StandardButton.No
+                ):
+                    add_to_df = False
+        elif form == "playoff":
+            # check for repeats
+            if (
+                df["teamNumber"].iloc[0]
+                in data_frames["playoff"]["teamNumber"].to_list()
+            ) or (
+                df["matchNumber"].iloc[0]
+                in data_frames["playoff"]["matchNumber"].to_list()
+            ):
+                if (
+                    self.on_repeated_data("playoff", int(df["teamNumber"].iloc[0]))
+                    == QMessageBox.StandardButton.No
+                ):
+                    add_to_df = False
+
+        if add_to_df:
+            data_frames[form] = pandas.concat([data_frames[form], df])
+
+        self.finished.emit(data_frames)
+
+    def on_repeated_data(self, form: str, team: int):
+        """
+        Display a warning for importing a repeat
+        """
+
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setText(f"Repeated data import for {form} form.\nTeam Number: {team}\nImport anyway?")
+        msg.setWindowTitle("Data Error")
+        msg.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        return msg.exec()
+
 
 class MainWindow(QMainWindow):
     """Main Window"""
@@ -152,7 +354,13 @@ class MainWindow(QMainWindow):
 
         self.is_scanning = False
 
-        self.data_buffer = "" # data may come in split up
+        self.data_buffer = ""  # data may come in split up
+
+        self.data_frames = {
+            "pit": pandas.DataFrame(columns=PIT_DATA_HEADER),
+            "qual": pandas.DataFrame(columns=QUAL_DATA_HEADER),
+            "playoff": pandas.DataFrame(columns=PLAYOFF_DATA_HEADER),
+        }
 
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
@@ -161,7 +369,7 @@ class MainWindow(QMainWindow):
         self.root_widget.setLayout(self.root_layout)
 
         # App navigation
-        
+
         self.nav_layout = QHBoxLayout()
         self.root_layout.addLayout(self.nav_layout)
 
@@ -240,9 +448,7 @@ class MainWindow(QMainWindow):
 
         self.drive_layout.addStretch()
 
-        self.disk_widget = disk_widget.DiskMgmtWidget(
-            predicate=scouting_disk_predicate
-        )
+        self.disk_widget = disk_widget.DiskMgmtWidget(predicate=scouting_disk_predicate)
         self.disk_widget.set_select_visible(False)
         self.drive_layout.addWidget(self.disk_widget)
 
@@ -436,8 +642,11 @@ class MainWindow(QMainWindow):
         Attempt to connect to serial port
         """
 
-        ports = [port for port in QSerialPortInfo.availablePorts()
-                 if not port.portName().startswith("ttyS")]
+        ports = [
+            port
+            for port in QSerialPortInfo.availablePorts()
+            if not port.portName().startswith("ttyS")
+        ]
 
         if len(ports) < 1:
             self.show_port_ref_error()
@@ -445,7 +654,10 @@ class MainWindow(QMainWindow):
 
         port = ports[self.serial_port.currentIndex()]
 
-        if f"{port.portName()} - {port.description()}" != self.serial_port.currentText():
+        if (
+            f"{port.portName()} - {port.description()}"
+            != self.serial_port.currentText()
+        ):
             self.show_port_ref_error()
             return
 
@@ -475,10 +687,12 @@ class MainWindow(QMainWindow):
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setText("Serial connect operation failed\n"
-                        "Common issues:\n"
-                        "1. Your user account does not have appropriate rights\n"
-                        "2. Another application is using the serial port")
+            msg.setText(
+                "Serial connect operation failed\n"
+                "Common issues:\n"
+                "1. Your user account does not have appropriate rights\n"
+                "2. Another application is using the serial port"
+            )
             msg.setWindowTitle("Can't connect")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
@@ -512,7 +726,9 @@ class MainWindow(QMainWindow):
             self.serial.close()
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setText(f"{self.serial.error().name}\nError occured during serial operation")
+            msg.setText(
+                f"{self.serial.error().name}\nError occured during serial operation"
+            )
             msg.setWindowTitle("Serial error")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
@@ -544,7 +760,6 @@ class MainWindow(QMainWindow):
         if self.data_buffer.endswith("\r\n"):
             self.on_data_retrieved(self.data_buffer)
             self.data_buffer = ""
-            
 
     def on_data_retrieved(self, data: str):
         if not self.is_scanning:
@@ -557,25 +772,25 @@ class MainWindow(QMainWindow):
 
             self.worker_thread = QThread()
 
-            self.data_worker = DataWorker(
-                data,
-                self.transfer_dir_textbox.text(),
-                disk
-            )
+            self.data_worker = DataWorker(data, self.transfer_dir_textbox.text(), disk)
             self.data_worker.finished.connect(self.on_data_transfer_complete)
+            self.data_worker.on_data_error.connect(self.on_data_error)
             self.data_worker.moveToThread(self.worker_thread)
-            self.worker_thread.started.connect(self.data_worker.run)
+            self.worker_thread.started.connect(lambda: self.data_worker.run(self.data_frames))
 
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
             self.data_worker.finished.connect(self.worker_thread.quit)
             self.data_worker.finished.connect(self.data_worker.deleteLater)
-            
+
             self.worker_thread.start()
 
-    def on_data_transfer_complete(self):
+    def on_data_transfer_complete(self, df: pandas.DataFrame):
         self.connection_icon.setPixmap(
             qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
         )
+
+        self.data_frames = df
+        print(self.data_frames)
 
         self.is_scanning = False
 
@@ -588,6 +803,18 @@ class MainWindow(QMainWindow):
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText("Port refresh required")
         msg.setWindowTitle("Can't connect")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
+
+    def on_data_error(self):
+        """
+        Display a data rx error
+        """
+
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Critical)
+        msg.setText("Recieved data does not match expected data")
+        msg.setWindowTitle("Data Error")
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
@@ -607,7 +834,9 @@ class MainWindow(QMainWindow):
         self.serial_parity.setEnabled(ena)
         self.serial_disconnect.setEnabled(not ena)
 
-    def closeEvent(self, a0: QCloseEvent | None) -> None: # pylint: disable=invalid-name
+    def closeEvent(
+        self, a0: QCloseEvent | None
+    ) -> None:  # pylint: disable=invalid-name
         """
         Application close event
 
