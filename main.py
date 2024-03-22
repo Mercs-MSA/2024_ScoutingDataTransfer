@@ -27,10 +27,11 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QMessageBox,
     QStackedWidget,
-    QGroupBox
+    QGroupBox,
+    QTextBrowser
 )
 from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt, pyqtSignal, QObject, QThread
-from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtGui import QCloseEvent, QPixmap
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -38,6 +39,8 @@ import qtawesome
 import disk_widget
 import disk_detector
 import utils
+
+__version__ = "0.1.0-amarillo"
 
 BAUDS = [
     300,
@@ -157,6 +160,7 @@ PIT_DATA_HEADER = [
     "maneuverability",
     "teleopStrat",
 ]
+
 QUAL_DATA_HEADER = [
     "form",
     "teamNumber",
@@ -448,6 +452,17 @@ class MainWindow(QMainWindow):
         self.nav_layout.addWidget(self.nav_button_settings)
         self.navigation_buttons.append(self.nav_button_settings)
 
+        self.nav_button_about = QToolButton()
+        self.nav_button_about.setCheckable(True)
+        self.nav_button_about.setText("About")
+        self.nav_button_about.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_about.setIconSize(QSize(48, 48))
+        self.nav_button_about.setIcon(qtawesome.icon("mdi6.information"))
+        self.nav_button_about.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_about.clicked.connect(lambda: self.nav(self.ABOUT_IDX))
+        self.nav_layout.addWidget(self.nav_button_about)
+        self.navigation_buttons.append(self.nav_button_about)
+
         self.app_widget = QStackedWidget()
         self.root_layout.addWidget(self.app_widget)
 
@@ -620,6 +635,34 @@ class MainWindow(QMainWindow):
         self.settings_emulate_scan = QPushButton("Emuluate Single Scan")
         self.settings_emulate_scan.clicked.connect(self.emulate_scan)
         self.settings_dev_layout.addWidget(self.settings_emulate_scan)
+
+        # * ABOUT * #
+        self.about_widget = QWidget()
+        self.app_widget.insertWidget(self.ABOUT_IDX, self.about_widget)
+
+        self.about_layout = QGridLayout()
+        self.about_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.about_widget.setLayout(self.about_layout)
+
+        self.about_icon = QLabel()
+        self.about_icon.setPixmap(QPixmap("icons/mercs.png"))
+        self.about_layout.addWidget(self.about_icon, 0, 0, 3, 1)
+
+        self.about_title = QLabel("Mercs Scouting Transfer")
+        self.about_title.setStyleSheet("font-size: 30px;")
+        self.about_layout.addWidget(self.about_title, 0, 1)
+
+        self.about_version = QLabel(__version__)
+        self.about_version.setStyleSheet("font-size: 28px;")
+        self.about_layout.addWidget(self.about_version, 1, 1)
+
+        self.about_description = QTextBrowser()
+        self.about_description.setReadOnly(True)
+        self.about_description.setText("A simple tool to convert QR-code output from our <a href=\"https://github.com/Mercs-MSA/2024_ScoutingDataCollection/\">2024_ScoutingDataCollection</a> using a USB Serial based QR/Barcode scanner. Features include automatic exports, automatic backup to attached volumes, support for pits scouting, qualification and playoff scouting.")
+        self.about_description.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self.about_description.setOpenExternalLinks(True)
+        self.about_description.setMaximumHeight(self.about_description.sizeHint().height())
+        self.about_layout.addWidget(self.about_description, 2, 1)
 
 
         # * LOAD STARTING STATE *#
