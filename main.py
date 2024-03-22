@@ -256,7 +256,6 @@ class DataWorker(QObject):
         disk: disk_detector.Disk,
         event_id: str,
     ):
-        print(self.data)
         if not os.path.exists(directory):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
@@ -296,8 +295,7 @@ class DataWorker(QObject):
         df = pandas.DataFrame([data], columns=header)
 
         add_to_df = True
-        print(data_frames["pit"])
-        print(df)
+
         # form type
         if form == "pit":
             # check for repeats
@@ -339,10 +337,6 @@ class DataWorker(QObject):
                     add_to_df = False
 
         if add_to_df:
-            print([data_frames[form]])
-            print("")
-            print(df["teamNumber"])
-            print(df)
             data_frames[form] = pandas.concat([data_frames[form], df])
 
         logging.info("transfering data to %s", directory)
@@ -612,8 +606,9 @@ class MainWindow(QMainWindow):
         self.settings_dev_layout.addWidget(self.settings_emulate_scan)
 
 
-        # * LOAD CSV *#
+        # * LOAD STARTING STATE *#
         self.attempt_load_csv()
+        self.update_serial_ports()
 
         self.show()
 
