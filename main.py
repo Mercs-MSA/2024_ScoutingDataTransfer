@@ -253,7 +253,7 @@ class DataWorker(QObject):
         self,
         data_frames: pandas.DataFrame,
         directory: str,
-        disk: disk_detector.Disk,
+        disk: disk_detector.Disk | None,
         event_id: str,
     ):
         if not os.path.exists(directory):
@@ -350,6 +350,18 @@ class DataWorker(QObject):
                 os.path.join(directory, form, f"{event_id}_{form}_total.csv"),
                 index=False,
             )
+
+        # create disk directory structure
+        if disk:
+            for form in data_frames:
+                if not os.path.exists(os.path.join(disk.mountpoint, form)):
+                    os.mkdir(os.path.join(disk.mountpoint, form))
+                    logging.info("Created directory structure on %s", disk.mountpoint)
+
+                data_frames[form].to_csv(
+                    os.path.join(disk.mountpoint, form, f"{event_id}_{form}_total.csv"),
+                    index=False,
+                )
 
         self.finished.emit(data_frames)
 
