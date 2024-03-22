@@ -358,6 +358,8 @@ class DataWorker(QObject):
         Display a warning for importing a repeat
         """
 
+        logging.warning("Attempting to import repeated data team number: %s", team)
+
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText(
@@ -367,7 +369,9 @@ class DataWorker(QObject):
         msg.setStandardButtons(
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        return msg.exec()
+
+        ret = msg.exec()
+        return ret
 
 
 class MainWindow(QMainWindow):
@@ -613,6 +617,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def nav(self, page: int):
+        """ Navigate to a page in app_widget using buttons """
 
         for button in self.navigation_buttons:
             button.setChecked(False)
