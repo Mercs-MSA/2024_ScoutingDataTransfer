@@ -28,7 +28,8 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QStackedWidget,
     QGroupBox,
-    QTextBrowser
+    QTextBrowser,
+    QCheckBox,
 )
 from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QCloseEvent, QPixmap
@@ -125,6 +126,7 @@ def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
 
 
 settings: QSettings | None = None
+win: QMainWindow | None = None
 
 PIT_DATA_HEADER = [
     "form",
@@ -261,7 +263,7 @@ class DataWorker(QObject):
         event_id: str,
     ):
         if not os.path.exists(directory):
-            msg = QMessageBox()
+            msg = QMessageBox(win)
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText(f"Directory {directory}\ndoes not exist\nData import cancelled")
             msg.setWindowTitle("Data Error")
@@ -376,7 +378,7 @@ class DataWorker(QObject):
 
         logging.warning("Attempting to import repeated data team number: %s", team)
 
-        msg = QMessageBox()
+        msg = QMessageBox(win)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText(
             f"Repeated data import for {form} form.\nTeam Number: {team}\nImport anyway?"
@@ -433,7 +435,9 @@ class MainWindow(QMainWindow):
         self.nav_button_home = QToolButton()
         self.nav_button_home.setCheckable(True)
         self.nav_button_home.setText("Home")
-        self.nav_button_home.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_home.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
         self.nav_button_home.setIconSize(QSize(48, 48))
         self.nav_button_home.setIcon(qtawesome.icon("mdi6.home"))
         self.nav_button_home.setChecked(True)
@@ -444,10 +448,14 @@ class MainWindow(QMainWindow):
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
         self.nav_button_settings.setText("Settings")
-        self.nav_button_settings.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_settings.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
         self.nav_button_settings.setIconSize(QSize(48, 48))
         self.nav_button_settings.setIcon(qtawesome.icon("mdi6.cog"))
-        self.nav_button_settings.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_settings.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
         self.nav_button_settings.clicked.connect(lambda: self.nav(self.SETTINGS_IDX))
         self.nav_layout.addWidget(self.nav_button_settings)
         self.navigation_buttons.append(self.nav_button_settings)
@@ -455,10 +463,14 @@ class MainWindow(QMainWindow):
         self.nav_button_about = QToolButton()
         self.nav_button_about.setCheckable(True)
         self.nav_button_about.setText("About")
-        self.nav_button_about.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_about.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
         self.nav_button_about.setIconSize(QSize(48, 48))
         self.nav_button_about.setIcon(qtawesome.icon("mdi6.information"))
-        self.nav_button_about.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_about.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
         self.nav_button_about.clicked.connect(lambda: self.nav(self.ABOUT_IDX))
         self.nav_layout.addWidget(self.nav_button_about)
         self.navigation_buttons.append(self.nav_button_about)
@@ -632,9 +644,19 @@ class MainWindow(QMainWindow):
         self.settings_dev_layout = QVBoxLayout()
         self.settings_dev_box.setLayout(self.settings_dev_layout)
 
-        self.settings_emulate_scan = QPushButton("Emuluate Single Scan")
+        self.settings_emulate_scan = QPushButton("Emulate Single Scan")
         self.settings_emulate_scan.clicked.connect(self.emulate_scan)
         self.settings_dev_layout.addWidget(self.settings_emulate_scan)
+
+        self.settings_ui_box = QGroupBox("UI")
+        self.settings_layout.addWidget(self.settings_ui_box)
+
+        self.settings_ui_layout = QVBoxLayout()
+        self.settings_ui_box.setLayout(self.settings_ui_layout)
+
+        self.settings_touchui = QCheckBox("Touch UI")
+        self.settings_touchui.stateChanged.connect(self.set_touch_mode)
+        self.settings_ui_layout.addWidget(self.settings_touchui)
 
         # * ABOUT * #
         self.about_widget = QWidget()
@@ -658,27 +680,55 @@ class MainWindow(QMainWindow):
 
         self.about_description = QTextBrowser()
         self.about_description.setReadOnly(True)
-        self.about_description.setText("A simple tool to convert QR-code output from our <a href=\"https://github.com/Mercs-MSA/2024_ScoutingDataCollection/\">2024_ScoutingDataCollection</a> using a USB Serial based QR/Barcode scanner. Features include automatic exports, automatic backup to attached volumes, support for pits scouting, qualification and playoff scouting.")
-        self.about_description.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self.about_description.setText(
+            "A simple tool to convert QR-code output from our "
+            '<a href="https://github.com/Mercs-MSA/2024_ScoutingDataCollection">'
+            "2024_ScoutingDataCollection</a> using a USB Serial based QR/Barcode scanner. "
+            "Features include automatic exports, automatic backup to attached volumes, support for "
+            "pits scouting, qualification and playoff scouting."
+        )
+        self.about_description.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
         self.about_description.setOpenExternalLinks(True)
-        self.about_description.setMaximumHeight(self.about_description.sizeHint().height())
+        self.about_description.setMaximumHeight(
+            self.about_description.sizeHint().height()
+        )
         self.about_layout.addWidget(self.about_description, 2, 1)
-
 
         # * LOAD STARTING STATE *#
         self.attempt_load_csv()
         self.update_serial_ports()
 
+        if settings.contains("touchui"):
+            self.set_touch_mode(settings.value("touchui", type=bool))
+            self.settings_touchui.setChecked(settings.value("touchui", type=bool))
+
         self.show()
 
     def nav(self, page: int):
-        """ Navigate to a page in app_widget using buttons """
+        """Navigate to a page in app_widget using buttons"""
 
         for button in self.navigation_buttons:
             button.setChecked(False)
 
         self.app_widget.setCurrentIndex(page)
         self.navigation_buttons[page].setChecked(True)
+
+    def set_touch_mode(self, enabled: bool):
+        print(enabled)
+        if enabled:
+            self.setStyleSheet(
+                "QPushButton { height: 36px; font-size: 14px; }"
+                "QToolButton { font-size: 14px; }"
+                "QComboBox { height: 42px; }"
+                "QLineEdit { height: 36px; }"
+                "QCheckBox::indicator { width: 32px; height: 32px; }"
+            )
+        else:
+            self.setStyleSheet("")
+
+        settings.setValue("touchui", enabled)
 
     def select_transfer_dir(self) -> None:
         """
@@ -830,7 +880,7 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
             )
         else:
-            msg = QMessageBox()
+            msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText(
                 "Serial connect operation failed\n"
@@ -859,7 +909,7 @@ class MainWindow(QMainWindow):
         """
 
         if self.serial.error() == QSerialPort.SerialPortError.NoError:
-            msg = QMessageBox()
+            msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setText("Connection Successful!")
             msg.setWindowTitle("Serial")
@@ -869,7 +919,7 @@ class MainWindow(QMainWindow):
 
         if self.serial.isOpen():
             self.serial.close()
-            msg = QMessageBox()
+            msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText(
                 f"{self.serial.error().name}\nError occured during serial operation"
@@ -887,7 +937,7 @@ class MainWindow(QMainWindow):
         Serial shutdown callback
         """
 
-        msg = QMessageBox()
+        msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Information)
         msg.setText("Serial controller shut down")
         msg.setWindowTitle("Serial")
@@ -950,7 +1000,7 @@ class MainWindow(QMainWindow):
         Display a serial port list refresh error
         """
 
-        msg = QMessageBox()
+        msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText("Port refresh required")
         msg.setWindowTitle("Can't connect")
@@ -963,7 +1013,7 @@ class MainWindow(QMainWindow):
         """
         logging.error("Data rx error: %s", errcode.name)
 
-        msg = QMessageBox()
+        msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
         msg.setText("Recieved data does not match expected data")
         msg.setWindowTitle("Data Error")
@@ -990,7 +1040,7 @@ class MainWindow(QMainWindow):
         with open("example_scan.txt", "r", encoding="utf-8") as file:
             self.on_data_retrieved(file.read().strip("\r\n ") + "\r\n")
 
-    def closeEvent( # pylint: disable=invalid-name
+    def closeEvent(  # pylint: disable=invalid-name
         self, a0: QCloseEvent | None
     ) -> None:
         """
