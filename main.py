@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QMessageBox,
     QStackedWidget,
+    QGroupBox
 )
 from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QCloseEvent
@@ -597,6 +598,20 @@ class MainWindow(QMainWindow):
         self.settings_widget = QWidget()
         self.app_widget.insertWidget(self.SETTINGS_IDX, self.settings_widget)
 
+        self.settings_layout = QVBoxLayout()
+        self.settings_widget.setLayout(self.settings_layout)
+
+        self.settings_dev_box = QGroupBox("Developer Options")
+        self.settings_layout.addWidget(self.settings_dev_box)
+
+        self.settings_dev_layout = QVBoxLayout()
+        self.settings_dev_box.setLayout(self.settings_dev_layout)
+
+        self.settings_emulate_scan = QPushButton("Emuluate Single Scan")
+        self.settings_emulate_scan.clicked.connect(self.emulate_scan)
+        self.settings_dev_layout.addWidget(self.settings_emulate_scan)
+
+
         # * LOAD CSV *#
         self.attempt_load_csv()
 
@@ -915,6 +930,10 @@ class MainWindow(QMainWindow):
         self.serial_flow.setEnabled(ena)
         self.serial_parity.setEnabled(ena)
         self.serial_disconnect.setEnabled(not ena)
+
+    def emulate_scan(self):
+        with open("example_scan.txt", "r", encoding="utf-8") as file:
+            self.on_data_retrieved(file.read().strip("\r\n ") + "\r\n")
 
     def closeEvent( # pylint: disable=invalid-name
         self, a0: QCloseEvent | None

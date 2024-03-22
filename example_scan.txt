@@ -1,0 +1,1 @@
+qual||0||0||red1||false||false||false||false||yes||0||0||0||0||no,no,no||no,no,no,no,no||false||false||0||0||0||0||0||0||0||no||no||no||true||0||0||true||failed||no||nr||TESTDATA
