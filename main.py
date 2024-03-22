@@ -418,6 +418,9 @@ class MainWindow(QMainWindow):
         self.nav_button_home = QToolButton()
         self.nav_button_home.setCheckable(True)
         self.nav_button_home.setText("Home")
+        self.nav_button_home.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_home.setIconSize(QSize(48, 48))
+        self.nav_button_home.setIcon(qtawesome.icon("mdi6.home"))
         self.nav_button_home.setChecked(True)
         self.nav_button_home.clicked.connect(lambda: self.nav(self.HOME_IDX))
         self.nav_layout.addWidget(self.nav_button_home)
@@ -426,6 +429,10 @@ class MainWindow(QMainWindow):
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
         self.nav_button_settings.setText("Settings")
+        self.nav_button_settings.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.nav_button_settings.setIconSize(QSize(48, 48))
+        self.nav_button_settings.setIcon(qtawesome.icon("mdi6.cog"))
+        self.nav_button_settings.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self.nav_button_settings.clicked.connect(lambda: self.nav(self.SETTINGS_IDX))
         self.nav_layout.addWidget(self.nav_button_settings)
         self.navigation_buttons.append(self.nav_button_settings)
@@ -521,6 +528,7 @@ class MainWindow(QMainWindow):
 
         if settings.contains("baud"):
             self.serial_baud.setCurrentText(str(settings.value("baud")))
+            self.serial.setBaudRate(int(settings.value("baud")))
 
         self.serial_baud.currentTextChanged.connect(self.change_baud)
         self.serial_grid.addWidget(self.serial_baud, 1, 0)
@@ -531,6 +539,7 @@ class MainWindow(QMainWindow):
 
         if settings.contains("databits"):
             self.serial_bits.setCurrentText(settings.value("databits"))
+            self.serial.setDataBits(DATA_BITS[settings.value("databits")])
 
         self.serial_bits.currentTextChanged.connect(self.change_data_bits)
         self.serial_grid.addWidget(self.serial_bits, 1, 1)
@@ -541,6 +550,7 @@ class MainWindow(QMainWindow):
 
         if settings.contains("stopbits"):
             self.serial_stop.setCurrentText(settings.value("stopbits"))
+            self.serial.setStopBits(STOP_BITS[settings.value("stopbits")])
 
         self.serial_stop.currentTextChanged.connect(self.change_stop_bits)
         self.serial_grid.addWidget(self.serial_stop, 1, 2)
@@ -551,6 +561,7 @@ class MainWindow(QMainWindow):
 
         if settings.contains("flow"):
             self.serial_flow.setCurrentText(settings.value("flow"))
+            self.serial.setFlowControl(FLOW_CONTROL[settings.value("flow")])
 
         self.serial_flow.currentTextChanged.connect(self.change_flow)
         self.serial_grid.addWidget(self.serial_flow, 1, 3)
@@ -561,6 +572,7 @@ class MainWindow(QMainWindow):
 
         if settings.contains("parity"):
             self.serial_parity.setCurrentText(settings.value("parity"))
+            self.serial.setParity(PARITY[settings.value("parity")])
 
         self.serial_parity.currentTextChanged.connect(self.change_parity)
         self.serial_grid.addWidget(self.serial_parity, 1, 4)
