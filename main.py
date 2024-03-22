@@ -7,8 +7,9 @@ import enum
 import sys
 import os
 import json
-import pandas
 import logging
+
+import pandas
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -247,17 +248,20 @@ class DataWorker(QObject):
         self.savedir = savedir
         self.savedisk = savedisk
 
-    def run(self, data_frames: pandas.DataFrame, directory: str, disk: disk_detector.Disk, event_id: str):
+    def run(
+        self,
+        data_frames: pandas.DataFrame,
+        directory: str,
+        disk: disk_detector.Disk,
+        event_id: str,
+    ):
+        print(self.data)
         if not os.path.exists(directory):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setText(
-                f"Directory {directory}\ndoes not exist\nData import cancelled"
-            )
+            msg.setText(f"Directory {directory}\ndoes not exist\nData import cancelled")
             msg.setWindowTitle("Data Error")
-            msg.setStandardButtons(
-                QMessageBox.StandardButton.Ok
-            )
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
             self.finished.emit(data_frames)
             return
@@ -291,11 +295,14 @@ class DataWorker(QObject):
         df = pandas.DataFrame([data], columns=header)
 
         add_to_df = True
-
+        print(data_frames["pit"])
+        print(df)
         # form type
         if form == "pit":
             # check for repeats
-            if int(df["teamNumber"].iloc[0]) in [int(x) for x in data_frames["pit"]["teamNumber"].to_list()]:
+            if int(df["teamNumber"].iloc[0]) in [
+                int(x) for x in data_frames["pit"]["teamNumber"].to_list()
+            ]:
                 if (
                     self.on_repeated_data("pit", df["teamNumber"].iloc[0])
                     == QMessageBox.StandardButton.No
@@ -304,7 +311,8 @@ class DataWorker(QObject):
         elif form == "qual":
             # check for repeats
             if (
-                int(df["teamNumber"].iloc[0]) in [int(x) for x in data_frames["qual"]["teamNumber"].to_list()]
+                int(df["teamNumber"].iloc[0])
+                in [int(x) for x in data_frames["qual"]["teamNumber"].to_list()]
             ) or (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
@@ -330,6 +338,10 @@ class DataWorker(QObject):
                     add_to_df = False
 
         if add_to_df:
+            print([data_frames[form]])
+            print("")
+            print(df["teamNumber"])
+            print(df)
             data_frames[form] = pandas.concat([data_frames[form], df])
 
         logging.info("transfering data to %s", directory)
@@ -339,7 +351,10 @@ class DataWorker(QObject):
             if not os.path.exists(os.path.join(directory, form)):
                 os.mkdir(os.path.join(directory, form))
 
-            data_frames[form].to_csv(os.path.join(directory, form, f"{event_id}_{form}_total.csv"), index=False)
+            data_frames[form].to_csv(
+                os.path.join(directory, form, f"{event_id}_{form}_total.csv"),
+                index=False,
+            )
 
         self.finished.emit(data_frames)
 
@@ -613,16 +628,22 @@ class MainWindow(QMainWindow):
         self.attempt_load_csv()
 
     def attempt_load_csv(self):
-        self.data_frames = {
-            "pit": pandas.DataFrame(columns=PIT_DATA_HEADER),
-            "qual": pandas.DataFrame(columns=QUAL_DATA_HEADER),
-            "playoff": pandas.DataFrame(columns=PLAYOFF_DATA_HEADER),
-        }
-
         event_id = "2024txtest"
         for form in self.data_frames:
-            if os.path.exists(os.path.join(self.transfer_dir_textbox.text(), form, f"{event_id}_{form}_total.csv")):
-                self.data_frames[form] = pandas.read_csv(os.path.join(self.transfer_dir_textbox.text(), form, f"{event_id}_{form}_total.csv"))
+            if os.path.exists(
+                os.path.join(
+                    self.transfer_dir_textbox.text(),
+                    form,
+                    f"{event_id}_{form}_total.csv",
+                )
+            ):
+                self.data_frames[form] = pandas.read_csv(
+                    os.path.join(
+                        self.transfer_dir_textbox.text(),
+                        form,
+                        f"{event_id}_{form}_total.csv",
+                    )
+                )
 
     def update_serial_ports(self):
         """
@@ -823,7 +844,7 @@ class MainWindow(QMainWindow):
                     self.data_frames,
                     self.transfer_dir_textbox.text(),
                     self.disk_widget.get_selected_disk(),
-                    "2024txtest"
+                    "2024txtest",
                 )
             )
 
@@ -883,9 +904,9 @@ class MainWindow(QMainWindow):
         self.serial_parity.setEnabled(ena)
         self.serial_disconnect.setEnabled(not ena)
 
-    def closeEvent(
+    def closeEvent( # pylint: disable=invalid-name
         self, a0: QCloseEvent | None
-    ) -> None:  # pylint: disable=invalid-name
+    ) -> None:
         """
         Application close event
 
