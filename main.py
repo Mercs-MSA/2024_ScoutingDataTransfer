@@ -600,6 +600,7 @@ class MainWindow(QMainWindow):
 
         self.pit_table_view = QTableView()
         self.pit_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.pit_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.pit_table_view.setModel(self.pit_model)
 
         self.data_view_pit_layout.addWidget(self.pit_table_view)
@@ -615,6 +616,7 @@ class MainWindow(QMainWindow):
 
         self.qual_table_view = QTableView()
         self.qual_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.qual_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.qual_table_view.setModel(self.qual_model)
 
         self.data_view_qual_layout.addWidget(self.qual_table_view)
@@ -630,6 +632,7 @@ class MainWindow(QMainWindow):
 
         self.playoff_table_view = QTableView()
         self.playoff_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.playoff_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.playoff_table_view.setModel(self.playoff_model)
 
         self.data_view_playoff_layout.addWidget(self.playoff_table_view)
@@ -827,9 +830,9 @@ class MainWindow(QMainWindow):
             QScroller.grabGesture(self.playoff_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
         else:
             self.setStyleSheet("")
-            QScroller.ungrabGesture(self.pit_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.ungrabGesture(self.qual_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.ungrabGesture(self.playoff_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.pit_table_view.viewport())
+            QScroller.ungrabGesture(self.qual_table_view.viewport())
+            QScroller.ungrabGesture(self.playoff_table_view.viewport())
 
         settings.setValue("touchui", enabled)
 
