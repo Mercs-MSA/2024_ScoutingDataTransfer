@@ -35,7 +35,6 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QAbstractItemView,
     QScroller,
-    QScrollerProperties,
 )
 from PyQt6.QtCore import (
     QSettings,
@@ -45,7 +44,6 @@ from PyQt6.QtCore import (
     pyqtSignal,
     QObject,
     QThread,
-    QEasingCurve,
 )
 from PyQt6.QtGui import QCloseEvent, QPixmap, QStandardItemModel, QStandardItem, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -56,7 +54,7 @@ import disk_widget
 import disk_detector
 import utils
 
-__version__ = "0.1.0-amarillo"
+__version__ = "v0.2.0-amarillo"
 
 BAUDS = [
     300,
