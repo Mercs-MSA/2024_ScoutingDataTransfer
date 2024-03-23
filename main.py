@@ -818,6 +818,8 @@ class MainWindow(QMainWindow):
                 "QLineEdit { height: 36px; }"
                 "QCheckBox::indicator { width: 32px; height: 32px; }"
                 "QTabBar::tab { font-size: 16px; }"
+                "QScrollBar:vertical:handle { width: 20px; }"
+                "QScrollBar:horizontal:handle { height: 20px; }"
             )
         else:
             self.setStyleSheet("")
