@@ -824,12 +824,12 @@ class MainWindow(QMainWindow):
             )
             QScroller.grabGesture(self.pit_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
             QScroller.grabGesture(self.qual_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.grabGesture(self.playoff_model.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(self.playoff_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
         else:
             self.setStyleSheet("")
             QScroller.ungrabGesture(self.pit_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
             QScroller.ungrabGesture(self.qual_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.ungrabGesture(self.playoff_model.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.playoff_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
 
         settings.setValue("touchui", enabled)
 
