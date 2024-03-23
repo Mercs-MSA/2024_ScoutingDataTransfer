@@ -33,7 +33,8 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QTableView,
     QTabWidget,
-    QAbstractItemView
+    QAbstractItemView,
+    QScroller,
 )
 from PyQt6.QtCore import (
     QSettings,
@@ -821,8 +822,14 @@ class MainWindow(QMainWindow):
                 "QScrollBar:vertical:handle { width: 20px; }"
                 "QScrollBar:horizontal:handle { height: 20px; }"
             )
+            QScroller.grabGesture(self.pit_table_view, QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(self.qual_table_view, QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(self.playoff_model, QScroller.ScrollerGestureType.TouchGesture)
         else:
             self.setStyleSheet("")
+            QScroller.ungrabGesture(self.pit_table_view, QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.qual_table_view, QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.playoff_model, QScroller.ScrollerGestureType.TouchGesture)
 
         settings.setValue("touchui", enabled)
 
