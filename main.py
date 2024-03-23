@@ -8,6 +8,7 @@ import sys
 import os
 import json
 import logging
+import math
 
 import pandas
 
@@ -30,9 +31,20 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QTextBrowser,
     QCheckBox,
+    QTableView,
+    QTabWidget,
+    QAbstractItemView
 )
-from PyQt6.QtCore import QSettings, QSize, QIODevice, Qt, pyqtSignal, QObject, QThread
-from PyQt6.QtGui import QCloseEvent, QPixmap
+from PyQt6.QtCore import (
+    QSettings,
+    QSize,
+    QIODevice,
+    Qt,
+    pyqtSignal,
+    QObject,
+    QThread,
+)
+from PyQt6.QtGui import QCloseEvent, QPixmap, QStandardItemModel, QStandardItem, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -157,7 +169,6 @@ PIT_DATA_HEADER = [
     "autonRoutes",
     "autonPrefStart",
     "autonStrat",
-    "hasAuton",
     "repairability",
     "maneuverability",
     "teleopStrat",
@@ -392,6 +403,47 @@ class DataWorker(QObject):
         return ret
 
 
+class PandasModel(QStandardItemModel):
+    def __init__(self, data: pandas.DataFrame, parent=None):
+        QStandardItemModel.__init__(self, parent)
+        self._data = data
+        for row in data.values.tolist():
+            data_row = [ QStandardItem("{0:.6f}".format(x)) for x in row ]
+            self.appendRow(data_row)
+        return
+
+    def rowCount(self, parent=None):
+        return len(self._data.values)
+
+    def columnCount(self, parent=None):
+        return self._data.columns.size
+    
+    def load_data(self, data: pandas.DataFrame):
+        self._data = data
+        for i, row in enumerate(self._data.values.tolist()):
+            for j, value in enumerate(row):
+                item = self.item(i, j)
+                if isinstance(value, float) and math.isnan(value):
+                    icon = qtawesome.icon("mdi6.null")
+                else:
+                    icon = QIcon()
+
+                if item:
+                    item.setText(str(value))
+                    item.setIcon(icon)
+                else:
+                    stditem = QStandardItem(str(value))
+                    stditem.setIcon(icon)
+                    self.setItem(i, j, stditem)
+
+    def headerData(self, x, orientation, role):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+            return self._data.columns[x]
+        if orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
+            return self._data.index[x]
+        return None
+
+
 class MainWindow(QMainWindow):
     """Main Window"""
 
@@ -414,9 +466,9 @@ class MainWindow(QMainWindow):
         self.data_buffer = ""  # data may come in split up
 
         self.data_frames = {
-            "pit": pandas.DataFrame(columns=PIT_DATA_HEADER),
-            "qual": pandas.DataFrame(columns=QUAL_DATA_HEADER),
-            "playoff": pandas.DataFrame(columns=PLAYOFF_DATA_HEADER),
+            "pit": pandas.DataFrame(),
+            "qual": pandas.DataFrame(),
+            "playoff": pandas.DataFrame(),
         }
 
         self.root_widget = QWidget()
@@ -496,8 +548,6 @@ class MainWindow(QMainWindow):
         self.drive_layout = QVBoxLayout()
         self.drive_widget.setLayout(self.drive_layout)
 
-        self.drive_layout.addStretch()
-
         self.transfer_dir_label = QLabel("Transfer Directory")
         self.drive_layout.addWidget(self.transfer_dir_label)
 
@@ -531,13 +581,57 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
 
-        self.drive_layout.addStretch()
-
         self.disk_widget = disk_widget.DiskMgmtWidget(predicate=scouting_disk_predicate)
         self.disk_widget.set_select_visible(False)
         self.drive_layout.addWidget(self.disk_widget)
 
-        self.drive_layout.addStretch()
+        self.data_view_tabs = QTabWidget()
+        self.drive_layout.addWidget(self.data_view_tabs)
+
+        self.data_view_pit_widget = QWidget()
+        self.data_view_tabs.addTab(self.data_view_pit_widget, "Pit")
+
+        self.data_view_pit_layout = QVBoxLayout()
+        self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
+        self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
+
+        self.pit_model = PandasModel(self.data_frames["pit"])
+
+        self.pit_table_view = QTableView()
+        self.pit_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.pit_table_view.setModel(self.pit_model)
+
+        self.data_view_pit_layout.addWidget(self.pit_table_view)
+
+        self.data_view_qual_widget = QWidget()
+        self.data_view_tabs.addTab(self.data_view_qual_widget, "Qualifications")
+
+        self.data_view_qual_layout = QVBoxLayout()
+        self.data_view_qual_layout.setContentsMargins(0, 0, 0, 0)
+        self.data_view_qual_widget.setLayout(self.data_view_qual_layout)
+
+        self.qual_model = PandasModel(self.data_frames["qual"])
+
+        self.qual_table_view = QTableView()
+        self.qual_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.qual_table_view.setModel(self.qual_model)
+
+        self.data_view_qual_layout.addWidget(self.qual_table_view)
+
+        self.data_view_playoff_widget = QWidget()
+        self.data_view_tabs.addTab(self.data_view_playoff_widget, "Playoffs")
+
+        self.data_view_playoff_layout = QVBoxLayout()
+        self.data_view_playoff_layout.setContentsMargins(0, 0, 0, 0)
+        self.data_view_playoff_widget.setLayout(self.data_view_playoff_layout)
+
+        self.playoff_model = PandasModel(self.data_frames["playoff"])
+
+        self.playoff_table_view = QTableView()
+        self.playoff_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.playoff_table_view.setModel(self.playoff_model)
+
+        self.data_view_playoff_layout.addWidget(self.playoff_table_view)
 
         # Scan manager (right side)
         self.scanner_widget = QWidget()
@@ -716,7 +810,6 @@ class MainWindow(QMainWindow):
         self.navigation_buttons[page].setChecked(True)
 
     def set_touch_mode(self, enabled: bool):
-        print(enabled)
         if enabled:
             self.setStyleSheet(
                 "QPushButton { height: 36px; font-size: 14px; }"
@@ -724,6 +817,7 @@ class MainWindow(QMainWindow):
                 "QComboBox { height: 42px; }"
                 "QLineEdit { height: 36px; }"
                 "QCheckBox::indicator { width: 32px; height: 32px; }"
+                "QTabBar::tab { font-size: 16px; }"
             )
         else:
             self.setStyleSheet("")
@@ -776,6 +870,16 @@ class MainWindow(QMainWindow):
                         f"{event_id}_{form}_total.csv",
                     )
                 )
+            elif form == "pit":
+                self.data_frames["pit"] = pandas.DataFrame(columns=PIT_DATA_HEADER)
+            elif form == "qual":
+                self.data_frames["qual"] = pandas.DataFrame(columns=QUAL_DATA_HEADER)
+            elif form == "playoff":
+                self.data_frames["playoff"] = pandas.DataFrame(columns=PLAYOFF_DATA_HEADER)
+
+        self.pit_model.load_data(self.data_frames["pit"])
+        self.qual_model.load_data(self.data_frames["qual"])
+        self.playoff_model.load_data(self.data_frames["playoff"])
 
     def update_serial_ports(self):
         """
@@ -875,11 +979,13 @@ class MainWindow(QMainWindow):
 
         ok = self.serial.open(QIODevice.ReadWrite)
         if ok:
+            logging.info("Connected to serial")
             self.set_serial_options_enabled(False)
             self.connection_icon.setPixmap(
                 qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
             )
         else:
+            logging.error("Can't connect to serial port, %s", self.serial.error().name)
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText(
@@ -992,6 +1098,9 @@ class MainWindow(QMainWindow):
         )
 
         self.data_frames = df
+        self.pit_model.load_data(self.data_frames["pit"])
+        self.qual_model.load_data(self.data_frames["qual"])
+        self.playoff_model.load_data(self.data_frames["playoff"])
 
         self.is_scanning = False
 
