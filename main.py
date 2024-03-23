@@ -822,14 +822,14 @@ class MainWindow(QMainWindow):
                 "QScrollBar:vertical:handle { width: 20px; }"
                 "QScrollBar:horizontal:handle { height: 20px; }"
             )
-            QScroller.grabGesture(self.pit_table_view, QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.grabGesture(self.qual_table_view, QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.grabGesture(self.playoff_model, QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(self.pit_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(self.qual_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(self.playoff_model.viewport(), QScroller.ScrollerGestureType.TouchGesture)
         else:
             self.setStyleSheet("")
-            QScroller.ungrabGesture(self.pit_table_view, QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.ungrabGesture(self.qual_table_view, QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.ungrabGesture(self.playoff_model, QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.pit_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.qual_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.ungrabGesture(self.playoff_model.viewport(), QScroller.ScrollerGestureType.TouchGesture)
 
         settings.setValue("touchui", enabled)
 
