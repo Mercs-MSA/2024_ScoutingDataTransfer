@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QAbstractItemView,
     QScroller,
+    QScrollerProperties,
 )
 from PyQt6.QtCore import (
     QSettings,
@@ -44,6 +45,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
     QObject,
     QThread,
+    QEasingCurve,
 )
 from PyQt6.QtGui import QCloseEvent, QPixmap, QStandardItemModel, QStandardItem, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -602,7 +604,7 @@ class MainWindow(QMainWindow):
         self.pit_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.pit_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.pit_table_view.setModel(self.pit_model)
-
+        self.pit_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.data_view_pit_layout.addWidget(self.pit_table_view)
 
         self.data_view_qual_widget = QWidget()
@@ -618,7 +620,7 @@ class MainWindow(QMainWindow):
         self.qual_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.qual_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.qual_table_view.setModel(self.qual_model)
-
+        self.qual_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.data_view_qual_layout.addWidget(self.qual_table_view)
 
         self.data_view_playoff_widget = QWidget()
@@ -634,7 +636,7 @@ class MainWindow(QMainWindow):
         self.playoff_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.playoff_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.playoff_table_view.setModel(self.playoff_model)
-
+        self.playoff_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.data_view_playoff_layout.addWidget(self.playoff_table_view)
 
         # Scan manager (right side)
@@ -833,7 +835,7 @@ class MainWindow(QMainWindow):
             QScroller.ungrabGesture(self.pit_table_view.viewport())
             QScroller.ungrabGesture(self.qual_table_view.viewport())
             QScroller.ungrabGesture(self.playoff_table_view.viewport())
-
+          
         settings.setValue("touchui", enabled)
 
     def select_transfer_dir(self) -> None:
