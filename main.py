@@ -411,7 +411,7 @@ class PandasModel(QStandardItemModel):
         QStandardItemModel.__init__(self, parent)
         self._data = data
         for row in data.values.tolist():
-            data_row = [ QStandardItem("{0:.6f}".format(x)) for x in row ]
+            data_row = [QStandardItem("{0:.6f}".format(x)) for x in row]
             self.appendRow(data_row)
         return
 
@@ -420,7 +420,7 @@ class PandasModel(QStandardItemModel):
 
     def columnCount(self, parent=None):
         return self._data.columns.size
-    
+
     def load_data(self, data: pandas.DataFrame):
         self._data = data
         for i, row in enumerate(self._data.values.tolist()):
@@ -440,9 +440,15 @@ class PandasModel(QStandardItemModel):
                     self.setItem(i, j, stditem)
 
     def headerData(self, x, orientation, role):
-        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+        if (
+            orientation == Qt.Orientation.Horizontal
+            and role == Qt.ItemDataRole.DisplayRole
+        ):
             return self._data.columns[x]
-        if orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
+        if (
+            orientation == Qt.Orientation.Vertical
+            and role == Qt.ItemDataRole.DisplayRole
+        ):
             return self._data.index[x]
         return None
 
@@ -601,10 +607,16 @@ class MainWindow(QMainWindow):
         self.pit_model = PandasModel(self.data_frames["pit"])
 
         self.pit_table_view = QTableView()
-        self.pit_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.pit_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.pit_table_view.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.pit_table_view.setSelectionMode(
+            QAbstractItemView.SelectionMode.NoSelection
+        )
         self.pit_table_view.setModel(self.pit_model)
-        self.pit_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.pit_table_view.setHorizontalScrollMode(
+            QAbstractItemView.ScrollMode.ScrollPerPixel
+        )
         self.data_view_pit_layout.addWidget(self.pit_table_view)
 
         self.data_view_qual_widget = QWidget()
@@ -617,10 +629,16 @@ class MainWindow(QMainWindow):
         self.qual_model = PandasModel(self.data_frames["qual"])
 
         self.qual_table_view = QTableView()
-        self.qual_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.qual_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.qual_table_view.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.qual_table_view.setSelectionMode(
+            QAbstractItemView.SelectionMode.NoSelection
+        )
         self.qual_table_view.setModel(self.qual_model)
-        self.qual_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.qual_table_view.setHorizontalScrollMode(
+            QAbstractItemView.ScrollMode.ScrollPerPixel
+        )
         self.data_view_qual_layout.addWidget(self.qual_table_view)
 
         self.data_view_playoff_widget = QWidget()
@@ -633,10 +651,16 @@ class MainWindow(QMainWindow):
         self.playoff_model = PandasModel(self.data_frames["playoff"])
 
         self.playoff_table_view = QTableView()
-        self.playoff_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.playoff_table_view.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.playoff_table_view.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.playoff_table_view.setSelectionMode(
+            QAbstractItemView.SelectionMode.NoSelection
+        )
         self.playoff_table_view.setModel(self.playoff_model)
-        self.playoff_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.playoff_table_view.setHorizontalScrollMode(
+            QAbstractItemView.ScrollMode.ScrollPerPixel
+        )
         self.data_view_playoff_layout.addWidget(self.playoff_table_view)
 
         # Scan manager (right side)
@@ -722,11 +746,10 @@ class MainWindow(QMainWindow):
 
         self.scanner_layout.addStretch()
 
-        self.connection_icon = QLabel()
+        self.connection_icon = qtawesome.IconWidget()
         self.connection_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.connection_icon.setPixmap(
-            qtawesome.icon("mdi6.serial-port").pixmap(256, 256)
-        )
+        self.connection_icon.setIconSize(QSize(256, 256))
+        self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
         self.scanner_layout.addWidget(self.connection_icon)
 
         self.scanner_layout.addStretch()
@@ -796,6 +819,9 @@ class MainWindow(QMainWindow):
         )
         self.about_layout.addWidget(self.about_description, 2, 1)
 
+        # * UI post-load *#
+        self.spin_animation = qtawesome.Spin(self.connection_icon, interval=5, step=2)
+
         # * LOAD STARTING STATE *#
         self.attempt_load_csv()
         self.update_serial_ports()
@@ -827,15 +853,24 @@ class MainWindow(QMainWindow):
                 "QScrollBar:vertical:handle { width: 20px; }"
                 "QScrollBar:horizontal:handle { height: 20px; }"
             )
-            QScroller.grabGesture(self.pit_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.grabGesture(self.qual_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
-            QScroller.grabGesture(self.playoff_table_view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+            QScroller.grabGesture(
+                self.pit_table_view.viewport(),
+                QScroller.ScrollerGestureType.TouchGesture,
+            )
+            QScroller.grabGesture(
+                self.qual_table_view.viewport(),
+                QScroller.ScrollerGestureType.TouchGesture,
+            )
+            QScroller.grabGesture(
+                self.playoff_table_view.viewport(),
+                QScroller.ScrollerGestureType.TouchGesture,
+            )
         else:
             self.setStyleSheet("")
             QScroller.ungrabGesture(self.pit_table_view.viewport())
             QScroller.ungrabGesture(self.qual_table_view.viewport())
             QScroller.ungrabGesture(self.playoff_table_view.viewport())
-          
+
         settings.setValue("touchui", enabled)
 
     def select_transfer_dir(self) -> None:
@@ -889,7 +924,9 @@ class MainWindow(QMainWindow):
             elif form == "qual":
                 self.data_frames["qual"] = pandas.DataFrame(columns=QUAL_DATA_HEADER)
             elif form == "playoff":
-                self.data_frames["playoff"] = pandas.DataFrame(columns=PLAYOFF_DATA_HEADER)
+                self.data_frames["playoff"] = pandas.DataFrame(
+                    columns=PLAYOFF_DATA_HEADER
+                )
 
         self.pit_model.load_data(self.data_frames["pit"])
         self.qual_model.load_data(self.data_frames["qual"])
@@ -995,8 +1032,8 @@ class MainWindow(QMainWindow):
         if ok:
             logging.info("Connected to serial")
             self.set_serial_options_enabled(False)
-            self.connection_icon.setPixmap(
-                qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
+            self.connection_icon.setIcon(
+                qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4")
             )
         else:
             logging.error("Can't connect to serial port, %s", self.serial.error().name)
@@ -1019,9 +1056,7 @@ class MainWindow(QMainWindow):
 
         self.serial.close()
         self.set_serial_options_enabled(True)
-        self.connection_icon.setPixmap(
-            qtawesome.icon("mdi6.serial-port").pixmap(256, 256)
-        )
+        self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
 
     def on_serial_error(self):
         """
@@ -1048,8 +1083,8 @@ class MainWindow(QMainWindow):
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
 
-            self.connection_icon.setPixmap(
-                qtawesome.icon("mdi6.alert-decagram", color="#f44336").pixmap(256, 256)
+            self.connection_icon.setIcon(
+                qtawesome.icon("mdi6.alert-decagram", color="#f44336")
             )
 
     def serial_close(self):
@@ -1067,8 +1102,10 @@ class MainWindow(QMainWindow):
         self.set_serial_options_enabled(True)
 
     def on_serial_recieve(self):
-        self.connection_icon.setPixmap(
-            qtawesome.icon("mdi6.timer-sand", color="#03a9f4").pixmap(256, 256)
+        self.connection_icon.setIcon(
+            qtawesome.icon(
+                "mdi6.loading", color="#03a9f4", animation=self.spin_animation
+            )
         )
         data = self.serial.readLine()
         self.data_buffer += data.data().decode()
@@ -1107,8 +1144,8 @@ class MainWindow(QMainWindow):
             self.worker_thread.start()
 
     def on_data_transfer_complete(self, df: pandas.DataFrame):
-        self.connection_icon.setPixmap(
-            qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4").pixmap(256, 256)
+        self.connection_icon.setIcon(
+            qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4")
         )
 
         self.data_frames = df
