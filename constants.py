@@ -73,6 +73,7 @@ PIT_DATA_HEADER: typing.Final = [
     "turretShoot",
     "extendShoot",
     "hasBlocker",
+    "hasAutoAim",
     "hasAuton",
     "autonSpeakerNotes",
     "autonAmpNotes",
