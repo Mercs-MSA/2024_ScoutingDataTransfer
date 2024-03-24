@@ -6,9 +6,7 @@ Transfer data form scouting tablets using qr code scanner
 import enum
 import sys
 import os
-import json
 import logging
-import math
 
 import pandas
 
@@ -45,211 +43,21 @@ from PyQt6.QtCore import (
     QObject,
     QThread,
 )
-from PyQt6.QtGui import QCloseEvent, QPixmap, QStandardItemModel, QStandardItem, QIcon
+from PyQt6.QtGui import QCloseEvent, QPixmap
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
 
 import disk_widget
 import disk_detector
-import utils
+import data_models
+import constants
 
 __version__ = "v0.2.0-amarillo"
-
-BAUDS = [
-    300,
-    600,
-    900,
-    1200,
-    2400,
-    3200,
-    4800,
-    9600,
-    19200,
-    38400,
-    57600,
-    115200,
-    230400,
-    460800,
-    921600,
-]
-
-DATA_BITS = {
-    "5 Data Bits": QSerialPort.DataBits.Data5,
-    "6 Data Bits": QSerialPort.DataBits.Data6,
-    "7 Data Bits": QSerialPort.DataBits.Data7,
-    "8 Data Bits": QSerialPort.DataBits.Data8,
-}
-
-STOP_BITS = {
-    "1 Stop Bits": QSerialPort.StopBits.OneStop,
-    "1.5 Stop Bits": QSerialPort.StopBits.OneAndHalfStop,
-    "2 Stop Bits": QSerialPort.StopBits.TwoStop,
-}
-
-PARITY = {
-    "No Parity": QSerialPort.Parity.NoParity,
-    "Even Parity": QSerialPort.Parity.EvenParity,
-    "Odd Parity": QSerialPort.Parity.OddParity,
-    "Mark Parity": QSerialPort.Parity.MarkParity,
-    "Space Parity": QSerialPort.Parity.SpaceParity,
-}
-
-FLOW_CONTROL = {
-    "No Flow Control": QSerialPort.FlowControl.NoFlowControl,
-    "Software FC": QSerialPort.FlowControl.SoftwareControl,
-    "Hardware FC": QSerialPort.FlowControl.HardwareControl,
-}
-
-
-def scouting_disk_predicate(disk: disk_detector.Disk) -> tuple[bool, str, str]:
-    """Disk detection predicate
-
-    Args:
-        disk (disk_detector.Disk): Disk to attempt search
-
-    Returns:
-        tuple[bool, str, str]: Output from predicate (Visible, Name, Icon)
-    """
-    if os.path.isfile(os.path.join(disk.mountpoint, "scout_disk_opts.json")):
-        with open(
-            os.path.join(disk.mountpoint, "scout_disk_opts.json"), "r", encoding="utf-8"
-        ) as file:
-            opts = json.load(file)
-    else:
-        opts = {}
-
-    if "display" in opts:
-        if "id" in opts:
-            return (
-                True,
-                f"ID: {opts['id']} {disk.mountpoint} fs:{disk.fstype} "
-                f"cap:{utils.format_bytes(disk.capacity)}",
-                str(opts["id"]),
-            )
-        if opts["display"]:
-            return (
-                True,
-                f"ID: ?? {disk.mountpoint} fs:{disk.fstype} "
-                "cap:{utils.format_bytes(disk.capacity)}",
-                "0",
-            )
-
-    return False, "", "??"
 
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
-
-PIT_DATA_HEADER = [
-    "form",
-    "teamNumber",
-    "botLength",
-    "botWidth",
-    "botHeight",
-    "botWeight",
-    "drivebase",
-    "drivebaseAlt",
-    "climber",
-    "climberAlt",
-    "isKitbot",
-    "intakeInBumper",
-    "speakerScore",
-    "ampScore",
-    "trapScore",
-    "groundPickup",
-    "sourcePickup",
-    "turretShoot",
-    "extendShoot",
-    "hasBlocker",
-    "hasAuton",
-    "autonSpeakerNotes",
-    "autonAmpNotes",
-    "autonConsistency",
-    "autonVersatility",
-    "autonRoutes",
-    "autonPrefStart",
-    "autonStrat",
-    "repairability",
-    "maneuverability",
-    "teleopStrat",
-]
-
-QUAL_DATA_HEADER = [
-    "form",
-    "teamNumber",
-    "matchNumber",
-    "startingPosition",
-    "hasAuton",
-    "autonLeave",
-    "autonCrossCenter",
-    "autonAStop",
-    "autonPreload",
-    "autonSpeakerNotesScored",
-    "autonSpeakerNotesMissed",
-    "autonAmpNotesScored",
-    "autonAmpNotesMissed",
-    "autonWingNotes",
-    "autonCenterNotes",
-    "teleopFloorPickup",
-    "teleopSourcePickup",
-    "teleopAmpScored",
-    "teleopAmpMissed",
-    "teleopSpeakerScored",
-    "teleopSpeakerMissed",
-    "teleopDroppedNotes",
-    "teleopFedNotes",
-    "teleopAmps",
-    "endgameDidTheyClimb",
-    "endgameDidTheyTrap",
-    "endgameDidTheyHarmony",
-    "endgameDefenseBot",
-    "endgameDriverRating",
-    "endgameDefenseRating",
-    "endgameHighnote",
-    "endgameCoOp",
-    "endgameDidTheyGetACard",
-    "endgameDidTheyNoShow",
-    "endgameComments",
-]
-
-PLAYOFF_DATA_HEADER = [
-    "form",
-    "teamNumber",
-    "matchNumber",
-    "startingPosition",
-    "hasAuton",
-    "autonLeave",
-    "autonCrossCenter",
-    "autonAStop",
-    "autonPreload",
-    "autonSpeakerNotesScored",
-    "autonSpeakerNotesMissed",
-    "autonAmpNotesScored",
-    "autonAmpNotesMissed",
-    "autonWingNotes",
-    "autonCenterNotes",
-    "teleopFloorPickup",
-    "teleopSourcePickup",
-    "teleopAmpScored",
-    "teleopAmpMissed",
-    "teleopSpeakerScored",
-    "teleopSpeakerMissed",
-    "teleopDroppedNotes",
-    "teleopFedNotes",
-    "teleopAmps",
-    "endgameDidTheyClimb",
-    "endgameDidTheyTrap",
-    "endgameDidTheyHarmony",
-    "endgameDefenseBot",
-    "endgameDriverRating",
-    "endgameDefenseRating",
-    "endgameHighnote",
-    "endgameCoOp",
-    "endgameDidTheyGetACard",
-    "endgameDidTheyNoShow",
-    "endgameComments",
-]
 
 
 class DataError(enum.Enum):
@@ -288,19 +96,19 @@ class DataWorker(QObject):
         logging.info("Data transfer started on form %s", str(form))
 
         if form == "pit":
-            header = PIT_DATA_HEADER
+            header = constants.PIT_DATA_HEADER
             if len(data) != len(header):
                 self.on_data_error.emit(DataError.DATA_MALFORMED)
                 self.finished.emit(data_frames)
                 return
         elif form == "qual":
-            header = QUAL_DATA_HEADER
+            header = constants.QUAL_DATA_HEADER
             if len(data) != len(header):
                 self.on_data_error.emit(DataError.DATA_MALFORMED)
                 self.finished.emit(data_frames)
                 return
         elif form == "playoff":
-            header = PLAYOFF_DATA_HEADER
+            header = constants.PLAYOFF_DATA_HEADER
             if len(data) != len(header):
                 self.on_data_error.emit(DataError.DATA_MALFORMED)
                 self.finished.emit(data_frames)
@@ -402,53 +210,6 @@ class DataWorker(QObject):
 
         ret = msg.exec()
         return ret
-
-
-class PandasModel(QStandardItemModel):
-    def __init__(self, data: pandas.DataFrame, parent=None):
-        QStandardItemModel.__init__(self, parent)
-        self._data = data
-        for row in data.values.tolist():
-            data_row = [QStandardItem("{0:.6f}".format(x)) for x in row]
-            self.appendRow(data_row)
-        return
-
-    def rowCount(self, parent=None):
-        return len(self._data.values)
-
-    def columnCount(self, parent=None):
-        return self._data.columns.size
-
-    def load_data(self, data: pandas.DataFrame):
-        self._data = data
-        for i, row in enumerate(self._data.values.tolist()):
-            for j, value in enumerate(row):
-                item = self.item(i, j)
-                if isinstance(value, float) and math.isnan(value):
-                    icon = qtawesome.icon("mdi6.null")
-                else:
-                    icon = QIcon()
-
-                if item:
-                    item.setText(str(value))
-                    item.setIcon(icon)
-                else:
-                    stditem = QStandardItem(str(value))
-                    stditem.setIcon(icon)
-                    self.setItem(i, j, stditem)
-
-    def headerData(self, x, orientation, role):
-        if (
-            orientation == Qt.Orientation.Horizontal
-            and role == Qt.ItemDataRole.DisplayRole
-        ):
-            return self._data.columns[x]
-        if (
-            orientation == Qt.Orientation.Vertical
-            and role == Qt.ItemDataRole.DisplayRole
-        ):
-            return self._data.index[x]
-        return None
 
 
 class MainWindow(QMainWindow):
@@ -588,7 +349,9 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
 
-        self.disk_widget = disk_widget.DiskMgmtWidget(predicate=scouting_disk_predicate)
+        self.disk_widget = disk_widget.DiskMgmtWidget(
+            predicate=disk_detector.scouting_disk_predicate
+        )
         self.disk_widget.set_select_visible(False)
         self.drive_layout.addWidget(self.disk_widget)
 
@@ -602,7 +365,7 @@ class MainWindow(QMainWindow):
         self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
 
-        self.pit_model = PandasModel(self.data_frames["pit"])
+        self.pit_model = data_models.PandasModel(self.data_frames["pit"])
 
         self.pit_table_view = QTableView()
         self.pit_table_view.setEditTriggers(
@@ -624,7 +387,7 @@ class MainWindow(QMainWindow):
         self.data_view_qual_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_qual_widget.setLayout(self.data_view_qual_layout)
 
-        self.qual_model = PandasModel(self.data_frames["qual"])
+        self.qual_model = data_models.PandasModel(self.data_frames["qual"])
 
         self.qual_table_view = QTableView()
         self.qual_table_view.setEditTriggers(
@@ -646,7 +409,7 @@ class MainWindow(QMainWindow):
         self.data_view_playoff_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_playoff_widget.setLayout(self.data_view_playoff_layout)
 
-        self.playoff_model = PandasModel(self.data_frames["playoff"])
+        self.playoff_model = data_models.PandasModel(self.data_frames["playoff"])
 
         self.playoff_table_view = QTableView()
         self.playoff_table_view.setEditTriggers(
@@ -684,7 +447,7 @@ class MainWindow(QMainWindow):
 
         self.serial_baud = QComboBox()
         self.serial_baud.setMinimumWidth(90)
-        self.serial_baud.addItems([str(baud) for baud in BAUDS])
+        self.serial_baud.addItems([str(baud) for baud in constants.BAUDS])
 
         if settings.contains("baud"):
             self.serial_baud.setCurrentText(str(settings.value("baud")))
@@ -695,44 +458,44 @@ class MainWindow(QMainWindow):
 
         self.serial_bits = QComboBox()
         self.serial_bits.setMinimumWidth(110)
-        self.serial_bits.addItems([str(key) for key in DATA_BITS])
+        self.serial_bits.addItems([str(key) for key in constants.DATA_BITS])
 
         if settings.contains("databits"):
             self.serial_bits.setCurrentText(settings.value("databits"))
-            self.serial.setDataBits(DATA_BITS[settings.value("databits")])
+            self.serial.setDataBits(constants.DATA_BITS[settings.value("databits")])
 
         self.serial_bits.currentTextChanged.connect(self.change_data_bits)
         self.serial_grid.addWidget(self.serial_bits, 1, 1)
 
         self.serial_stop = QComboBox()
         self.serial_stop.setMinimumWidth(110)
-        self.serial_stop.addItems([str(key) for key in STOP_BITS])
+        self.serial_stop.addItems([str(key) for key in constants.STOP_BITS])
 
         if settings.contains("stopbits"):
             self.serial_stop.setCurrentText(settings.value("stopbits"))
-            self.serial.setStopBits(STOP_BITS[settings.value("stopbits")])
+            self.serial.setStopBits(constants.STOP_BITS[settings.value("stopbits")])
 
         self.serial_stop.currentTextChanged.connect(self.change_stop_bits)
         self.serial_grid.addWidget(self.serial_stop, 1, 2)
 
         self.serial_flow = QComboBox()
         self.serial_flow.setMinimumWidth(140)
-        self.serial_flow.addItems([str(key) for key in FLOW_CONTROL])
+        self.serial_flow.addItems([str(key) for key in constants.FLOW_CONTROL])
 
         if settings.contains("flow"):
             self.serial_flow.setCurrentText(settings.value("flow"))
-            self.serial.setFlowControl(FLOW_CONTROL[settings.value("flow")])
+            self.serial.setFlowControl(constants.FLOW_CONTROL[settings.value("flow")])
 
         self.serial_flow.currentTextChanged.connect(self.change_flow)
         self.serial_grid.addWidget(self.serial_flow, 1, 3)
 
         self.serial_parity = QComboBox()
         self.serial_parity.setMinimumWidth(140)
-        self.serial_parity.addItems([str(key) for key in PARITY])
+        self.serial_parity.addItems([str(key) for key in constants.PARITY])
 
         if settings.contains("parity"):
             self.serial_parity.setCurrentText(settings.value("parity"))
-            self.serial.setParity(PARITY[settings.value("parity")])
+            self.serial.setParity(constants.PARITY[settings.value("parity")])
 
         self.serial_parity.currentTextChanged.connect(self.change_parity)
         self.serial_grid.addWidget(self.serial_parity, 1, 4)
@@ -918,12 +681,16 @@ class MainWindow(QMainWindow):
                     )
                 )
             elif form == "pit":
-                self.data_frames["pit"] = pandas.DataFrame(columns=PIT_DATA_HEADER)
+                self.data_frames["pit"] = pandas.DataFrame(
+                    columns=constants.PIT_DATA_HEADER
+                )
             elif form == "qual":
-                self.data_frames["qual"] = pandas.DataFrame(columns=QUAL_DATA_HEADER)
+                self.data_frames["qual"] = pandas.DataFrame(
+                    columns=constants.QUAL_DATA_HEADER
+                )
             elif form == "playoff":
                 self.data_frames["playoff"] = pandas.DataFrame(
-                    columns=PLAYOFF_DATA_HEADER
+                    columns=constants.PLAYOFF_DATA_HEADER
                 )
 
         self.pit_model.load_data(self.data_frames["pit"])
@@ -954,7 +721,7 @@ class MainWindow(QMainWindow):
         Set data bits from combo box
         """
 
-        bits = DATA_BITS[self.serial_bits.currentText()]
+        bits = constants.DATA_BITS[self.serial_bits.currentText()]
         self.serial.setDataBits(bits)
         settings.setValue("databits", self.serial_bits.currentText())
 
@@ -963,7 +730,7 @@ class MainWindow(QMainWindow):
         Set stop bits from combo box
         """
 
-        stop_bits = STOP_BITS[self.serial_stop.currentText()]
+        stop_bits = constants.STOP_BITS[self.serial_stop.currentText()]
         self.serial.setStopBits(stop_bits)
         settings.setValue("stopbits", self.serial_stop.currentText())
 
@@ -972,7 +739,7 @@ class MainWindow(QMainWindow):
         Set flow control from combo box
         """
 
-        flow = FLOW_CONTROL[self.serial_flow.currentText()]
+        flow = constants.FLOW_CONTROL[self.serial_flow.currentText()]
         self.serial.setFlowControl(flow)
         settings.setValue("flow", self.serial_flow.currentText())
 
@@ -981,7 +748,7 @@ class MainWindow(QMainWindow):
         Set parity type from combo box
         """
 
-        parity = PARITY[self.serial_parity.currentText()]
+        parity = constants.PARITY[self.serial_parity.currentText()]
         self.serial.setParity(parity)
         settings.setValue("parity", self.serial_parity.currentText())
 
@@ -1014,16 +781,16 @@ class MainWindow(QMainWindow):
         baud = int(self.serial_baud.currentText())
         self.serial.setBaudRate(baud)
 
-        bits = DATA_BITS[self.serial_bits.currentText()]
+        bits = constants.DATA_BITS[self.serial_bits.currentText()]
         self.serial.setDataBits(bits)
 
-        stop_bits = STOP_BITS[self.serial_stop.currentText()]
+        stop_bits = constants.STOP_BITS[self.serial_stop.currentText()]
         self.serial.setStopBits(stop_bits)
 
-        flow = FLOW_CONTROL[self.serial_flow.currentText()]
+        flow = constants.FLOW_CONTROL[self.serial_flow.currentText()]
         self.serial.setFlowControl(flow)
 
-        parity = PARITY[self.serial_parity.currentText()]
+        parity = constants.PARITY[self.serial_parity.currentText()]
         self.serial.setParity(parity)
 
         ok = self.serial.open(QIODevice.ReadWrite)

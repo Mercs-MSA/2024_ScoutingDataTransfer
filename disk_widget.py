@@ -176,7 +176,7 @@ class DiskMgmtWidget(QWidget):
         Get filtered disk partitions
 
         Returns:
-            list[disk_detector.Disk]: List of partitions detected by disk_detector 
+            list[disk_detector.Disk]: List of partitions detected by disk_detector
                                       with predicate filtering
         """
 
