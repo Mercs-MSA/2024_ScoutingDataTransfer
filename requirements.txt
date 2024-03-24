@@ -3,3 +3,4 @@ PyQt6~=6.6.1
 pyqtdarktheme
 qtawesome
 pandas
+statbotics~=2.0.3

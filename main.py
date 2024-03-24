@@ -6,7 +6,9 @@ Transfer data form scouting tablets using qr code scanner
 import sys
 import os
 import logging
+import traceback
 import typing
+import datetime
 
 import pandas
 
@@ -33,6 +35,7 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QAbstractItemView,
     QScroller,
+    QInputDialog,
 )
 from PyQt6.QtCore import (
     QSettings,
@@ -48,13 +51,14 @@ from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
 
+import statbotics
+
 import disk_widget
 import disk_detector
 import data_models
 import constants
 
 __version__: typing.Final = "v0.2.0-amarillo"
-
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
@@ -206,6 +210,22 @@ class DataWorker(QObject):
         ret = msg.exec()
         return ret
 
+class EventCodeWorker(QObject):
+    finished = pyqtSignal(list)
+    on_error = pyqtSignal(str)
+
+    def __init__(self, api: statbotics.Statbotics, district: str) -> None:
+        super().__init__()
+        self.api = api
+        self.district = district
+
+    def run(self):
+        try:
+            events = self.api.get_events(datetime.datetime.now().year, district=self.district)
+            self.finished.emit(events)
+        except Exception:
+            self.on_error.emit(traceback.format_exc())
+            self.finished.emit([])
 
 class MainWindow(QMainWindow):
     """Main Window"""
@@ -221,7 +241,10 @@ class MainWindow(QMainWindow):
         self.serial.aboutToClose.connect(self.serial_close)
         self.serial.readyRead.connect(self.on_serial_recieve)
 
+        self.sbapi = statbotics.Statbotics()
+
         self.data_worker = None
+        self.api_worker = None
         self.worker_thread = None
 
         self.is_scanning = False
@@ -517,7 +540,7 @@ class MainWindow(QMainWindow):
         self.settings_layout = QVBoxLayout()
         self.settings_widget.setLayout(self.settings_layout)
 
-        self.settings_dev_box = QGroupBox("Developer Options")
+        self.settings_dev_box = QGroupBox("Developer")
         self.settings_layout.addWidget(self.settings_dev_box)
 
         self.settings_dev_layout = QVBoxLayout()
@@ -536,6 +559,24 @@ class MainWindow(QMainWindow):
         self.settings_touchui = QCheckBox("Touch UI")
         self.settings_touchui.stateChanged.connect(self.set_touch_mode)
         self.settings_ui_layout.addWidget(self.settings_touchui)
+
+        self.settings_event_box = QGroupBox("Event")
+        self.settings_layout.addWidget(self.settings_event_box)
+
+        self.settings_event_layout = QHBoxLayout()
+        self.settings_event_box.setLayout(self.settings_event_layout)
+
+        self.event_entry = QComboBox()
+        self.event_entry.setEditable(True)
+        self.event_entry.currentTextChanged.connect(self.on_event_changed)
+        self.settings_event_layout.addWidget(self.event_entry)
+
+        if settings.contains("event"):
+            self.event_entry.setEditText(settings.value("event", type=str))
+
+        self.event_fetch = QPushButton("Fetch")
+        self.event_fetch.clicked.connect(self.fetch_events)
+        self.settings_event_layout.addWidget(self.event_fetch)
 
         # * ABOUT * #
         self.about_widget = QWidget()
@@ -629,6 +670,9 @@ class MainWindow(QMainWindow):
 
         settings.setValue("touchui", enabled)
 
+    def on_event_changed(self):
+        settings.setValue("event", self.event_entry.currentText())
+
     def select_transfer_dir(self) -> None:
         """
         Pick file for transfer directory
@@ -659,7 +703,7 @@ class MainWindow(QMainWindow):
         self.attempt_load_csv()
 
     def attempt_load_csv(self):
-        event_id = "2024txtest"
+        event_id = self.event_entry.currentText()
         for form in self.data_frames:
             if os.path.exists(
                 os.path.join(
@@ -893,15 +937,50 @@ class MainWindow(QMainWindow):
                     self.data_frames,
                     self.transfer_dir_textbox.text(),
                     self.disk_widget.get_selected_disk(),
-                    "2024txtest",
+                    self.event_entry.currentText(),
                 )
             )
 
-            self.worker_thread.finished.connect(self.worker_thread.deleteLater)
             self.data_worker.finished.connect(self.worker_thread.quit)
-            self.data_worker.finished.connect(self.data_worker.deleteLater)
 
             self.worker_thread.start()
+
+    def fetch_events(self):
+        if self.worker_thread and self.worker_thread.isRunning():
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Another API operation is running")
+            msg.setWindowTitle("API")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+        else:
+            district, ok = QInputDialog.getText(self, 'API', 'What district would you like to fetch')
+		
+            if ok:
+                self.worker_thread = QThread()
+
+                self.api_worker = EventCodeWorker(self.sbapi, district)
+                self.api_worker.finished.connect(self.on_event_fetch_complete)
+                self.api_worker.on_error.connect(self.on_api_error)
+                self.api_worker.moveToThread(self.worker_thread)
+                self.worker_thread.started.connect(self.api_worker.run)
+
+                self.api_worker.finished.connect(self.worker_thread.quit)
+
+                self.worker_thread.start()
+
+    def on_event_fetch_complete(self, events: list):
+        self.event_entry.clear()
+        self.event_entry.addItems([event["key"] for event in events])
+
+    def on_api_error(self, stack: str):
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Critical)
+        msg.setText("Error from fetch operation")
+        msg.setWindowTitle("API")
+        msg.setDetailedText(stack)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
 
     def on_data_transfer_complete(self, df: pandas.DataFrame):
         self.connection_icon.setIcon(
