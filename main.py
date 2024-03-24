@@ -3,10 +3,10 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
-import enum
 import sys
 import os
 import logging
+import typing
 
 import pandas
 
@@ -53,21 +53,16 @@ import disk_detector
 import data_models
 import constants
 
-__version__ = "v0.2.0-amarillo"
+__version__: typing.Final = "v0.2.0-amarillo"
 
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
 
 
-class DataError(enum.Enum):
-    DATA_MALFORMED = 0
-    UNKNOWN_FORM = 1
-
-
 class DataWorker(QObject):
     finished = pyqtSignal(dict)
-    on_data_error = pyqtSignal(DataError)
+    on_data_error = pyqtSignal(constants.DataError)
 
     def __init__(self, data: str, savedir: str, savedisk: str | None) -> None:
         super().__init__()
@@ -98,23 +93,23 @@ class DataWorker(QObject):
         if form == "pit":
             header = constants.PIT_DATA_HEADER
             if len(data) != len(header):
-                self.on_data_error.emit(DataError.DATA_MALFORMED)
+                self.on_data_error.emit(constants.DataError.DATA_MALFORMED)
                 self.finished.emit(data_frames)
                 return
         elif form == "qual":
             header = constants.QUAL_DATA_HEADER
             if len(data) != len(header):
-                self.on_data_error.emit(DataError.DATA_MALFORMED)
+                self.on_data_error.emit(constants.DataError.DATA_MALFORMED)
                 self.finished.emit(data_frames)
                 return
         elif form == "playoff":
             header = constants.PLAYOFF_DATA_HEADER
             if len(data) != len(header):
-                self.on_data_error.emit(DataError.DATA_MALFORMED)
+                self.on_data_error.emit(constants.DataError.DATA_MALFORMED)
                 self.finished.emit(data_frames)
                 return
         else:
-            self.on_data_error.emit(DataError.UNKNOWN_FORM)
+            self.on_data_error.emit(constants.DataError.UNKNOWN_FORM)
             self.finished.emit(data_frames)
             return
 
@@ -932,7 +927,7 @@ class MainWindow(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
-    def on_data_error(self, errcode: DataError):
+    def on_data_error(self, errcode: constants.DataError):
         """
         Display a data rx error
         """

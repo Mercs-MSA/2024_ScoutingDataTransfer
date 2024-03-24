@@ -2,9 +2,12 @@
 Constant values for scouting transfer
 """
 
+import typing
+import enum
+
 from PyQt6.QtSerialPort import QSerialPort
 
-BAUDS = [
+BAUDS: typing.Final = [
     300,
     600,
     900,
@@ -22,20 +25,20 @@ BAUDS = [
     921600,
 ]
 
-DATA_BITS = {
+DATA_BITS: typing.Final = {
     "5 Data Bits": QSerialPort.DataBits.Data5,
     "6 Data Bits": QSerialPort.DataBits.Data6,
     "7 Data Bits": QSerialPort.DataBits.Data7,
     "8 Data Bits": QSerialPort.DataBits.Data8,
 }
 
-STOP_BITS = {
+STOP_BITS: typing.Final = {
     "1 Stop Bits": QSerialPort.StopBits.OneStop,
     "1.5 Stop Bits": QSerialPort.StopBits.OneAndHalfStop,
     "2 Stop Bits": QSerialPort.StopBits.TwoStop,
 }
 
-PARITY = {
+PARITY: typing.Final = {
     "No Parity": QSerialPort.Parity.NoParity,
     "Even Parity": QSerialPort.Parity.EvenParity,
     "Odd Parity": QSerialPort.Parity.OddParity,
@@ -43,13 +46,13 @@ PARITY = {
     "Space Parity": QSerialPort.Parity.SpaceParity,
 }
 
-FLOW_CONTROL = {
+FLOW_CONTROL: typing.Final = {
     "No Flow Control": QSerialPort.FlowControl.NoFlowControl,
     "Software FC": QSerialPort.FlowControl.SoftwareControl,
     "Hardware FC": QSerialPort.FlowControl.HardwareControl,
 }
 
-PIT_DATA_HEADER = [
+PIT_DATA_HEADER: typing.Final = [
     "form",
     "teamNumber",
     "botLength",
@@ -83,7 +86,7 @@ PIT_DATA_HEADER = [
     "teleopStrat",
 ]
 
-QUAL_DATA_HEADER = [
+QUAL_DATA_HEADER: typing.Final = [
     "form",
     "teamNumber",
     "matchNumber",
@@ -121,7 +124,7 @@ QUAL_DATA_HEADER = [
     "endgameComments",
 ]
 
-PLAYOFF_DATA_HEADER = [
+PLAYOFF_DATA_HEADER: typing.Final = [
     "form",
     "teamNumber",
     "matchNumber",
@@ -158,3 +161,9 @@ PLAYOFF_DATA_HEADER = [
     "endgameDidTheyNoShow",
     "endgameComments",
 ]
+
+
+class DataError(enum.Enum):
+    """ Potential error for worker """
+    DATA_MALFORMED = 0
+    UNKNOWN_FORM = 1
