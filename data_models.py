@@ -37,6 +37,16 @@ class PandasModel(QStandardItemModel):
                 item = self.item(i, j)
                 if isinstance(value, float) and math.isnan(value):
                     icon = qtawesome.icon("mdi6.null")
+                elif isinstance(value, bool):
+                    icon = qtawesome.icon("mdi6.circle", color="#4caf50" if value else "#f44336")
+                elif isinstance(value, float):
+                    icon = qtawesome.icon("mdi6.decimal")
+                elif isinstance(value, int):
+                    icon = qtawesome.icon("mdi6.pound")
+                elif isinstance(value, str) and j == 0:
+                    icon = qtawesome.icon("mdi6.apple-keyboard-command")
+                elif isinstance(value, str):
+                    icon = qtawesome.icon("mdi6.code-string")
                 else:
                     icon = QIcon()
 

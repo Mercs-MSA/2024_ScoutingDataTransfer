@@ -2,6 +2,8 @@
 Various utilities used by the program
 """
 
+import json
+
 # https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
 def format_bytes(size: int) -> str:
     """Convert bytes to str of KB, MB, etc
@@ -19,3 +21,10 @@ def format_bytes(size: int) -> str:
         size /= power
         n += 1
     return f"{size:.1f}{power_labels[n] + 'B'}"
+
+def convert_types(data_list):
+    for i in data_list:
+        try:
+            yield json.loads(i)
+        except Exception:
+            yield i

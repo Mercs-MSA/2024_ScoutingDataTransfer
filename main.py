@@ -57,6 +57,7 @@ import disk_widget
 import disk_detector
 import data_models
 import constants
+import utils
 
 __version__: typing.Final = "v0.3.0-amarillo"
 
@@ -90,7 +91,7 @@ class DataWorker(QObject):
             msg.exec()
             self.finished.emit(data_frames)
             return
-        data = self.data.strip("\r\n").split("||")
+        data = list(utils.convert_types(self.data.strip("\r\n").split("||")))
         form = data[0]
         logging.info("Data transfer started on form %s", str(form))
 
@@ -605,8 +606,9 @@ class MainWindow(QMainWindow):
             "A simple tool to convert QR-code output from our "
             '<a href="https://github.com/Mercs-MSA/2024_ScoutingDataCollection">'
             "2024_ScoutingDataCollection</a> using a USB Serial based QR/Barcode scanner. "
-            "Features include automatic exports, automatic backup to attached volumes, support for "
-            "pits scouting, qualification and playoff scouting."
+            "Features include a data viewer, Statbotics event fetching, automatic exports, "
+            "automatic backup to attached volumes, support for pits scouting, "
+            "qualification and playoff scouting."
         )
         self.about_description.setTextInteractionFlags(
             Qt.TextInteractionFlag.LinksAccessibleByMouse
