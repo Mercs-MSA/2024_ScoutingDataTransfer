@@ -46,7 +46,7 @@ from PyQt6.QtCore import (
     QObject,
     QThread,
 )
-from PyQt6.QtGui import QCloseEvent, QPixmap
+from PyQt6.QtGui import QCloseEvent, QPixmap, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -235,6 +235,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("6369 Scouting Data Transfer")
+        self.setWindowIcon(QIcon("icons/mercs.png"))
 
         self.serial = QSerialPort()
         self.serial.errorOccurred.connect(self.on_serial_error)
@@ -1056,6 +1057,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("icons/mercs.png"))
+    app.setApplicationVersion(__version__)
+    app.setApplicationName("6369 Scouting Data Transfer")
+
     settings = QSettings("Mercs", "ScoutingDataTransfer")
     qdarktheme.setup_theme(additional_qss="#big_dropdown {min-height: 56px}")
     qtawesome.dark(app)
