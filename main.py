@@ -58,7 +58,7 @@ import disk_detector
 import data_models
 import constants
 
-__version__: typing.Final = "v0.2.0-amarillo"
+__version__: typing.Final = "v0.3.0-amarillo"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
