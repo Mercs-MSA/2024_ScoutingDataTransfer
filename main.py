@@ -59,7 +59,7 @@ import data_models
 import constants
 import utils
 
-__version__: typing.Final = "v0.3.0-amarillo"
+__version__: typing.Final = "v0.4.0-amarillo"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
