@@ -54,6 +54,7 @@ FLOW_CONTROL: typing.Final = {
 
 PIT_DATA_HEADER: typing.Final = [
     "form",
+    "event",
     "teamNumber",
     "botLength",
     "botWidth",
@@ -89,6 +90,7 @@ PIT_DATA_HEADER: typing.Final = [
 
 QUAL_DATA_HEADER: typing.Final = [
     "form",
+    "event",
     "teamNumber",
     "matchNumber",
     "startingPosition",
@@ -113,6 +115,7 @@ QUAL_DATA_HEADER: typing.Final = [
     "teleopFedNotes",
     "teleopAmps",
     "endgameDidTheyClimb",
+    "endgameClimbPos",
     "endgameDidTheyTrap",
     "endgameDidTheyHarmony",
     "endgameDefenseBot",
@@ -127,6 +130,7 @@ QUAL_DATA_HEADER: typing.Final = [
 
 PLAYOFF_DATA_HEADER: typing.Final = [
     "form",
+    "event",
     "teamNumber",
     "matchNumber",
     "startingPosition",
@@ -151,6 +155,7 @@ PLAYOFF_DATA_HEADER: typing.Final = [
     "teleopFedNotes",
     "teleopAmps",
     "endgameDidTheyClimb",
+    "endgameClimbPos",
     "endgameDidTheyTrap",
     "endgameDidTheyHarmony",
     "endgameDefenseBot",

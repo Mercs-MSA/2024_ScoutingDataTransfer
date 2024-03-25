@@ -125,8 +125,8 @@ class DataWorker(QObject):
         # form type
         if form == "pit":
             # check for repeats
-            if int(df["teamNumber"].iloc[0]) in [
-                int(x) for x in data_frames["pit"]["teamNumber"].to_list()
+            if int(df["teamNumber"].iloc[0].strip("frc")) in [
+                int(x.strip("frc")) for x in data_frames["pit"]["teamNumber"].to_list()
             ]:
                 if (
                     self.on_repeated_data("pit", df["teamNumber"].iloc[0])
@@ -136,28 +136,28 @@ class DataWorker(QObject):
         elif form == "qual":
             # check for repeats
             if (
-                int(df["teamNumber"].iloc[0])
-                in [int(x) for x in data_frames["qual"]["teamNumber"].to_list()]
+                int(df["teamNumber"].iloc[0].strip("frc"))
+                in [int(x.strip("frc")) for x in data_frames["qual"]["teamNumber"].to_list()]
             ) or (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
             ):
                 if (
-                    self.on_repeated_data("qual", int(df["teamNumber"].iloc[0]))
+                    self.on_repeated_data("qual", df["teamNumber"].iloc[0])
                     == QMessageBox.StandardButton.No
                 ):
                     add_to_df = False
         elif form == "playoff":
             # check for repeats
             if (
-                int(df["teamNumber"].iloc[0])
-                in [int(x) for x in data_frames["playoff"]["teamNumber"].to_list()]
+                int(df["teamNumber"].iloc[0].strip("frc"))
+                in [int(x.strip("frc")) for x in data_frames["playoff"]["teamNumber"].to_list()]
             ) or (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["playoff"]["matchNumber"].to_list()]
             ):
                 if (
-                    self.on_repeated_data("playoff", int(df["teamNumber"].iloc[0]))
+                    self.on_repeated_data("playoff", int(df["teamNumber"].iloc[0].strip("frc")))
                     == QMessageBox.StandardButton.No
                 ):
                     add_to_df = False
