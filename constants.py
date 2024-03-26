@@ -173,3 +173,5 @@ class DataError(enum.Enum):
     """ Potential error for worker """
     DATA_MALFORMED = 0
     UNKNOWN_FORM = 1
+    TEAM_NUMBER_NULL = 2
+    MATCH_NUMBER_NULL = 3

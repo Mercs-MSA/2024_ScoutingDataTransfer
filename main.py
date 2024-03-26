@@ -122,6 +122,17 @@ class DataWorker(QObject):
 
         add_to_df = True
 
+        if df["teamNumber"].iloc[0] == "frcnull":
+            self.on_data_error.emit(constants.DataError.TEAM_NUMBER_NULL)
+            self.finished.emit(data_frames)
+            return
+
+        if form == "qual" or form =="playoff":
+            if df["matchNumber"].iloc[0] is None:
+                self.on_data_error.emit(constants.DataError.MATCH_NUMBER_NULL)
+                self.finished.emit(data_frames)
+                return
+
         # form type
         if form == "pit":
             # check for repeats
@@ -1017,7 +1028,7 @@ class MainWindow(QMainWindow):
 
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
-        msg.setText("Recieved data does not match expected data")
+        msg.setText(f"Error when recieving data:\n{errcode.name}")
         msg.setWindowTitle("Data Error")
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
