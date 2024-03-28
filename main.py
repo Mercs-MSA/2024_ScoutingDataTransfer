@@ -149,7 +149,7 @@ class DataWorker(QObject):
             if (
                 int(df["teamNumber"].iloc[0].strip("frc"))
                 in [int(x.strip("frc")) for x in data_frames["qual"]["teamNumber"].to_list()]
-            ) or (
+            ) and (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
             ):
@@ -163,7 +163,7 @@ class DataWorker(QObject):
             if (
                 int(df["teamNumber"].iloc[0].strip("frc"))
                 in [int(x.strip("frc")) for x in data_frames["playoff"]["teamNumber"].to_list()]
-            ) or (
+            ) and (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["playoff"]["matchNumber"].to_list()]
             ):
@@ -925,9 +925,10 @@ class MainWindow(QMainWindow):
                 "mdi6.loading", color="#03a9f4", animation=self.spin_animation
             )
         )
-        data = self.serial.readLine()
+        data = self.serial.readAll()
+        print(data)
         self.data_buffer += data.data().decode()
-        if self.data_buffer.endswith("\r\n"):
+        if self.data_buffer.endswith("\n"):
             self.on_data_retrieved(self.data_buffer)
             self.data_buffer = ""
 
