@@ -45,7 +45,9 @@ from PyQt6.QtCore import (
     pyqtSignal,
     QObject,
     QThread,
+    QUrl,
 )
+from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtGui import QCloseEvent, QPixmap, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
@@ -255,6 +257,8 @@ class MainWindow(QMainWindow):
         self.serial.readyRead.connect(self.on_serial_recieve)
 
         self.sbapi = statbotics.Statbotics()
+
+        self.mediaplayer = QSoundEffect()
 
         self.data_worker = None
         self.api_worker = None
@@ -989,6 +993,10 @@ class MainWindow(QMainWindow):
         self.event_entry.addItems([event["key"] for event in events])
 
     def on_api_error(self, stack: str):
+        self.mediaplayer.setSource(QUrl.fromLocalFile("mad.wav"))
+        self.mediaplayer.setVolume(1)
+        self.mediaplayer.play()
+
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
         msg.setText("Error from fetch operation")
@@ -1014,6 +1022,10 @@ class MainWindow(QMainWindow):
         Display a serial port list refresh error
         """
 
+        self.mediaplayer.setSource(QUrl.fromLocalFile("mad.wav"))
+        self.mediaplayer.setVolume(1)
+        self.mediaplayer.play()
+
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText("Port refresh required")
@@ -1026,6 +1038,10 @@ class MainWindow(QMainWindow):
         Display a data rx error
         """
         logging.error("Data rx error: %s", errcode.name)
+
+        self.mediaplayer.setSource(QUrl.fromLocalFile("mad.wav"))
+        self.mediaplayer.setVolume(1)
+        self.mediaplayer.play()
 
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
