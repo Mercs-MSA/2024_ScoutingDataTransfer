@@ -238,6 +238,7 @@ class EventCodeWorker(QObject):
             events = self.api.get_events(datetime.datetime.now().year, district=self.district)
             self.finished.emit(events)
         except Exception:
+            traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
             self.finished.emit([])
 
@@ -930,7 +931,6 @@ class MainWindow(QMainWindow):
             )
         )
         data = self.serial.readAll()
-        print(data)
         self.data_buffer += data.data().decode()
         if self.data_buffer.endswith("\n"):
             self.on_data_retrieved(self.data_buffer)
