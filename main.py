@@ -252,6 +252,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("6369 Scouting Data Transfer")
         self.setWindowIcon(QIcon("icons/mercs.png"))
 
+        self.show()
+
         self.serial = QSerialPort()
         self.serial.errorOccurred.connect(self.on_serial_error)
         self.serial.aboutToClose.connect(self.serial_close)
@@ -645,8 +647,6 @@ class MainWindow(QMainWindow):
         if settings.contains("touchui"):
             self.set_touch_mode(settings.value("touchui", type=bool))
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
-
-        self.show()
 
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""
