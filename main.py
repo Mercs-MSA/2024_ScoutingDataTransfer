@@ -45,7 +45,9 @@ from PyQt6.QtCore import (
     pyqtSignal,
     QObject,
     QThread,
+    QUrl,
 )
+from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtGui import QCloseEvent, QPixmap, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
@@ -59,7 +61,7 @@ import data_models
 import constants
 import utils
 
-__version__: typing.Final = "v0.4.0-amarillo"
+__version__: typing.Final = "v1.0.0-amarillo"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
@@ -149,7 +151,7 @@ class DataWorker(QObject):
             if (
                 int(df["teamNumber"].iloc[0].strip("frc"))
                 in [int(x.strip("frc")) for x in data_frames["qual"]["teamNumber"].to_list()]
-            ) or (
+            ) and (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
             ):
@@ -163,7 +165,7 @@ class DataWorker(QObject):
             if (
                 int(df["teamNumber"].iloc[0].strip("frc"))
                 in [int(x.strip("frc")) for x in data_frames["playoff"]["teamNumber"].to_list()]
-            ) or (
+            ) and (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["playoff"]["matchNumber"].to_list()]
             ):
@@ -236,6 +238,7 @@ class EventCodeWorker(QObject):
             events = self.api.get_events(datetime.datetime.now().year, district=self.district)
             self.finished.emit(events)
         except Exception:
+            traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
             self.finished.emit([])
 
@@ -255,6 +258,8 @@ class MainWindow(QMainWindow):
         self.serial.readyRead.connect(self.on_serial_recieve)
 
         self.sbapi = statbotics.Statbotics()
+
+        self.mediaplayer = QSoundEffect()
 
         self.data_worker = None
         self.api_worker = None
@@ -925,9 +930,9 @@ class MainWindow(QMainWindow):
                 "mdi6.loading", color="#03a9f4", animation=self.spin_animation
             )
         )
-        data = self.serial.readLine()
+        data = self.serial.readAll()
         self.data_buffer += data.data().decode()
-        if self.data_buffer.endswith("\r\n"):
+        if self.data_buffer.endswith("\n"):
             self.on_data_retrieved(self.data_buffer)
             self.data_buffer = ""
 
@@ -988,6 +993,10 @@ class MainWindow(QMainWindow):
         self.event_entry.addItems([event["key"] for event in events])
 
     def on_api_error(self, stack: str):
+        self.mediaplayer.setSource(QUrl.fromLocalFile("mad.wav"))
+        self.mediaplayer.setVolume(1)
+        self.mediaplayer.play()
+
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
         msg.setText("Error from fetch operation")
@@ -1013,6 +1022,10 @@ class MainWindow(QMainWindow):
         Display a serial port list refresh error
         """
 
+        self.mediaplayer.setSource(QUrl.fromLocalFile("mad.wav"))
+        self.mediaplayer.setVolume(1)
+        self.mediaplayer.play()
+
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setText("Port refresh required")
@@ -1025,6 +1038,10 @@ class MainWindow(QMainWindow):
         Display a data rx error
         """
         logging.error("Data rx error: %s", errcode.name)
+
+        self.mediaplayer.setSource(QUrl.fromLocalFile("mad.wav"))
+        self.mediaplayer.setVolume(1)
+        self.mediaplayer.play()
 
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
