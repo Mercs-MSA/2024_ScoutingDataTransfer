@@ -1,1 +1,1 @@
-qual||TESTEVENT||frc0||0||red1||false||false||false||false||yes||0||0||0||0||no,no,no||no,no,no,no,no||false||false||0||0||0||0||0||0||0||no||no||no||no||true||0||0||true||failed||no||nr||TESTDATA
+qual||TESTEVENT||frc0||0||blue1||false||false||false||false||yes||0||0||0||0||no,no,no||no,no,no,no,no||false||false||0||0||0||0||0||0||0||1.0||sr||no||no||false||0.0||0.0||false||no||no||s||
