@@ -626,11 +626,15 @@ class MainWindow(QMainWindow):
         self.assign_pit_tablet_label = QLabel(f"Tablet Count: {self.assign_pit_tablets}")
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_label)
 
-        self.assign_pit_tablet_add = QPushButton("+")
+        self.assign_pit_tablet_add = QPushButton()
+        self.assign_pit_tablet_add.setIcon(qtawesome.icon("mdi6.plus"))
+        self.assign_pit_tablet_add.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_add.clicked.connect(lambda: self.change_assign_pit_tablet_count(1))
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_add)
 
-        self.assign_pit_tablet_subtract = QPushButton("-")
+        self.assign_pit_tablet_subtract = QPushButton()
+        self.assign_pit_tablet_subtract.setIcon(qtawesome.icon("mdi6.minus"))
+        self.assign_pit_tablet_subtract.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_subtract.clicked.connect(lambda: self.change_assign_pit_tablet_count(-1))
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_subtract)
 
