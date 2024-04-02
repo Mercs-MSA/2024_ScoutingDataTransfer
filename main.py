@@ -3,6 +3,7 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
+import pprint
 import sys
 import os
 import logging
@@ -268,6 +269,7 @@ class PitTeamWorker(QObject):
 
 class MatchMatchWorker(QObject):
     finished = pyqtSignal(list)
+    pit_teams = pyqtSignal(list)
     on_error = pyqtSignal(str)
 
     def __init__(self, api: statbotics.Statbotics, event: str) -> None:
@@ -277,6 +279,7 @@ class MatchMatchWorker(QObject):
 
     def run(self):
         try:
+            pit_teams = self.api.get_team_events(event=self.eventcode, fields=["team", "team_name"])
             matches = self.api.get_matches(
             event=self.eventcode,
             fields=[
@@ -287,9 +290,11 @@ class MatchMatchWorker(QObject):
                 "blue_1",
                 "blue_2",
                 "blue_3",
+                "playoff"
             ],
         )
             self.finished.emit(matches)
+            self.pit_teams.emit(pit_teams)
         except Exception:
             traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
@@ -738,6 +743,8 @@ class MainWindow(QMainWindow):
         self.assign_match_top_options.addWidget(self.assign_match_clear_ignored)
 
         # creating a QListWidget
+        self.assign_match_pit_teams = []
+
         self.assign_match_ignored_teams = QListWidget(self)
 
         self.assign_match_ignored_teams.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -747,6 +754,63 @@ class MainWindow(QMainWindow):
         self.assign_match_clear_ignored.clicked.connect(self.assign_match_ignored_teams.clear)
 
         self.assign_match_layout.addWidget(self.assign_match_ignored_teams)
+
+        self.assign_match_tablets = 6
+        self.assign_match_tablet_slots: list[QListWidget] = []
+
+        self.assign_match_tablet_layout = QHBoxLayout()
+        self.assign_match_layout.addLayout(self.assign_match_tablet_layout)
+
+        self.assign_match_tablet_label = QLabel(f"Tablet Count: {self.assign_match_tablets}")
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_label)
+
+        self.assign_match_tablet_add = QPushButton()
+        self.assign_match_tablet_add.setIcon(qtawesome.icon("mdi6.plus"))
+        self.assign_match_tablet_add.setIconSize(QSize(32, 32))
+        self.assign_match_tablet_add.clicked.connect(lambda: self.change_assign_match_tablet_count(1))
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_add)
+
+        self.assign_match_tablet_subtract = QPushButton()
+        self.assign_match_tablet_subtract.setIcon(qtawesome.icon("mdi6.minus"))
+        self.assign_match_tablet_subtract.setIconSize(QSize(32, 32))
+        self.assign_match_tablet_subtract.clicked.connect(lambda: self.change_assign_match_tablet_count(-1))
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_subtract)
+
+        self.assign_match_tablet_generate = QPushButton("Generate Slots")
+        self.assign_match_tablet_generate.setIcon(qtawesome.icon("mdi6.cellphone-settings"))
+        self.assign_match_tablet_generate.setIconSize(QSize(32, 32))
+        self.assign_match_tablet_generate.clicked.connect(self.generate_assign_match_tablet_slots)
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_generate)
+
+        self.assign_match_tablet_sort = QPushButton("Auto Sort")
+        self.assign_match_tablet_sort.setIcon(qtawesome.icon("mdi6.auto-fix"))
+        self.assign_match_tablet_sort.setIconSize(QSize(32, 32))
+        self.assign_match_tablet_sort.setEnabled(False)
+        self.assign_match_tablet_sort.clicked.connect(self.sort_assign_match_tablet_slots)
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_sort)
+
+        self.assign_match_tablet_clear = QPushButton("Clear Slots")
+        self.assign_match_tablet_clear.setIcon(qtawesome.icon("mdi6.notification-clear-all"))
+        self.assign_match_tablet_clear.setIconSize(QSize(32, 32))
+        self.assign_match_tablet_clear.clicked.connect(self.clear_assign_match_tablet_slots)
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_clear)
+
+
+        self.assign_match_tablet_export = QPushButton("Export Dir")
+        self.assign_match_tablet_export.setIcon(qtawesome.icon("mdi6.export"))
+        self.assign_match_tablet_export.setIconSize(QSize(32, 32))
+        # self.assign_match_tablet_export.clicked.connect(self.export_assign_match_tablet_slots)
+        self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_export)
+
+        self.assign_match_tablets_scroll = QScrollArea()
+        self.assign_match_tablets_scroll.setWidgetResizable(True)
+        self.assign_match_layout.addWidget(self.assign_match_tablets_scroll)
+
+        self.assign_match_tablets_widget = QWidget()
+        self.assign_match_tablets_scroll.setWidget(self.assign_match_tablets_widget)
+
+        self.assign_match_tablets_layout = QHBoxLayout()
+        self.assign_match_tablets_widget.setLayout(self.assign_match_tablets_layout)
 
         # * SETTINGS * #
         self.settings_widget = QWidget()
@@ -1269,6 +1333,11 @@ class MainWindow(QMainWindow):
         if self.assign_pit_tablets + change in range(1, 13):
             self.assign_pit_tablets += change
         self.assign_pit_tablet_label.setText(f"Tablet Count: {self.assign_pit_tablets}")
+    
+    def change_assign_match_tablet_count(self, change: int):
+        if self.assign_match_tablets + change in range(1, 13):
+            self.assign_match_tablets += change
+        self.assign_match_tablet_label.setText(f"Tablet Count: {self.assign_match_tablets}")
 
     def generate_assign_pit_tablet_slots(self):
         self.assign_pit_tablet_add.setEnabled(False)
@@ -1284,6 +1353,21 @@ class MainWindow(QMainWindow):
 
             self.assign_pit_tablet_slots.append(slot)
 
+    
+    def generate_assign_match_tablet_slots(self):
+        self.assign_match_tablet_add.setEnabled(False)
+        self.assign_match_tablet_subtract.setEnabled(False)
+        self.assign_match_tablet_generate.setEnabled(False)
+        self.assign_match_tablet_sort.setEnabled(True)
+
+        for i in range(self.assign_match_tablets):
+            slot = QListWidget()
+            slot.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+            slot.setDefaultDropAction(Qt.DropAction.MoveAction)
+            self.assign_match_tablets_layout.addWidget(slot)
+
+            self.assign_match_tablet_slots.append(slot)
+
     def sort_assign_pit_tablet_slots(self):
         chunks = utils.chunk_into_n([self.assign_pit_ignored_teams.item(x) for x in range(self.assign_pit_ignored_teams.count())], self.assign_pit_tablets)
         
@@ -1294,12 +1378,32 @@ class MainWindow(QMainWindow):
             for item in chunk:
                 new_item = QListWidgetItem()
                 new_item.setText(item.text())
-                new_item.setData(0, item.data(0))
-                new_item.setData(1, item.data(1))
+                new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
                 self.assign_pit_tablet_slots[idx].addItem(new_item)
 
         self.assign_pit_ignored_teams.clear()
-                
+
+    def sort_assign_match_tablet_slots(self):
+        converted_matches = [self.assign_match_ignored_teams.item(x).data(Qt.ItemDataRole.UserRole) for x in range(self.assign_match_ignored_teams.count())]
+
+        outputs = [
+            {
+                "field": []
+            }
+            for i in range(self.assign_match_tablets)
+        ]
+
+        for index, session in enumerate(converted_matches):
+            outputs[index % int(self.assign_match_tablets)]["field"].append(session)
+
+        for idx, out in enumerate(outputs):
+            for session in out["field"]:
+                item = QListWidgetItem()
+                item.setText(f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}")
+                item.setData(Qt.ItemDataRole.UserRole, session)
+                self.assign_match_tablet_slots[idx].addItem(item)
+
+        self.assign_match_ignored_teams.clear()
 
     def clear_assign_pit_tablet_slots(self):
         self.assign_pit_tablet_add.setEnabled(True)
@@ -1311,8 +1415,7 @@ class MainWindow(QMainWindow):
             for item in [slot.item(x) for x in range(slot.count())]:
                 new_item = QListWidgetItem()
                 new_item.setText(item.text())
-                new_item.setData(0, item.data(0))
-                new_item.setData(1, item.data(1))
+                new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
                 self.assign_pit_ignored_teams.addItem(new_item)
 
             self.assign_pit_tablets_layout.removeWidget(slot)
@@ -1320,16 +1423,35 @@ class MainWindow(QMainWindow):
 
         self.assign_pit_tablet_slots.clear()
 
+
+    def clear_assign_match_tablet_slots(self):
+        self.assign_match_tablet_add.setEnabled(True)
+        self.assign_match_tablet_subtract.setEnabled(True)
+        self.assign_match_tablet_generate.setEnabled(True)
+        self.assign_match_tablet_sort.setEnabled(False)
+
+        for slot in self.assign_match_tablet_slots:
+            for item in [slot.item(x) for x in range(slot.count())]:
+                new_item = QListWidgetItem()
+                new_item.setText(item.text())
+                new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
+                self.assign_match_ignored_teams.addItem(new_item)
+
+            self.assign_match_tablets_layout.removeWidget(slot)
+            slot.deleteLater()
+
+        self.assign_match_tablet_slots.clear()
+
     def export_assign_pit_tablet_slots(self):
         output_sessions = []
 
         for slot in self.assign_pit_tablet_slots:
             output_sessions.append(
                 {
-                    "pit": [{"team": d.data(0)} for d in [slot.item(x) for x in range(slot.count())]],
+                    "pit": [{"team": d.data(Qt.ItemDataRole.UserRole)[0]} for d in [slot.item(x) for x in range(slot.count())]],
                     "field": [],
                     "teamnames": [
-                        {str(d.data(0)): d.data(1)} for d in [slot.item(x) for x in range(slot.count())]
+                        {str(d.data(Qt.ItemDataRole.UserRole)[0]): d.data(Qt.ItemDataRole.UserRole)[1]} for d in [slot.item(x) for x in range(slot.count())]
                     ],
                 }
             )
@@ -1391,6 +1513,7 @@ class MainWindow(QMainWindow):
 
             self.api_worker = MatchMatchWorker(self.sbapi, text)
             self.api_worker.finished.connect(self.on_match_generate_statbotics)
+            self.api_worker.pit_teams.connect(self.on_pit_teams)
             self.api_worker.on_error.connect(self.on_api_error)
             self.api_worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(self.api_worker.run)
@@ -1406,60 +1529,52 @@ class MainWindow(QMainWindow):
 
         for team in data:
             item = QListWidgetItem(str(team["team"]))
-            item.setData(0, int(team["team"]))
-            item.setData(1, team["team_name"])
+            item.setData(Qt.ItemDataRole.UserRole, [int(team["team"]), team["team_name"]])
             self.assign_pit_ignored_teams.addItem(item)
             
             app.processEvents()
 
     def on_match_generate_statbotics(self, matches: list):
-        # self.assign_pit_ignored_teams.clear()
-
-        # for team in data:
-        #     item = QListWidgetItem(str(team["team"]))
-        #     item.setData(0, int(team["team"]))
-        #     item.setData(1, team["team_name"])
-        #     self.assign_pit_ignored_teams.addItem(item)
-            
-        #     app.processEvents()
-    
         converted_matches = []
 
-        for match in matches:
-            match_number = match["match_number"]
+        for match in [matches[i] for i in range(len(matches)) if i == matches.index(matches[i])]:
+            if not match["playoff"]:
+                match_number = match["match_number"]
 
-            # Red Teams
-            for i in range(1, 4):
-                team_number = match[f"red_{i}"]
-                converted_matches.append(
-                    {
-                        "match": match_number,
-                        "teamNumber": team_number,
-                        "alliance": 0,
-                        "position": i - 1,
-                    }
-                )
+                # Red Teams
+                for i in range(1, 4):
+                    team_number = match[f"red_{i}"]
+                    converted_matches.append(
+                        {
+                            "match": match_number,
+                            "teamNumber": team_number,
+                            "alliance": 0,
+                            "position": i - 1,
+                        }
+                    )
 
-            # Blue Teams
-            for i in range(1, 4):
-                team_number = match[f"blue_{i}"]
-                converted_matches.append(
-                    {
-                        "match": match_number,
-                        "teamNumber": team_number,
-                        "alliance": 1,
-                        "position": i - 1,
-                    }
-                )
+                # Blue Teams
+                for i in range(1, 4):
+                    team_number = match[f"blue_{i}"]
+                    converted_matches.append(
+                        {
+                            "match": match_number,
+                            "teamNumber": team_number,
+                            "alliance": 1,
+                            "position": i - 1,
+                        }
+                    )
         
         for session in converted_matches:
             item = QListWidgetItem()
-            item.setText(f"{session['teamNumber']} | {session['match']}")
+            item.setText(f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}")
             item.setData(Qt.ItemDataRole.UserRole, session)
             self.assign_match_ignored_teams.addItem(item)
 
             app.processEvents()
 
+    def on_pit_teams(self, teams: list):
+        self.assign_match_pit_teams = teams
 
     def closeEvent(  # pylint: disable=invalid-name
         self, a0: QCloseEvent | None
