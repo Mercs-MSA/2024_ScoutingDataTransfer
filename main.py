@@ -54,7 +54,7 @@ from PyQt6.QtCore import (
     QPoint,
 )
 from PyQt6.QtMultimedia import QSoundEffect
-from PyQt6.QtGui import QCloseEvent, QPixmap, QIcon, QAction
+from PyQt6.QtGui import QCloseEvent, QPixmap, QIcon
 from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -261,6 +261,35 @@ class PitTeamWorker(QObject):
         try:
             teams = self.api.get_team_events(event=self.event, fields=["team", "team_name"])
             self.finished.emit(teams)
+        except Exception:
+            traceback.print_exc()
+            self.on_error.emit(traceback.format_exc())
+            self.finished.emit([])
+
+class MatchMatchWorker(QObject):
+    finished = pyqtSignal(list)
+    on_error = pyqtSignal(str)
+
+    def __init__(self, api: statbotics.Statbotics, event: str) -> None:
+        super().__init__()
+        self.api = api
+        self.eventcode = event
+
+    def run(self):
+        try:
+            matches = self.api.get_matches(
+            event=self.eventcode,
+            fields=[
+                "match_number",
+                "red_1",
+                "red_2",
+                "red_3",
+                "blue_1",
+                "blue_2",
+                "blue_3",
+            ],
+        )
+            self.finished.emit(matches)
         except Exception:
             traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
@@ -686,6 +715,7 @@ class MainWindow(QMainWindow):
         self.assign_pit_tablets_layout = QHBoxLayout()
         self.assign_pit_tablets_widget.setLayout(self.assign_pit_tablets_layout)
 
+        # Match
         self.assign_match_widget = QWidget()
         self.assign_widget.addTab(self.assign_match_widget, "Match")
 
@@ -694,6 +724,29 @@ class MainWindow(QMainWindow):
 
         self.assign_match_top_options = QHBoxLayout()
         self.assign_match_layout.addLayout(self.assign_match_top_options)
+
+        self.assign_match_generate_statbotics = QPushButton("Pull from Statbotics")
+        self.assign_match_generate_statbotics.setIcon(qtawesome.icon("mdi6.web"))
+        self.assign_match_generate_statbotics.setIconSize(QSize(32, 32))
+        self.assign_match_generate_statbotics.clicked.connect(self.assign_match_generate_worker)
+        self.assign_match_top_options.addWidget(self.assign_match_generate_statbotics)
+
+        self.assign_match_clear_ignored = QPushButton("Clear")
+        self.assign_match_clear_ignored.setIcon(qtawesome.icon("mdi6.eraser"))
+        self.assign_match_clear_ignored.setIconSize(QSize(32, 32))
+        # self.assign_match_clear_ignored.clicked.connect(self.assign_match_ignored_teams.clear) # this is done later after listview in init'ed
+        self.assign_match_top_options.addWidget(self.assign_match_clear_ignored)
+
+        # creating a QListWidget
+        self.assign_match_ignored_teams = QListWidget(self)
+
+        self.assign_match_ignored_teams.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.assign_match_ignored_teams.customContextMenuRequested.connect(self.assign_show_ignored_match_context)
+        self.assign_match_ignored_teams.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.assign_match_ignored_teams.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.assign_match_clear_ignored.clicked.connect(self.assign_match_ignored_teams.clear)
+
+        self.assign_match_layout.addWidget(self.assign_match_ignored_teams)
 
         # * SETTINGS * #
         self.settings_widget = QWidget()
@@ -1298,20 +1351,21 @@ class MainWindow(QMainWindow):
         
         menu.exec(global_pos)
 
+    def assign_show_ignored_match_context(self, point: QPoint):
+        global_pos = self.assign_pit_ignored_teams.mapToGlobal(point)
+
+        menu = QMenu()
+        menu.addAction("Delete", self.assign_match_context_delete)
+        
+        menu.exec(global_pos)
+
     def assign_pit_context_delete(self):
         for _ in range(len(self.assign_pit_ignored_teams.selectedItems())):
             self.assign_pit_ignored_teams.takeItem(self.assign_pit_ignored_teams.currentRow())
 
-    def assign_pit_context_insert(self):
-        text, okPressed = QInputDialog.getText(self, "Team Number", "Enter a team number", QLineEdit.EchoMode.Normal, "")
-        if okPressed and text.strip() != '':
-            if text.isdigit() and len(text) <= 4:
-                item = QListWidgetItem(text)
-                item.setData(0, int(text))
-                item.setData(1, "Manually Entered")
-                self.assign_pit_ignored_teams.addItem(item)
-            else:
-                QMessageBox.warning(self, 'Warning', 'Please enter a numerical value up to 4 digits.')
+    def assign_match_context_delete(self):
+        for _ in range(len(self.assign_match_ignored_teams.selectedItems())):
+            self.assign_match_ignored_teams.takeItem(self.assign_match_ignored_teams.currentRow())
 
     def assign_pit_generate_worker(self):
         text, okPressed = QInputDialog.getText(self, "Event Code", "Enter a valid TBA-format event code", QLineEdit.EchoMode.Normal, "")
@@ -1320,6 +1374,23 @@ class MainWindow(QMainWindow):
 
             self.api_worker = PitTeamWorker(self.sbapi, text)
             self.api_worker.finished.connect(self.on_pit_generate_statbotics)
+            self.api_worker.on_error.connect(self.on_api_error)
+            self.api_worker.moveToThread(self.worker_thread)
+            self.worker_thread.started.connect(self.api_worker.run)
+
+            self.api_worker.finished.connect(self.worker_thread.quit)
+
+            self.worker_thread.start()
+        else:
+            QMessageBox.critical(self, 'Error', 'Please enter a code')
+
+    def assign_match_generate_worker(self):
+        text, okPressed = QInputDialog.getText(self, "Event Code", "Enter a valid TBA-format event code", QLineEdit.EchoMode.Normal, "")
+        if okPressed and text.strip() != '':
+            self.worker_thread = QThread()
+
+            self.api_worker = MatchMatchWorker(self.sbapi, text)
+            self.api_worker.finished.connect(self.on_match_generate_statbotics)
             self.api_worker.on_error.connect(self.on_api_error)
             self.api_worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(self.api_worker.run)
@@ -1339,6 +1410,54 @@ class MainWindow(QMainWindow):
             item.setData(1, team["team_name"])
             self.assign_pit_ignored_teams.addItem(item)
             
+            app.processEvents()
+
+    def on_match_generate_statbotics(self, matches: list):
+        # self.assign_pit_ignored_teams.clear()
+
+        # for team in data:
+        #     item = QListWidgetItem(str(team["team"]))
+        #     item.setData(0, int(team["team"]))
+        #     item.setData(1, team["team_name"])
+        #     self.assign_pit_ignored_teams.addItem(item)
+            
+        #     app.processEvents()
+    
+        converted_matches = []
+
+        for match in matches:
+            match_number = match["match_number"]
+
+            # Red Teams
+            for i in range(1, 4):
+                team_number = match[f"red_{i}"]
+                converted_matches.append(
+                    {
+                        "match": match_number,
+                        "teamNumber": team_number,
+                        "alliance": 0,
+                        "position": i - 1,
+                    }
+                )
+
+            # Blue Teams
+            for i in range(1, 4):
+                team_number = match[f"blue_{i}"]
+                converted_matches.append(
+                    {
+                        "match": match_number,
+                        "teamNumber": team_number,
+                        "alliance": 1,
+                        "position": i - 1,
+                    }
+                )
+        
+        for session in converted_matches:
+            item = QListWidgetItem()
+            item.setText(f"{session['teamNumber']} | {session['match']}")
+            item.setData(Qt.ItemDataRole.UserRole, session)
+            self.assign_match_ignored_teams.addItem(item)
+
             app.processEvents()
 
 
