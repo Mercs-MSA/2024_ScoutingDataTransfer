@@ -132,6 +132,7 @@ QUAL_DATA_HEADER: typing.Final = [
     "endgameDidTheyGetACard",
     "endgameDidTheyNoShow",
     "endgameComments",
+    "questionables"
 ]
 
 PLAYOFF_DATA_HEADER: typing.Final = [
@@ -173,6 +174,7 @@ PLAYOFF_DATA_HEADER: typing.Final = [
     "endgameDidTheyGetACard",
     "endgameDidTheyNoShow",
     "endgameComments",
+    "questionables"
 ]
 
 
