@@ -603,6 +603,8 @@ class MainWindow(QMainWindow):
         self.assign_pit_widget.setLayout(self.assign_pit_layout)
 
         self.assign_pit_generate_statbotics = QPushButton("Pull from Statbotics")
+        self.assign_pit_generate_statbotics.setIcon(qtawesome.icon("mdi6.web"))
+        self.assign_pit_generate_statbotics.setIconSize(QSize(32, 32))
         self.assign_pit_generate_statbotics.clicked.connect(self.assign_pit_generate_worker)
         self.assign_pit_layout.addWidget(self.assign_pit_generate_statbotics)
 
@@ -639,20 +641,28 @@ class MainWindow(QMainWindow):
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_subtract)
 
         self.assign_pit_tablet_generate = QPushButton("Generate Slots")
+        self.assign_pit_tablet_generate.setIcon(qtawesome.icon("mdi6.cellphone-settings"))
+        self.assign_pit_tablet_generate.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_generate.clicked.connect(self.generate_assign_pit_tablet_slots)
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_generate)
 
         self.assign_pit_tablet_sort = QPushButton("Auto Sort")
+        self.assign_pit_tablet_sort.setIcon(qtawesome.icon("mdi6.auto-fix"))
+        self.assign_pit_tablet_sort.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_sort.setEnabled(False)
         self.assign_pit_tablet_sort.clicked.connect(self.sort_assign_pit_tablet_slots)
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_sort)
 
         self.assign_pit_tablet_clear = QPushButton("Clear Slots")
+        self.assign_pit_tablet_clear.setIcon(qtawesome.icon("mdi6.notification-clear-all"))
+        self.assign_pit_tablet_clear.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_clear.clicked.connect(self.clear_assign_pit_tablet_slots)
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_clear)
 
 
         self.assign_pit_tablet_export = QPushButton("Export Dir")
+        self.assign_pit_tablet_export.setIcon(qtawesome.icon("mdi6.export"))
+        self.assign_pit_tablet_export.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_export.clicked.connect(self.export_assign_pit_tablet_slots)
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_export)
 
