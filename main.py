@@ -602,20 +602,20 @@ class MainWindow(QMainWindow):
         self.assign_pit_layout = QVBoxLayout()
         self.assign_pit_widget.setLayout(self.assign_pit_layout)
 
-        self.assign_piy_top_options = QHBoxLayout()
-        self.assign_pit_layout.addLayout(self.assign_piy_top_options)
+        self.assign_pit_top_options = QHBoxLayout()
+        self.assign_pit_layout.addLayout(self.assign_pit_top_options)
 
         self.assign_pit_generate_statbotics = QPushButton("Pull from Statbotics")
         self.assign_pit_generate_statbotics.setIcon(qtawesome.icon("mdi6.web"))
         self.assign_pit_generate_statbotics.setIconSize(QSize(32, 32))
         self.assign_pit_generate_statbotics.clicked.connect(self.assign_pit_generate_worker)
-        self.assign_piy_top_options.addWidget(self.assign_pit_generate_statbotics)
+        self.assign_pit_top_options.addWidget(self.assign_pit_generate_statbotics)
 
         self.assign_pit_clear_ignored = QPushButton("Clear")
         self.assign_pit_clear_ignored.setIcon(qtawesome.icon("mdi6.eraser"))
         self.assign_pit_clear_ignored.setIconSize(QSize(32, 32))
         # self.assign_pit_clear_ignored.clicked.connect(self.assign_pit_ignored_teams.clear) # this is done later after listview in init'ed
-        self.assign_piy_top_options.addWidget(self.assign_pit_clear_ignored)
+        self.assign_pit_top_options.addWidget(self.assign_pit_clear_ignored)
 
         # creating a QListWidget
         self.assign_pit_ignored_teams = QListWidget(self)
@@ -685,6 +685,15 @@ class MainWindow(QMainWindow):
 
         self.assign_pit_tablets_layout = QHBoxLayout()
         self.assign_pit_tablets_widget.setLayout(self.assign_pit_tablets_layout)
+
+        self.assign_match_widget = QWidget()
+        self.assign_widget.addTab(self.assign_match_widget, "Match")
+
+        self.assign_match_layout = QVBoxLayout()
+        self.assign_match_widget.setLayout(self.assign_match_layout)
+
+        self.assign_match_top_options = QHBoxLayout()
+        self.assign_match_layout.addLayout(self.assign_match_top_options)
 
         # * SETTINGS * #
         self.settings_widget = QWidget()
