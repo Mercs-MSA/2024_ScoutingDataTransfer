@@ -3,7 +3,6 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
-import pprint
 import sys
 import os
 import logging
@@ -68,7 +67,7 @@ import data_models
 import constants
 import utils
 
-__version__: typing.Final = "v1.0.0-amarillo"
+__version__: typing.Final = "v2.0.0-state"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
@@ -136,7 +135,7 @@ class DataWorker(QObject):
             self.finished.emit(data_frames)
             return
 
-        if form == "qual" or form =="playoff":
+        if form == "qual" or form == "playoff":
             if df["matchNumber"].iloc[0] is None:
                 self.on_data_error.emit(constants.DataError.MATCH_NUMBER_NULL)
                 self.finished.emit(data_frames)
@@ -157,7 +156,10 @@ class DataWorker(QObject):
             # check for repeats
             if (
                 int(df["teamNumber"].iloc[0].strip("frc"))
-                in [int(x.strip("frc")) for x in data_frames["qual"]["teamNumber"].to_list()]
+                in [
+                    int(x.strip("frc"))
+                    for x in data_frames["qual"]["teamNumber"].to_list()
+                ]
             ) and (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
@@ -171,13 +173,18 @@ class DataWorker(QObject):
             # check for repeats
             if (
                 int(df["teamNumber"].iloc[0].strip("frc"))
-                in [int(x.strip("frc")) for x in data_frames["playoff"]["teamNumber"].to_list()]
+                in [
+                    int(x.strip("frc"))
+                    for x in data_frames["playoff"]["teamNumber"].to_list()
+                ]
             ) and (
                 int(df["matchNumber"].iloc[0])
                 in [int(x) for x in data_frames["playoff"]["matchNumber"].to_list()]
             ):
                 if (
-                    self.on_repeated_data("playoff", int(df["teamNumber"].iloc[0].strip("frc")))
+                    self.on_repeated_data(
+                        "playoff", int(df["teamNumber"].iloc[0].strip("frc"))
+                    )
                     == QMessageBox.StandardButton.No
                 ):
                     add_to_df = False
@@ -231,6 +238,7 @@ class DataWorker(QObject):
         ret = msg.exec()
         return ret
 
+
 class EventCodeWorker(QObject):
     finished = pyqtSignal(list)
     on_error = pyqtSignal(str)
@@ -242,12 +250,15 @@ class EventCodeWorker(QObject):
 
     def run(self):
         try:
-            events = self.api.get_events(datetime.datetime.now().year, district=self.district)
+            events = self.api.get_events(
+                datetime.datetime.now().year, district=self.district
+            )
             self.finished.emit(events)
         except Exception:
             traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
             self.finished.emit([])
+
 
 class PitTeamWorker(QObject):
     finished = pyqtSignal(list)
@@ -260,12 +271,15 @@ class PitTeamWorker(QObject):
 
     def run(self):
         try:
-            teams = self.api.get_team_events(event=self.event, fields=["team", "team_name"])
+            teams = self.api.get_team_events(
+                event=self.event, fields=["team", "team_name"]
+            )
             self.finished.emit(teams)
         except Exception:
             traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
             self.finished.emit([])
+
 
 class MatchMatchWorker(QObject):
     finished = pyqtSignal(list)
@@ -279,26 +293,29 @@ class MatchMatchWorker(QObject):
 
     def run(self):
         try:
-            pit_teams = self.api.get_team_events(event=self.eventcode, fields=["team", "team_name"])
+            pit_teams = self.api.get_team_events(
+                event=self.eventcode, fields=["team", "team_name"]
+            )
             matches = self.api.get_matches(
-            event=self.eventcode,
-            fields=[
-                "match_number",
-                "red_1",
-                "red_2",
-                "red_3",
-                "blue_1",
-                "blue_2",
-                "blue_3",
-                "playoff"
-            ],
-        )
+                event=self.eventcode,
+                fields=[
+                    "match_number",
+                    "red_1",
+                    "red_2",
+                    "red_3",
+                    "blue_1",
+                    "blue_2",
+                    "blue_3",
+                    "playoff",
+                ],
+            )
             self.finished.emit(matches)
             self.pit_teams.emit(pit_teams)
         except Exception:
             traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
             self.finished.emit([])
+
 
 class MainWindow(QMainWindow):
     """Main Window"""
@@ -642,7 +659,9 @@ class MainWindow(QMainWindow):
         self.assign_pit_generate_statbotics = QPushButton("Pull from Statbotics")
         self.assign_pit_generate_statbotics.setIcon(qtawesome.icon("mdi6.web"))
         self.assign_pit_generate_statbotics.setIconSize(QSize(32, 32))
-        self.assign_pit_generate_statbotics.clicked.connect(self.assign_pit_generate_worker)
+        self.assign_pit_generate_statbotics.clicked.connect(
+            self.assign_pit_generate_worker
+        )
         self.assign_pit_top_options.addWidget(self.assign_pit_generate_statbotics)
 
         self.assign_pit_clear_ignored = QPushButton("Clear")
@@ -655,11 +674,19 @@ class MainWindow(QMainWindow):
         self.assign_pit_ignored_teams = QListWidget(self)
 
         # setting drag drop mode
-        self.assign_pit_ignored_teams.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.assign_pit_ignored_teams.customContextMenuRequested.connect(self.assign_show_ignored_pit_context)
-        self.assign_pit_ignored_teams.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.assign_pit_ignored_teams.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.assign_pit_ignored_teams.customContextMenuRequested.connect(
+            self.assign_show_ignored_pit_context
+        )
+        self.assign_pit_ignored_teams.setDragDropMode(
+            QAbstractItemView.DragDropMode.DragDrop
+        )
         self.assign_pit_ignored_teams.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.assign_pit_clear_ignored.clicked.connect(self.assign_pit_ignored_teams.clear)
+        self.assign_pit_clear_ignored.clicked.connect(
+            self.assign_pit_ignored_teams.clear
+        )
 
         self.assign_pit_layout.addWidget(self.assign_pit_ignored_teams)
 
@@ -669,25 +696,35 @@ class MainWindow(QMainWindow):
         self.assign_pit_tablet_layout = QHBoxLayout()
         self.assign_pit_layout.addLayout(self.assign_pit_tablet_layout)
 
-        self.assign_pit_tablet_label = QLabel(f"Tablet Count: {self.assign_pit_tablets}")
+        self.assign_pit_tablet_label = QLabel(
+            f"Tablet Count: {self.assign_pit_tablets}"
+        )
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_label)
 
         self.assign_pit_tablet_add = QPushButton()
         self.assign_pit_tablet_add.setIcon(qtawesome.icon("mdi6.plus"))
         self.assign_pit_tablet_add.setIconSize(QSize(32, 32))
-        self.assign_pit_tablet_add.clicked.connect(lambda: self.change_assign_pit_tablet_count(1))
+        self.assign_pit_tablet_add.clicked.connect(
+            lambda: self.change_assign_pit_tablet_count(1)
+        )
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_add)
 
         self.assign_pit_tablet_subtract = QPushButton()
         self.assign_pit_tablet_subtract.setIcon(qtawesome.icon("mdi6.minus"))
         self.assign_pit_tablet_subtract.setIconSize(QSize(32, 32))
-        self.assign_pit_tablet_subtract.clicked.connect(lambda: self.change_assign_pit_tablet_count(-1))
+        self.assign_pit_tablet_subtract.clicked.connect(
+            lambda: self.change_assign_pit_tablet_count(-1)
+        )
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_subtract)
 
         self.assign_pit_tablet_generate = QPushButton("Generate Slots")
-        self.assign_pit_tablet_generate.setIcon(qtawesome.icon("mdi6.cellphone-settings"))
+        self.assign_pit_tablet_generate.setIcon(
+            qtawesome.icon("mdi6.cellphone-settings")
+        )
         self.assign_pit_tablet_generate.setIconSize(QSize(32, 32))
-        self.assign_pit_tablet_generate.clicked.connect(self.generate_assign_pit_tablet_slots)
+        self.assign_pit_tablet_generate.clicked.connect(
+            self.generate_assign_pit_tablet_slots
+        )
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_generate)
 
         self.assign_pit_tablet_sort = QPushButton("Auto Sort")
@@ -698,16 +735,19 @@ class MainWindow(QMainWindow):
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_sort)
 
         self.assign_pit_tablet_clear = QPushButton("Clear Slots")
-        self.assign_pit_tablet_clear.setIcon(qtawesome.icon("mdi6.notification-clear-all"))
+        self.assign_pit_tablet_clear.setIcon(
+            qtawesome.icon("mdi6.notification-clear-all")
+        )
         self.assign_pit_tablet_clear.setIconSize(QSize(32, 32))
         self.assign_pit_tablet_clear.clicked.connect(self.clear_assign_pit_tablet_slots)
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_clear)
 
-
         self.assign_pit_tablet_export = QPushButton("Export Dir")
         self.assign_pit_tablet_export.setIcon(qtawesome.icon("mdi6.export"))
         self.assign_pit_tablet_export.setIconSize(QSize(32, 32))
-        self.assign_pit_tablet_export.clicked.connect(self.export_assign_pit_tablet_slots)
+        self.assign_pit_tablet_export.clicked.connect(
+            self.export_assign_pit_tablet_slots
+        )
         self.assign_pit_tablet_layout.addWidget(self.assign_pit_tablet_export)
 
         self.assign_pit_tablets_scroll = QScrollArea()
@@ -733,7 +773,9 @@ class MainWindow(QMainWindow):
         self.assign_match_generate_statbotics = QPushButton("Pull from Statbotics")
         self.assign_match_generate_statbotics.setIcon(qtawesome.icon("mdi6.web"))
         self.assign_match_generate_statbotics.setIconSize(QSize(32, 32))
-        self.assign_match_generate_statbotics.clicked.connect(self.assign_match_generate_worker)
+        self.assign_match_generate_statbotics.clicked.connect(
+            self.assign_match_generate_worker
+        )
         self.assign_match_top_options.addWidget(self.assign_match_generate_statbotics)
 
         self.assign_match_clear_ignored = QPushButton("Clear")
@@ -747,11 +789,19 @@ class MainWindow(QMainWindow):
 
         self.assign_match_ignored_teams = QListWidget(self)
 
-        self.assign_match_ignored_teams.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.assign_match_ignored_teams.customContextMenuRequested.connect(self.assign_show_ignored_match_context)
-        self.assign_match_ignored_teams.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.assign_match_ignored_teams.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.assign_match_ignored_teams.customContextMenuRequested.connect(
+            self.assign_show_ignored_match_context
+        )
+        self.assign_match_ignored_teams.setDragDropMode(
+            QAbstractItemView.DragDropMode.DragDrop
+        )
         self.assign_match_ignored_teams.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.assign_match_clear_ignored.clicked.connect(self.assign_match_ignored_teams.clear)
+        self.assign_match_clear_ignored.clicked.connect(
+            self.assign_match_ignored_teams.clear
+        )
 
         self.assign_match_layout.addWidget(self.assign_match_ignored_teams)
 
@@ -761,45 +811,62 @@ class MainWindow(QMainWindow):
         self.assign_match_tablet_layout = QHBoxLayout()
         self.assign_match_layout.addLayout(self.assign_match_tablet_layout)
 
-        self.assign_match_tablet_label = QLabel(f"Tablet Count: {self.assign_match_tablets}")
+        self.assign_match_tablet_label = QLabel(
+            f"Tablet Count: {self.assign_match_tablets}"
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_label)
 
         self.assign_match_tablet_add = QPushButton()
         self.assign_match_tablet_add.setIcon(qtawesome.icon("mdi6.plus"))
         self.assign_match_tablet_add.setIconSize(QSize(32, 32))
-        self.assign_match_tablet_add.clicked.connect(lambda: self.change_assign_match_tablet_count(1))
+        self.assign_match_tablet_add.clicked.connect(
+            lambda: self.change_assign_match_tablet_count(1)
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_add)
 
         self.assign_match_tablet_subtract = QPushButton()
         self.assign_match_tablet_subtract.setIcon(qtawesome.icon("mdi6.minus"))
         self.assign_match_tablet_subtract.setIconSize(QSize(32, 32))
-        self.assign_match_tablet_subtract.clicked.connect(lambda: self.change_assign_match_tablet_count(-1))
+        self.assign_match_tablet_subtract.clicked.connect(
+            lambda: self.change_assign_match_tablet_count(-1)
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_subtract)
 
         self.assign_match_tablet_generate = QPushButton("Generate Slots")
-        self.assign_match_tablet_generate.setIcon(qtawesome.icon("mdi6.cellphone-settings"))
+        self.assign_match_tablet_generate.setIcon(
+            qtawesome.icon("mdi6.cellphone-settings")
+        )
         self.assign_match_tablet_generate.setIconSize(QSize(32, 32))
-        self.assign_match_tablet_generate.clicked.connect(self.generate_assign_match_tablet_slots)
+        self.assign_match_tablet_generate.clicked.connect(
+            self.generate_assign_match_tablet_slots
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_generate)
 
         self.assign_match_tablet_sort = QPushButton("Auto Sort")
         self.assign_match_tablet_sort.setIcon(qtawesome.icon("mdi6.auto-fix"))
         self.assign_match_tablet_sort.setIconSize(QSize(32, 32))
         self.assign_match_tablet_sort.setEnabled(False)
-        self.assign_match_tablet_sort.clicked.connect(self.sort_assign_match_tablet_slots)
+        self.assign_match_tablet_sort.clicked.connect(
+            self.sort_assign_match_tablet_slots
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_sort)
 
         self.assign_match_tablet_clear = QPushButton("Clear Slots")
-        self.assign_match_tablet_clear.setIcon(qtawesome.icon("mdi6.notification-clear-all"))
+        self.assign_match_tablet_clear.setIcon(
+            qtawesome.icon("mdi6.notification-clear-all")
+        )
         self.assign_match_tablet_clear.setIconSize(QSize(32, 32))
-        self.assign_match_tablet_clear.clicked.connect(self.clear_assign_match_tablet_slots)
+        self.assign_match_tablet_clear.clicked.connect(
+            self.clear_assign_match_tablet_slots
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_clear)
-
 
         self.assign_match_tablet_export = QPushButton("Export Dir")
         self.assign_match_tablet_export.setIcon(qtawesome.icon("mdi6.export"))
         self.assign_match_tablet_export.setIconSize(QSize(32, 32))
-        self.assign_match_tablet_export.clicked.connect(self.export_assign_match_tablet_slots)
+        self.assign_match_tablet_export.clicked.connect(
+            self.export_assign_match_tablet_slots
+        )
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_export)
 
         self.assign_match_tablets_scroll = QScrollArea()
@@ -1232,8 +1299,10 @@ class MainWindow(QMainWindow):
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
         else:
-            district, ok = QInputDialog.getText(self, 'API', 'What district would you like to fetch')
-		
+            district, ok = QInputDialog.getText(
+                self, "API", "What district would you like to fetch"
+            )
+
             if ok:
                 self.worker_thread = QThread()
 
@@ -1333,11 +1402,13 @@ class MainWindow(QMainWindow):
         if self.assign_pit_tablets + change in range(1, 13):
             self.assign_pit_tablets += change
         self.assign_pit_tablet_label.setText(f"Tablet Count: {self.assign_pit_tablets}")
-    
+
     def change_assign_match_tablet_count(self, change: int):
         if self.assign_match_tablets + change in range(1, 13):
             self.assign_match_tablets += change
-        self.assign_match_tablet_label.setText(f"Tablet Count: {self.assign_match_tablets}")
+        self.assign_match_tablet_label.setText(
+            f"Tablet Count: {self.assign_match_tablets}"
+        )
 
     def generate_assign_pit_tablet_slots(self):
         self.assign_pit_tablet_add.setEnabled(False)
@@ -1353,7 +1424,6 @@ class MainWindow(QMainWindow):
 
             self.assign_pit_tablet_slots.append(slot)
 
-    
     def generate_assign_match_tablet_slots(self):
         self.assign_match_tablet_add.setEnabled(False)
         self.assign_match_tablet_subtract.setEnabled(False)
@@ -1369,8 +1439,14 @@ class MainWindow(QMainWindow):
             self.assign_match_tablet_slots.append(slot)
 
     def sort_assign_pit_tablet_slots(self):
-        chunks = utils.chunk_into_n([self.assign_pit_ignored_teams.item(x) for x in range(self.assign_pit_ignored_teams.count())], self.assign_pit_tablets)
-        
+        chunks = utils.chunk_into_n(
+            [
+                self.assign_pit_ignored_teams.item(x)
+                for x in range(self.assign_pit_ignored_teams.count())
+            ],
+            self.assign_pit_tablets,
+        )
+
         if len(self.assign_pit_tablet_slots) != len(chunks):
             return
 
@@ -1378,20 +1454,20 @@ class MainWindow(QMainWindow):
             for item in chunk:
                 new_item = QListWidgetItem()
                 new_item.setText(item.text())
-                new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
+                new_item.setData(
+                    Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole)
+                )
                 self.assign_pit_tablet_slots[idx].addItem(new_item)
 
         self.assign_pit_ignored_teams.clear()
 
     def sort_assign_match_tablet_slots(self):
-        converted_matches = [self.assign_match_ignored_teams.item(x).data(Qt.ItemDataRole.UserRole) for x in range(self.assign_match_ignored_teams.count())]
-
-        outputs = [
-            {
-                "field": []
-            }
-            for i in range(self.assign_match_tablets)
+        converted_matches = [
+            self.assign_match_ignored_teams.item(x).data(Qt.ItemDataRole.UserRole)
+            for x in range(self.assign_match_ignored_teams.count())
         ]
+
+        outputs = [{"field": []} for i in range(self.assign_match_tablets)]
 
         for index, session in enumerate(converted_matches):
             outputs[index % int(self.assign_match_tablets)]["field"].append(session)
@@ -1399,7 +1475,9 @@ class MainWindow(QMainWindow):
         for idx, out in enumerate(outputs):
             for session in out["field"]:
                 item = QListWidgetItem()
-                item.setText(f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}")
+                item.setText(
+                    f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}"
+                )
                 item.setData(Qt.ItemDataRole.UserRole, session)
                 self.assign_match_tablet_slots[idx].addItem(item)
 
@@ -1415,14 +1493,15 @@ class MainWindow(QMainWindow):
             for item in [slot.item(x) for x in range(slot.count())]:
                 new_item = QListWidgetItem()
                 new_item.setText(item.text())
-                new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
+                new_item.setData(
+                    Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole)
+                )
                 self.assign_pit_ignored_teams.addItem(new_item)
 
             self.assign_pit_tablets_layout.removeWidget(slot)
             slot.deleteLater()
 
         self.assign_pit_tablet_slots.clear()
-
 
     def clear_assign_match_tablet_slots(self):
         self.assign_match_tablet_add.setEnabled(True)
@@ -1434,7 +1513,9 @@ class MainWindow(QMainWindow):
             for item in [slot.item(x) for x in range(slot.count())]:
                 new_item = QListWidgetItem()
                 new_item.setText(item.text())
-                new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
+                new_item.setData(
+                    Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole)
+                )
                 self.assign_match_ignored_teams.addItem(new_item)
 
             self.assign_match_tablets_layout.removeWidget(slot)
@@ -1448,10 +1529,18 @@ class MainWindow(QMainWindow):
         for slot in self.assign_pit_tablet_slots:
             output_sessions.append(
                 {
-                    "pit": [{"team": d.data(Qt.ItemDataRole.UserRole)[0]} for d in [slot.item(x) for x in range(slot.count())]],
+                    "pit": [
+                        {"team": d.data(Qt.ItemDataRole.UserRole)[0]}
+                        for d in [slot.item(x) for x in range(slot.count())]
+                    ],
                     "field": [],
                     "teamnames": [
-                        {str(d.data(Qt.ItemDataRole.UserRole)[0]): d.data(Qt.ItemDataRole.UserRole)[1]} for d in [slot.item(x) for x in range(slot.count())]
+                        {
+                            str(d.data(Qt.ItemDataRole.UserRole)[0]): d.data(
+                                Qt.ItemDataRole.UserRole
+                            )[1]
+                        }
+                        for d in [slot.item(x) for x in range(slot.count())]
                     ],
                 }
             )
@@ -1465,7 +1554,9 @@ class MainWindow(QMainWindow):
                 )
 
     def export_assign_match_tablet_slots(self):
-        merged_teams = {str(d["team"]): d["team_name"] for d in self.assign_match_pit_teams}
+        merged_teams = {
+            str(d["team"]): d["team_name"] for d in self.assign_match_pit_teams
+        }
         print(merged_teams)
         output_sessions = []
 
@@ -1473,9 +1564,19 @@ class MainWindow(QMainWindow):
             output_sessions.append(
                 {
                     "pit": [],
-                    "field": [item.data(Qt.ItemDataRole.UserRole) for item in [slot.item(x) for x in range(slot.count())]],
+                    "field": [
+                        item.data(Qt.ItemDataRole.UserRole)
+                        for item in [slot.item(x) for x in range(slot.count())]
+                    ],
                     "teamnames": [
-                        {str(d.data(Qt.ItemDataRole.UserRole)["teamNumber"]): merged_teams[str(d.data(Qt.ItemDataRole.UserRole)["teamNumber"])]} for d in [slot.item(x) for x in range(slot.count())]
+                        {
+                            str(
+                                d.data(Qt.ItemDataRole.UserRole)["teamNumber"]
+                            ): merged_teams[
+                                str(d.data(Qt.ItemDataRole.UserRole)["teamNumber"])
+                            ]
+                        }
+                        for d in [slot.item(x) for x in range(slot.count())]
                     ],
                 }
             )
@@ -1494,7 +1595,7 @@ class MainWindow(QMainWindow):
         menu = QMenu()
         menu.addAction("Delete", self.assign_pit_context_delete)
         menu.addAction("Insert", self.assign_pit_context_insert)
-        
+
         menu.exec(global_pos)
 
     def assign_show_ignored_match_context(self, point: QPoint):
@@ -1502,20 +1603,30 @@ class MainWindow(QMainWindow):
 
         menu = QMenu()
         menu.addAction("Delete", self.assign_match_context_delete)
-        
+
         menu.exec(global_pos)
 
     def assign_pit_context_delete(self):
         for _ in range(len(self.assign_pit_ignored_teams.selectedItems())):
-            self.assign_pit_ignored_teams.takeItem(self.assign_pit_ignored_teams.currentRow())
+            self.assign_pit_ignored_teams.takeItem(
+                self.assign_pit_ignored_teams.currentRow()
+            )
 
     def assign_match_context_delete(self):
         for _ in range(len(self.assign_match_ignored_teams.selectedItems())):
-            self.assign_match_ignored_teams.takeItem(self.assign_match_ignored_teams.currentRow())
+            self.assign_match_ignored_teams.takeItem(
+                self.assign_match_ignored_teams.currentRow()
+            )
 
     def assign_pit_generate_worker(self):
-        text, okPressed = QInputDialog.getText(self, "Event Code", "Enter a valid TBA-format event code", QLineEdit.EchoMode.Normal, "")
-        if okPressed and text.strip() != '':
+        text, okPressed = QInputDialog.getText(
+            self,
+            "Event Code",
+            "Enter a valid TBA-format event code",
+            QLineEdit.EchoMode.Normal,
+            "",
+        )
+        if okPressed and text.strip() != "":
             self.worker_thread = QThread()
 
             self.api_worker = PitTeamWorker(self.sbapi, text)
@@ -1528,11 +1639,17 @@ class MainWindow(QMainWindow):
 
             self.worker_thread.start()
         else:
-            QMessageBox.critical(self, 'Error', 'Please enter a code')
+            QMessageBox.critical(self, "Error", "Please enter a code")
 
     def assign_match_generate_worker(self):
-        text, okPressed = QInputDialog.getText(self, "Event Code", "Enter a valid TBA-format event code", QLineEdit.EchoMode.Normal, "")
-        if okPressed and text.strip() != '':
+        text, okPressed = QInputDialog.getText(
+            self,
+            "Event Code",
+            "Enter a valid TBA-format event code",
+            QLineEdit.EchoMode.Normal,
+            "",
+        )
+        if okPressed and text.strip() != "":
             self.worker_thread = QThread()
 
             self.api_worker = MatchMatchWorker(self.sbapi, text)
@@ -1546,22 +1663,26 @@ class MainWindow(QMainWindow):
 
             self.worker_thread.start()
         else:
-            QMessageBox.critical(self, 'Error', 'Please enter a code')
+            QMessageBox.critical(self, "Error", "Please enter a code")
 
     def on_pit_generate_statbotics(self, data: list):
         self.assign_pit_ignored_teams.clear()
 
         for team in data:
             item = QListWidgetItem(str(team["team"]))
-            item.setData(Qt.ItemDataRole.UserRole, [int(team["team"]), team["team_name"]])
+            item.setData(
+                Qt.ItemDataRole.UserRole, [int(team["team"]), team["team_name"]]
+            )
             self.assign_pit_ignored_teams.addItem(item)
-            
+
             app.processEvents()
 
     def on_match_generate_statbotics(self, matches: list):
         converted_matches = []
 
-        for match in [matches[i] for i in range(len(matches)) if i == matches.index(matches[i])]:
+        for match in [
+            matches[i] for i in range(len(matches)) if i == matches.index(matches[i])
+        ]:
             if not match["playoff"]:
                 match_number = match["match_number"]
 
@@ -1588,10 +1709,12 @@ class MainWindow(QMainWindow):
                             "position": i - 1,
                         }
                     )
-        
+
         for session in converted_matches:
             item = QListWidgetItem()
-            item.setText(f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}")
+            item.setText(
+                f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}"
+            )
             item.setData(Qt.ItemDataRole.UserRole, session)
             self.assign_match_ignored_teams.addItem(item)
 
