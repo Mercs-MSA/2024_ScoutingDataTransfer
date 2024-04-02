@@ -799,7 +799,7 @@ class MainWindow(QMainWindow):
         self.assign_match_tablet_export = QPushButton("Export Dir")
         self.assign_match_tablet_export.setIcon(qtawesome.icon("mdi6.export"))
         self.assign_match_tablet_export.setIconSize(QSize(32, 32))
-        # self.assign_match_tablet_export.clicked.connect(self.export_assign_match_tablet_slots)
+        self.assign_match_tablet_export.clicked.connect(self.export_assign_match_tablet_slots)
         self.assign_match_tablet_layout.addWidget(self.assign_match_tablet_export)
 
         self.assign_match_tablets_scroll = QScrollArea()
@@ -1452,6 +1452,30 @@ class MainWindow(QMainWindow):
                     "field": [],
                     "teamnames": [
                         {str(d.data(Qt.ItemDataRole.UserRole)[0]): d.data(Qt.ItemDataRole.UserRole)[1]} for d in [slot.item(x) for x in range(slot.count())]
+                    ],
+                }
+            )
+
+        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if directory:
+            for i in range(len(output_sessions)):
+                json.dump(
+                    output_sessions[i],
+                    open(os.path.join(directory, f"assign_{i}.json"), "w"),
+                )
+
+    def export_assign_match_tablet_slots(self):
+        merged_teams = {str(d["team"]): d["team_name"] for d in self.assign_match_pit_teams}
+        print(merged_teams)
+        output_sessions = []
+
+        for slot in self.assign_match_tablet_slots:
+            output_sessions.append(
+                {
+                    "pit": [],
+                    "field": [item.data(Qt.ItemDataRole.UserRole) for item in [slot.item(x) for x in range(slot.count())]],
+                    "teamnames": [
+                        {str(d.data(Qt.ItemDataRole.UserRole)["teamNumber"]): merged_teams[str(d.data(Qt.ItemDataRole.UserRole)["teamNumber"])]} for d in [slot.item(x) for x in range(slot.count())]
                     ],
                 }
             )
