@@ -1745,7 +1745,12 @@ if __name__ == "__main__":
     app.setApplicationName("6369 Scouting Data Transfer")
 
     settings = QSettings("Mercs", "ScoutingDataTransfer")
-    qdarktheme.setup_theme(additional_qss="#big_dropdown {min-height: 56px}")
+    with open("style.qss", "r", encoding="utf-8") as file:
+        qdarktheme.setup_theme(additional_qss=file.read(), custom_colors={
+        "[dark]": {
+            "primary": "#FFB3A9"
+        }
+    })
     qtawesome.dark(app)
     win = MainWindow()
     sys.exit(app.exec())
