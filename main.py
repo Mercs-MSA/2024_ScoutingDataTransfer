@@ -13,7 +13,7 @@ import json
 
 import pandas
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QHBoxLayout,
@@ -42,20 +42,20 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QMenu,
 )
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QSettings,
     QSize,
     QIODevice,
     Qt,
-    pyqtSignal,
+    Signal,
     QObject,
     QThread,
     QUrl,
     QPoint,
 )
-from PyQt6.QtMultimedia import QSoundEffect
-from PyQt6.QtGui import QCloseEvent, QPixmap, QIcon
-from PyQt6.QtSerialPort import QSerialPort, QSerialPortInfo
+from PySide6.QtMultimedia import QSoundEffect
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon
+from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
 
@@ -74,8 +74,8 @@ win: QMainWindow | None = None
 
 
 class DataWorker(QObject):
-    finished = pyqtSignal(dict)
-    on_data_error = pyqtSignal(constants.DataError)
+    finished = Signal(dict)
+    on_data_error = Signal(constants.DataError)
 
     def __init__(self, data: str, savedir: str, savedisk: str | None) -> None:
         super().__init__()
@@ -240,8 +240,8 @@ class DataWorker(QObject):
 
 
 class EventCodeWorker(QObject):
-    finished = pyqtSignal(list)
-    on_error = pyqtSignal(str)
+    finished = Signal(list)
+    on_error = Signal(str)
 
     def __init__(self, api: statbotics.Statbotics, district: str) -> None:
         super().__init__()
@@ -261,8 +261,8 @@ class EventCodeWorker(QObject):
 
 
 class PitTeamWorker(QObject):
-    finished = pyqtSignal(list)
-    on_error = pyqtSignal(str)
+    finished = Signal(list)
+    on_error = Signal(str)
 
     def __init__(self, api: statbotics.Statbotics, event: str) -> None:
         super().__init__()
@@ -282,9 +282,9 @@ class PitTeamWorker(QObject):
 
 
 class MatchMatchWorker(QObject):
-    finished = pyqtSignal(list)
-    pit_teams = pyqtSignal(list)
-    on_error = pyqtSignal(str)
+    finished = Signal(list)
+    pit_teams = Signal(list)
+    on_error = Signal(str)
 
     def __init__(self, api: statbotics.Statbotics, event: str) -> None:
         super().__init__()
@@ -499,6 +499,7 @@ class MainWindow(QMainWindow):
         self.pit_table_view.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
+        self.pit_table_view.setAlternatingRowColors(True)
         self.pit_table_view.setSelectionMode(
             QAbstractItemView.SelectionMode.NoSelection
         )
@@ -521,6 +522,7 @@ class MainWindow(QMainWindow):
         self.qual_table_view.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
+        self.qual_table_view.setAlternatingRowColors(True)
         self.qual_table_view.setSelectionMode(
             QAbstractItemView.SelectionMode.NoSelection
         )
@@ -543,6 +545,7 @@ class MainWindow(QMainWindow):
         self.playoff_table_view.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
+        self.playoff_table_view.setAlternatingRowColors(True)
         self.playoff_table_view.setSelectionMode(
             QAbstractItemView.SelectionMode.NoSelection
         )
@@ -1612,6 +1615,18 @@ class MainWindow(QMainWindow):
                 self.assign_pit_ignored_teams.currentRow()
             )
 
+    def assign_pit_context_insert(self):
+        # ask for team number
+        team_number, okPressed = QInputDialog.getInt(
+            self,
+            "Team Number",
+            "Enter a valid team number"
+        )
+        if okPressed:
+            item = QListWidgetItem(f"Team {team_number}")
+            item.setData(Qt.ItemDataRole.UserRole, [team_number])
+            self.assign_pit_ignored_teams.addItem(item)
+
     def assign_match_context_delete(self):
         for _ in range(len(self.assign_match_ignored_teams.selectedItems())):
             self.assign_match_ignored_teams.takeItem(
@@ -1723,17 +1738,15 @@ class MainWindow(QMainWindow):
     def on_pit_teams(self, teams: list):
         self.assign_match_pit_teams = teams
 
-    def closeEvent(  # pylint: disable=invalid-name
-        self, a0: QCloseEvent | None
-    ) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         """
         Application close event
 
         Args:
             a0 (QCloseEvent | None): Qt close event
         """
-        self.serial.disconnect()
-        return super().closeEvent(a0)
+        self.serial.close()
+        event.accept()
 
 
 if __name__ == "__main__":
