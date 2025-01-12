@@ -18,13 +18,18 @@ class DataManager(QObject):
 
     def __init__(
         self,
-        database_kind="QSQLITE",
-        database_name="scouting.sqlite",
         tables: list[str] = list(constants.FIELDS.keys()),
     ):
         super().__init__()
-        self.db = QSqlDatabase.addDatabase(database_kind)
+        self.db = None
+
+        self.query = None
+        self.tables = tables
+
+    def connect_db_sqlite(self, database_name="scouting.sqlite"):
+        self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(database_name)
+
         if not self.db.open():
             self.on_message.emit(
                 f"Failed to open database: {self.db.lastError().text()}",
@@ -32,10 +37,11 @@ class DataManager(QObject):
             )
             return
 
+    def initialize(self):
         self.query = QSqlQuery()
 
         # create empty tables
-        for table in tables:
+        for table in self.tables:
             self.query.prepare(
                 f"CREATE TABLE IF NOT EXISTS {table} (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
             )
@@ -52,6 +58,9 @@ class DataManager(QObject):
             table (str): Name of form/table
             fields (dict[str, str]): Keys=field names, values=type
         """
+        if not self.query:
+            raise RuntimeError("DB not initialized")
+        
         self.query.prepare(f"PRAGMA table_info({table})")
         if not self.query.exec():
             self.on_message.emit(
@@ -94,6 +103,9 @@ class DataManager(QObject):
         Args:
             data (dict[str, Any]): Key=field names, values=data
         """
+        if not self.query:
+            raise RuntimeError("DB not initialized")
+        
         table = data["form"]
         fields = constants.FIELDS[table]
         values = ", ".join(
@@ -118,6 +130,9 @@ class DataManager(QObject):
         Returns:
             list[dict[str, Any]]: List of data
         """
+        if not self.query:
+            raise RuntimeError("DB not initialized")
+        
         query = f"SELECT * FROM {form}"
         self.query.exec(query)
         data = []
@@ -127,3 +142,22 @@ class DataManager(QObject):
                 row[field] = self.query.value(i + 2)
             data.append(row)
         return data
+
+    def update_data(self, form: str, row: int, field: str, value: Any) -> bool:
+        """Update a specific field in a row
+
+        Args:
+            form (str): Name of form/table
+            row (int): Index of row
+            field (str): Name of field
+            value (Any): New value
+
+        Returns:
+            bool: True if update successful, False otherwise
+        """
+        if not self.query:
+            raise RuntimeError("DB not initialized")
+        
+        value_str = f"'{value}'" if isinstance(value, str) else str(value)
+        query = f"UPDATE {form} SET {field} = {value_str} WHERE id = {row+1}"
+        return self.query.exec(query)

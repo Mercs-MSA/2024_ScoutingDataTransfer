@@ -5,6 +5,7 @@ Qt data model for a pandas DataFrame
 import math
 from typing import Any
 
+from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItem, QStandardItemModel, QIcon
 import qtawesome
@@ -56,6 +57,17 @@ class ListDictModel(QStandardItemModel):
             # data_row = [QStandardItem(str(x)) for x in row.values()]
             # self.appendRow(data_row)
             self.appendRow(items)
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if index.column() == 0:  # Reject updates to the first column
+            QMessageBox.critical(
+                self.parent(),
+                "Error",
+                "Cannot edit form identifier column"
+            )
+            return False  # Explicitly reject the update
+        QStandardItemModel.setData(self, index, value, role)
+        return True
 
     def headerData(
         self, section: int, orientation: Qt.Orientation, role: int = ...

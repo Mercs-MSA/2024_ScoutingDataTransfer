@@ -47,8 +47,8 @@ from PySide6.QtCore import (
     Qt,
     Signal,
     QObject,
+    QModelIndex,
     QThread,
-    QUrl,
     QPoint,
 )
 from PySide6.QtGui import QCloseEvent, QPixmap, QIcon
@@ -248,9 +248,9 @@ class MainWindow(QMainWindow):
 
         self.is_scanning = False
 
-        self.database = data_manager.DataManager(
-            database_name=f"scouting-{settings.value('event', type=str, defaultValue='event_unknown')}.sqlite"
-        )
+        self.database = data_manager.DataManager()
+        self.database.connect_db_sqlite(database_name=f"scouting-{settings.value('event', type=str, defaultValue='event_unknown')}.sqlite")
+        self.database.initialize()
         for name, fields in constants.FIELDS.items():
             self.database.set_fields(name, fields)
 
@@ -448,20 +448,23 @@ class MainWindow(QMainWindow):
             self.database.get_data("pit"),
             list(constants.FIELDS["pit"].keys()),
             list(constants.FIELDS["pit"].values()),
+            self
         )
 
         self.pit_table_view = QTableView()
-        self.pit_table_view.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
-        )
         self.pit_table_view.setAlternatingRowColors(True)
         self.pit_table_view.setSelectionMode(
-            QAbstractItemView.SelectionMode.NoSelection
+            QAbstractItemView.SelectionMode.SingleSelection
         )
+        self.pit_table_view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.pit_table_view.setModel(self.pit_model)
         self.pit_table_view.setHorizontalScrollMode(
             QAbstractItemView.ScrollMode.ScrollPerPixel
         )
+        def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
+            self.database.update_data(form, topl.row(), list(constants.FIELDS[form].keys())[topl.column()], topl.model().data(topl, Qt.ItemDataRole.EditRole))
+            logging.debug(f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}")
+        self.pit_table_view.dataChanged = lambda *args, **kwargs: table_data_edit("pit", *args, **kwargs)
         self.data_view_pit_layout.addWidget(self.pit_table_view)
 
         # * ASSIGN * #
@@ -1068,7 +1071,7 @@ class MainWindow(QMainWindow):
             )
         )
         data = self.serial.readAll()
-        self.data_buffer += data.data().decode()
+        self.data_buffer += bytes(data.data()).decode()
         if self.data_buffer.endswith("\n"):
             self.on_data_retrieved(self.data_buffer)
             self.data_buffer = ""
