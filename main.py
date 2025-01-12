@@ -394,7 +394,7 @@ class MainWindow(QMainWindow):
         self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
 
-        self.pit_model = data_models.ListDictModel(self.database.get_data("pit"), list(constants.FIELDS["pit"].keys()))
+        self.pit_model = data_models.ListDictModel(self.database.get_data("pit"), list(constants.FIELDS["pit"].keys()), list(constants.FIELDS["pit"].values()))
 
         self.pit_table_view = QTableView()
         self.pit_table_view.setEditTriggers(
