@@ -16,7 +16,7 @@ import constants
 class ScoutingFormModel(QStandardItemModel):
     def __init__(
         self,
-        data: list[dict[str, str]],
+        data: list[dict[str, Any]],
         columns: list,
         column_types: list,
         form: str,
@@ -24,8 +24,8 @@ class ScoutingFormModel(QStandardItemModel):
     ):
         QStandardItemModel.__init__(self, parent)
         self._data = data
-        self._columns = columns
-        self._column_types = column_types
+        self._columns = ["id", "timestamp"] + columns
+        self._column_types = ["UNIQUE ID", "TIME"] + column_types
         self.form = form
 
         self.load_data(data)
@@ -37,12 +37,12 @@ class ScoutingFormModel(QStandardItemModel):
     def columnCount(self, _=None):
         return len(self._columns)
 
-    def load_data(self, data: list[dict[str, str]]):
+    def load_data(self, data: list[dict[str, Any]]):
         self._data = data
         self.clear()
         for row in data:
             items = []
-            for i, value in enumerate(row.values()):
+            for i, value in enumerate(list(row.values())):
                 item = QStandardItem(str(value))
                 # set item icon
                 if isinstance(value, float) and math.isnan(value):
@@ -66,13 +66,13 @@ class ScoutingFormModel(QStandardItemModel):
             self.appendRow(items)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
-        if index.column() == 0:  # Reject updates to the first column
+        if index.column() in [0, 1, 2]:  # Reject updates to ids
             QMessageBox.critical(
                 self.parent(), "Error", "Cannot edit form identifier column"
             )
             return False  # Explicitly reject the update
 
-        if list(constants.FIELDS[self.form].values())[index.column()] in [
+        if list(constants.FIELDS[self.form].values())[index.column()-2] in [
             "INT",
             "INTEGER",
             "TINYINT",
@@ -90,7 +90,7 @@ class ScoutingFormModel(QStandardItemModel):
                     self.parent(), "Invalid Input", "Please enter a valid integer."
                 )
                 return False
-        elif list(constants.FIELDS[self.form].values())[index.column()] == "BOOLEAN":
+        elif list(constants.FIELDS[self.form].values())[index.column()-2] == "BOOLEAN":
             if value not in ["0", "1"]:
                 QMessageBox.warning(
                     self.parent(),

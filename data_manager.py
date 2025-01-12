@@ -23,7 +23,7 @@ class DataManager(QObject):
         super().__init__()
         self.db = None
 
-        self.query = None
+        self.query: QSqlQuery | None = None
         self.tables = tables
 
     def connect_db_sqlite(self, database_name="scouting.sqlite"):
@@ -61,6 +61,18 @@ class DataManager(QObject):
                     f"Failed to create table {table}: {self.query.lastError().text()}",
                     MessageType.ERROR,
                 )
+
+        # robot pictures
+        self.query.prepare(
+            "CREATE TABLE IF NOT EXISTS robot_pictures (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, team INTEGER, picture BLOB)"
+        )
+        if not self.query.exec():
+            self.on_message.emit(
+                f"Failed to create robot_pictures table: {self.query.lastError().text()}",
+                MessageType.ERROR,
+            )
+
+        # data
 
     def set_fields(self, table: str, fields: dict[str, str]):
         """Set fields supported in database
@@ -139,6 +151,8 @@ class DataManager(QObject):
         data = []
         while self.query.next():
             row = {}
+            row["id"] = self.query.value(0)
+            row["timestamp"] = self.query.value(1)
             for i, field in enumerate(constants.FIELDS[form]):
                 row[field] = self.query.value(i + 2)
             data.append(row)
@@ -149,7 +163,7 @@ class DataManager(QObject):
 
         Args:
             form (str): Name of form/table
-            row (int): Index of row
+            row (int): Id of row
             field (str): Name of field
             value (Any): New value
 
@@ -160,15 +174,15 @@ class DataManager(QObject):
             raise RuntimeError("DB not initialized")
 
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
-        query = f"UPDATE {form} SET {field} = {value_str} WHERE id = {row+1}"
-        return self.query.exec(query)
+        self.query.prepare(f"UPDATE {form} SET {field} = {value_str} WHERE id = {row}")
+        return self.query.exec()
 
     def delete_row(self, form: str, row: int) -> bool:
         """Delete a specific row
 
         Args:
             form (str): Name of form/table
-            row (int): Index of row
+            row (int): Id of row
 
         Returns:
             bool: True if delete successful, False otherwise
@@ -176,5 +190,5 @@ class DataManager(QObject):
         if not self.query:
             raise RuntimeError("DB not initialized")
 
-        query = f"DELETE FROM {form} WHERE id = {row+1}"
+        query = f"DELETE FROM {form} WHERE id = {row}"
         return self.query.exec(query)

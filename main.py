@@ -93,7 +93,12 @@ class DataWorker(QObject):
         for field, value in zip(header, data):
             formatted_data[field] = value
 
-        if formatted_data in database.get_data(form):
+        clean_data = database.get_data(form)
+        for row in clean_data:
+            row.pop("id")
+            row.pop("timestamp")
+        
+        if formatted_data in clean_data:
             if (
                 not self.on_repeated_data(form, formatted_data["team"])
                 == QMessageBox.StandardButton.Yes
@@ -466,12 +471,12 @@ class MainWindow(QMainWindow):
 
             self.database.update_data(
                 form,
-                topl.row(),
-                list(constants.FIELDS[form].keys())[topl.column()],
+                topl.siblingAtColumn(0).data(),
+                list(constants.FIELDS[form].keys())[topl.column()-2],
                 topl.model().data(topl, Qt.ItemDataRole.EditRole),
             )
             logging.debug(
-                f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
+                f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()-2]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
             )
 
         def table_menu(
@@ -484,9 +489,9 @@ class MainWindow(QMainWindow):
                 delete_action.triggered.connect(
                     lambda: self.delete_db_row(
                         form,
-                        table.selectionModel().selectedRows()[0].row(),
+                        table.selectionModel().selectedRows()[0].siblingAtColumn(0).data(),
                         model,
-                    )
+                    ) if QMessageBox.question(self, "Delete Row", f"Are you sure you want to delete ID {table.selectionModel().selectedRows()[0].siblingAtColumn(0).data()}?") == QMessageBox.StandardButton.Yes else None
                 )
 
                 deselect_action = QAction("Deselect Row", self)
@@ -941,9 +946,9 @@ class MainWindow(QMainWindow):
             case data_manager.MessageType.WARN:
                 QMessageBox.information(self, "Database Warning", msg)
 
-    def delete_db_row(self, form: str, row: int, table: data_models.ScoutingFormModel):
-        self.database.delete_row(form, row)
-        logging.debug(f"Deleted row {row} from {form}")
+    def delete_db_row(self, form: str, id: int, table: data_models.ScoutingFormModel):
+        logging.debug(f"Deleted row {id} from {form} with id {id}")
+        self.database.delete_row(form, id)
         table.load_data(self.database.get_data(form))
 
     def select_sqlite_file(self):
