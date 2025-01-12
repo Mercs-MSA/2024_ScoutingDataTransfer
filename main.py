@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
-    QSplitter,
+    QFrame,
     QLineEdit,
     QPushButton,
     QToolButton,
@@ -338,88 +338,17 @@ class MainWindow(QMainWindow):
         self.home_widget = QWidget()
         self.app_widget.insertWidget(self.HOME_IDX, self.home_widget)
 
-        self.home_layout = QHBoxLayout()
+        self.home_layout = QVBoxLayout()
         self.home_widget.setLayout(self.home_layout)
 
-        self.splitter = QSplitter()
-        self.home_layout.addWidget(self.splitter)
-
-        # Data manager (left side)
-        self.drive_widget = QWidget()
-        self.splitter.addWidget(self.drive_widget)
-
-        self.drive_layout = QVBoxLayout()
-        self.drive_widget.setLayout(self.drive_layout)
-
-        self.transfer_dir_label = QLabel("Transfer Directory")
-        self.drive_layout.addWidget(self.transfer_dir_label)
-
-        self.transfer_dir_layout = QHBoxLayout()
-        self.drive_layout.addLayout(self.transfer_dir_layout)
-
-        self.transfer_dir_textbox = QLineEdit()
-
-        if settings.contains("transferDir"):
-            self.transfer_dir_textbox.setText(settings.value("transferDir"))
-
-        self.transfer_dir_textbox.textChanged.connect(self.update_transfer_dir)
-        self.transfer_dir_layout.addWidget(self.transfer_dir_textbox)
-
-        self.transfer_dir_picker = QPushButton("Pick Dir")
-        self.transfer_dir_picker.clicked.connect(self.select_transfer_dir)
-        self.transfer_dir_layout.addWidget(self.transfer_dir_picker)
-
-        self.transfer_dir_icon = QLabel()
-        self.transfer_dir_layout.addWidget(self.transfer_dir_icon)
-
-        valid = os.path.isdir(self.transfer_dir_textbox.text())
-        if valid:
-            self.transfer_dir_icon.setPixmap(
-                qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
-                    QSize(24, 24)
-                )
-            )
-        else:
-            self.transfer_dir_icon.setPixmap(
-                qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
-            )
-
-        self.data_view_tabs = QTabWidget()
-        self.drive_layout.addWidget(self.data_view_tabs)
-
-        self.data_view_pit_widget = QWidget()
-        self.data_view_tabs.addTab(self.data_view_pit_widget, "Pit")
-
-        self.data_view_pit_layout = QVBoxLayout()
-        self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
-        self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
-
-        self.pit_model = data_models.ListDictModel(
-            self.database.get_data("pit"),
-            list(constants.FIELDS["pit"].keys()),
-            list(constants.FIELDS["pit"].values()),
-        )
-
-        self.pit_table_view = QTableView()
-        self.pit_table_view.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
-        )
-        self.pit_table_view.setAlternatingRowColors(True)
-        self.pit_table_view.setSelectionMode(
-            QAbstractItemView.SelectionMode.NoSelection
-        )
-        self.pit_table_view.setModel(self.pit_model)
-        self.pit_table_view.setHorizontalScrollMode(
-            QAbstractItemView.ScrollMode.ScrollPerPixel
-        )
-        self.data_view_pit_layout.addWidget(self.pit_table_view)
-
-        # Scan manager (right side)
+        # Scan manager
         self.scanner_widget = QWidget()
-        self.splitter.addWidget(self.scanner_widget)
+        self.home_layout.addWidget(self.scanner_widget)
 
-        self.scanner_layout = QVBoxLayout()
+        self.scanner_layout = QHBoxLayout()
         self.scanner_widget.setLayout(self.scanner_layout)
+
+        self.scanner_layout.addStretch()
 
         self.serial_grid = QGridLayout()
         self.scanner_layout.addLayout(self.serial_grid)
@@ -495,15 +424,48 @@ class MainWindow(QMainWindow):
         self.serial_disconnect.setEnabled(False)
         self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 6)
 
-        self.scanner_layout.addStretch()
-
         self.connection_icon = qtawesome.IconWidget()
         self.connection_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.connection_icon.setIconSize(QSize(256, 256))
+        self.connection_icon.setIconSize(QSize(84, 84))
         self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
         self.scanner_layout.addWidget(self.connection_icon)
 
         self.scanner_layout.addStretch()
+
+        self.hline = QFrame()
+        self.hline.setFrameShape(QFrame.Shape.HLine)
+        self.home_layout.addWidget(self.hline)
+
+        # Data manager (left side)
+        self.data_view_tabs = QTabWidget()
+        self.home_layout.addWidget(self.data_view_tabs)
+
+        self.data_view_pit_widget = QWidget()
+        self.data_view_tabs.addTab(self.data_view_pit_widget, "Pit")
+
+        self.data_view_pit_layout = QVBoxLayout()
+        self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
+        self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
+
+        self.pit_model = data_models.ListDictModel(
+            self.database.get_data("pit"),
+            list(constants.FIELDS["pit"].keys()),
+            list(constants.FIELDS["pit"].values()),
+        )
+
+        self.pit_table_view = QTableView()
+        self.pit_table_view.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.pit_table_view.setAlternatingRowColors(True)
+        self.pit_table_view.setSelectionMode(
+            QAbstractItemView.SelectionMode.NoSelection
+        )
+        self.pit_table_view.setModel(self.pit_model)
+        self.pit_table_view.setHorizontalScrollMode(
+            QAbstractItemView.ScrollMode.ScrollPerPixel
+        )
+        self.data_view_pit_layout.addWidget(self.pit_table_view)
 
         # * ASSIGN * #
         self.assign_widget = QTabWidget()
@@ -748,6 +710,46 @@ class MainWindow(QMainWindow):
         self.settings_layout = QVBoxLayout()
         self.settings_widget.setLayout(self.settings_layout)
 
+        self.settings_data_box = QGroupBox("Data")
+        self.settings_layout.addWidget(self.settings_data_box)
+
+        self.drive_layout = QVBoxLayout()
+        self.settings_data_box.setLayout(self.drive_layout)
+
+        self.transfer_dir_label = QLabel("Transfer Directory")
+        self.drive_layout.addWidget(self.transfer_dir_label)
+
+        self.transfer_dir_layout = QHBoxLayout()
+        self.drive_layout.addLayout(self.transfer_dir_layout)
+
+        self.transfer_dir_textbox = QLineEdit()
+
+        if settings.contains("transferDir"):
+            self.transfer_dir_textbox.setText(settings.value("transferDir"))
+
+        self.transfer_dir_textbox.textChanged.connect(self.update_transfer_dir)
+        self.transfer_dir_layout.addWidget(self.transfer_dir_textbox)
+
+        self.transfer_dir_picker = QPushButton("Pick Dir")
+        self.transfer_dir_picker.clicked.connect(self.select_transfer_dir)
+        self.transfer_dir_layout.addWidget(self.transfer_dir_picker)
+
+        self.transfer_dir_icon = QLabel()
+        self.transfer_dir_layout.addWidget(self.transfer_dir_icon)
+
+        valid = os.path.isdir(self.transfer_dir_textbox.text())
+        if valid:
+            self.transfer_dir_icon.setPixmap(
+                qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
+                    QSize(24, 24)
+                )
+            )
+        else:
+            self.transfer_dir_icon.setPixmap(
+                qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
+            )
+
+
         self.settings_dev_box = QGroupBox("Developer")
         self.settings_layout.addWidget(self.settings_dev_box)
 
@@ -844,9 +846,9 @@ class MainWindow(QMainWindow):
     def set_touch_mode(self, enabled: bool):
         if enabled:
             self.setStyleSheet(
-                "QPushButton { height: 36px; font-size: 14px; }"
+                "QPushButton { height: 30px; font-size: 14px; }"
                 "QToolButton { font-size: 14px; }"
-                "QComboBox { height: 42px; }"
+                "QComboBox { height: 38px; }"
                 "QLineEdit { height: 36px; }"
                 "QCheckBox::indicator { width: 32px; height: 32px; }"
                 "QTabBar::tab { font-size: 16px; }"
