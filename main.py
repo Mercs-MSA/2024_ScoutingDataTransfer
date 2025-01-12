@@ -82,9 +82,6 @@ class DataWorker(QObject):
     def run(
         self,
         database: data_manager.DataManager,
-        directory: str,
-        event_id: str,
-        export_csv: bool = False
     ):
         data = list(utils.convert_types(self.data.strip("\r\n").split("||")))
         form = data[0]
@@ -97,13 +94,15 @@ class DataWorker(QObject):
             formatted_data[field] = value
 
         if formatted_data in database.get_data(form):
-            if not self.on_repeated_data(form, formatted_data["team"]) == QMessageBox.StandardButton.Yes:
+            if (
+                not self.on_repeated_data(form, formatted_data["team"])
+                == QMessageBox.StandardButton.Yes
+            ):
                 self.finished.emit(form)
                 return
 
         database.add_data(formatted_data)
         self.finished.emit(form)
-
 
         # logging.info("transfering data to %s", directory)
 
@@ -125,7 +124,6 @@ class DataWorker(QObject):
         #         index=False,
         #     )
         # TODO: Implement csv export
-
 
     def on_repeated_data(self, form: str, team: int):
         """
@@ -253,7 +251,9 @@ class MainWindow(QMainWindow):
 
         self.is_scanning = False
 
-        self.database = data_manager.DataManager()
+        self.database = data_manager.DataManager(
+            database_name=f"scouting-{settings.value('event', type=str, defaultValue='event_unknown')}.sqlite"
+        )
         for name, fields in constants.FIELDS.items():
             self.database.set_fields(name, fields)
 
@@ -394,7 +394,11 @@ class MainWindow(QMainWindow):
         self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
 
-        self.pit_model = data_models.ListDictModel(self.database.get_data("pit"), list(constants.FIELDS["pit"].keys()), list(constants.FIELDS["pit"].values()))
+        self.pit_model = data_models.ListDictModel(
+            self.database.get_data("pit"),
+            list(constants.FIELDS["pit"].keys()),
+            list(constants.FIELDS["pit"].values()),
+        )
 
         self.pit_table_view = QTableView()
         self.pit_table_view.setEditTriggers(
@@ -1081,11 +1085,9 @@ class MainWindow(QMainWindow):
             self.data_worker.on_data_error.connect(self.on_data_error)
             self.data_worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(
-                lambda: self.data_worker.run(
-                    self.database,
-                    self.transfer_dir_textbox.text(),
-                    self.event_entry.currentText(),
-                )
+                lambda: self.data_worker.run(self.database)
+                if self.data_worker
+                else None
             )
 
             self.data_worker.finished.connect(self.worker_thread.quit)
@@ -1413,9 +1415,7 @@ class MainWindow(QMainWindow):
     def assign_pit_context_insert(self):
         # ask for team number
         team_number, okPressed = QInputDialog.getInt(
-            self,
-            "Team Number",
-            "Enter a valid team number"
+            self, "Team Number", "Enter a valid team number"
         )
         if okPressed:
             item = QListWidgetItem(f"Team {team_number}")
@@ -1554,11 +1554,9 @@ if __name__ == "__main__":
 
     settings = QSettings("Mercs", "ScoutingDataTransfer")
     with open("style.qss", "r", encoding="utf-8") as file:
-        qdarktheme.setup_theme(additional_qss=file.read(), custom_colors={
-        "[dark]": {
-            "primary": "#FFB3A9"
-        }
-    })
+        qdarktheme.setup_theme(
+            additional_qss=file.read(), custom_colors={"[dark]": {"primary": "#FFB3A9"}}
+        )
     qtawesome.dark(app)
     win = MainWindow()
     sys.exit(app.exec())

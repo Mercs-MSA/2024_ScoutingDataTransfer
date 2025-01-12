@@ -7,8 +7,7 @@ import enum
 
 from PySide6.QtSerialPort import QSerialPort
 
-FORMS = ["pit"]
-FIELDS= {
+FIELDS = {
     "pit": {
         "form": "pit",
         "team": "INTEGER",
@@ -69,7 +68,8 @@ FLOW_CONTROL: typing.Final = {
 
 
 class DataError(enum.Enum):
-    """ Potential error for worker """
+    """Potential error for worker"""
+
     DATA_MALFORMED = 0
     UNKNOWN_FORM = 1
     TEAM_NUMBER_NULL = 2

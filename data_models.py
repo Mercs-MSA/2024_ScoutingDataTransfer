@@ -12,35 +12,37 @@ import qtawesome
 
 # The same as PandasModel, but uses a list of dicts, key=header value, value=val
 class ListDictModel(QStandardItemModel):
-    def __init__(self, data: list[dict[str, str]], columns: list, column_types: list, parent=None):
+    def __init__(
+        self, data: list[dict[str, str]], columns: list, column_types: list, parent=None
+    ):
         QStandardItemModel.__init__(self, parent)
         self._data = data
         self._columns = columns
         self._column_types = column_types
-        
+
         self.load_data(data)
         return
-    
+
     def rowCount(self, _=None):
         return len(self._data)
-    
+
     def columnCount(self, _=None):
         return len(self._columns)
-    
+
     def load_data(self, data: list[dict[str, str]]):
         self._data = data
         self.clear()
         for row in data:
-            print(row)
             items = []
             for i, value in enumerate(row.values()):
-                print(value)
                 item = QStandardItem(str(value))
                 # set item icon
                 if isinstance(value, float) and math.isnan(value):
                     icon = qtawesome.icon("mdi6.null")
                 elif self._column_types[i] == "BOOLEAN":
-                    icon = qtawesome.icon("mdi6.circle", color="#4caf50" if value else "#f44336")
+                    icon = qtawesome.icon(
+                        "mdi6.circle", color="#4caf50" if value else "#f44336"
+                    )
                 elif isinstance(value, float):
                     icon = qtawesome.icon("mdi6.decimal")
                 elif isinstance(value, int):
@@ -55,7 +57,11 @@ class ListDictModel(QStandardItemModel):
             # self.appendRow(data_row)
             self.appendRow(items)
 
-                
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
-        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+    def headerData(
+        self, section: int, orientation: Qt.Orientation, role: int = ...
+    ) -> Any:
+        if (
+            orientation == Qt.Orientation.Horizontal
+            and role == Qt.ItemDataRole.DisplayRole
+        ):
             return self._columns[section]
