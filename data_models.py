@@ -76,6 +76,10 @@ class ScoutingFormModel(QStandardItemModel):
             except ValueError:
                 QMessageBox.warning(self.parent(), "Invalid Input", "Please enter a valid integer.")
                 return False
+        elif list(constants.FIELDS[self.form].values())[index.column()] == "BOOLEAN":
+            if value not in ["0", "1"]:
+                QMessageBox.warning(self.parent(), "Invalid Input", "Please enter a valid boolean (0 or 1).")
+                return False
 
         QStandardItemModel.setData(self, index, value, role)
 
@@ -110,4 +114,4 @@ class ScoutingFormModel(QStandardItemModel):
             orientation == Qt.Orientation.Horizontal
             and role == Qt.ItemDataRole.DisplayRole
         ):
-            return self._columns[section]
+            return f"{self._columns[section]}\n{self._column_types[section]}"

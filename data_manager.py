@@ -161,3 +161,19 @@ class DataManager(QObject):
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
         query = f"UPDATE {form} SET {field} = {value_str} WHERE id = {row+1}"
         return self.query.exec(query)
+    
+    def delete_row(self, form: str, row: int) -> bool:
+        """Delete a specific row
+
+        Args:
+            form (str): Name of form/table
+            row (int): Index of row
+
+        Returns:
+            bool: True if delete successful, False otherwise
+        """
+        if not self.query:
+            raise RuntimeError("DB not initialized")
+        
+        query = f"DELETE FROM {form} WHERE id = {row+1}"
+        return self.query.exec(query)

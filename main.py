@@ -52,7 +52,7 @@ from PySide6.QtCore import (
     QThread,
     QPoint,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -472,7 +472,26 @@ class MainWindow(QMainWindow):
 
             self.database.update_data(form, topl.row(), list(constants.FIELDS[form].keys())[topl.column()], topl.model().data(topl, Qt.ItemDataRole.EditRole))
             logging.debug(f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}")
+
         self.pit_table_view.dataChanged = lambda *args, **kwargs: table_data_edit("pit", *args, **kwargs)
+        def table_menu(form: str, model: data_models.ScoutingFormModel, table: QTableView):
+            if table.selectedIndexes():
+                menu = QMenu(self)
+
+                delete_action = QAction("Delete Row", self)
+                delete_action.triggered.connect(lambda: self.delete_db_row(form, self.pit_table_view.selectionModel().selectedRows()[0].row(), model))
+
+                deselect_action = QAction("Deselect Row", self)
+                deselect_action.triggered.connect(lambda: table.selectionModel().clearSelection())
+
+                menu.addAction(delete_action)
+                menu.addAction(deselect_action)
+
+                menu.popup(QCursor.pos())
+            
+        self.pit_table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        # self.pit_table_view.customContextMenuRequested.connect(table_menu)
+        self.pit_table_view.customContextMenuRequested.connect(lambda: table_menu("pit", self.pit_model, self.pit_table_view))
         self.data_view_pit_layout.addWidget(self.pit_table_view)
 
         # * ASSIGN * #
@@ -841,6 +860,11 @@ class MainWindow(QMainWindow):
         if settings.contains("touchui"):
             self.set_touch_mode(settings.value("touchui", type=bool))
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
+
+    def delete_db_row(self, form: str, row: int, table: data_models.ScoutingFormModel):
+        self.database.delete_row(form, row)
+        logging.debug(f"Deleted row {row} from {form}")
+        table.load_data(self.database.get_data(form))
 
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""
