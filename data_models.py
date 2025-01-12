@@ -18,9 +18,7 @@ class ListDictModel(QStandardItemModel):
         self._columns = columns
         self._column_types = column_types
         
-        for row in data:
-            data_row = [QStandardItem(str(x)) for x in row.values()]
-            self.appendRow(data_row)
+        self.load_data(data)
         return
     
     def rowCount(self, _=None):
@@ -33,8 +31,30 @@ class ListDictModel(QStandardItemModel):
         self._data = data
         self.clear()
         for row in data:
-            data_row = [QStandardItem(str(x)) for x in row.values()]
-            self.appendRow(data_row)
+            print(row)
+            items = []
+            for i, value in enumerate(row.values()):
+                print(value)
+                item = QStandardItem(str(value))
+                # set item icon
+                if isinstance(value, float) and math.isnan(value):
+                    icon = qtawesome.icon("mdi6.null")
+                elif self._column_types[i] == "BOOLEAN":
+                    icon = qtawesome.icon("mdi6.circle", color="#4caf50" if value else "#f44336")
+                elif isinstance(value, float):
+                    icon = qtawesome.icon("mdi6.decimal")
+                elif isinstance(value, int):
+                    icon = qtawesome.icon("mdi6.pound")
+                elif isinstance(value, str):
+                    icon = qtawesome.icon("mdi6.code-string")
+                else:
+                    icon = QIcon()
+                item.setIcon(icon)
+                items.append(item)
+            # data_row = [QStandardItem(str(x)) for x in row.values()]
+            # self.appendRow(data_row)
+            self.appendRow(items)
+
                 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
