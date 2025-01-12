@@ -72,7 +72,7 @@ class ScoutingFormModel(QStandardItemModel):
             )
             return False  # Explicitly reject the update
 
-        if list(constants.FIELDS[self.form].values())[index.column()-2] in [
+        if list(constants.FIELDS[self.form].values())[index.column() - 2] in [
             "INT",
             "INTEGER",
             "TINYINT",
@@ -90,12 +90,27 @@ class ScoutingFormModel(QStandardItemModel):
                     self.parent(), "Invalid Input", "Please enter a valid integer."
                 )
                 return False
-        elif list(constants.FIELDS[self.form].values())[index.column()-2] == "BOOLEAN":
+        elif (
+            list(constants.FIELDS[self.form].values())[index.column() - 2] == "BOOLEAN"
+        ):
             if value not in ["0", "1"]:
                 QMessageBox.warning(
                     self.parent(),
                     "Invalid Input",
                     "Please enter a valid boolean (0 or 1).",
+                )
+                return False
+        elif list(constants.FIELDS[self.form].values())[index.column() - 2] in [
+            "FLOAT",
+            "REAL",
+            "DOUBLE",
+            "DOUBLE PRECISION",
+        ]:
+            try:
+                float(value)
+            except ValueError:
+                QMessageBox.warning(
+                    self.parent(), "Invalid Input", "Please enter a valid float."
                 )
                 return False
 
