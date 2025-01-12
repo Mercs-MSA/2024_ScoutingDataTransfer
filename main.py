@@ -249,11 +249,19 @@ class MainWindow(QMainWindow):
 
         self.is_scanning = False
 
+        db_name: str | None = None
+        if settings:
+            if settings.contains("sqliteFile"):
+                db_name = settings.value("sqliteFile", type=str)  # type: ignore
+
         self.database = data_manager.DataManager()
-        self.database.connect_db_sqlite(database_name=f"scouting-{settings.value('event', type=str, defaultValue='event_unknown')}.sqlite")
-        self.database.initialize()
-        for name, fields in constants.FIELDS.items():
-            self.database.set_fields(name, fields)
+        self.database.on_message.connect(self.on_database_error)
+        if db_name:
+            logging.info(f"Loading db at: {db_name}")
+            self.database.connect_db_sqlite(database_name=db_name)
+            self.database.initialize()
+            for name, fields in constants.FIELDS.items():
+                self.database.set_fields(name, fields)
 
         self.data_buffer = ""  # data may come in split up
 
@@ -272,7 +280,9 @@ class MainWindow(QMainWindow):
 
         self.nav_button_home = QToolButton()
         self.nav_button_home.setCheckable(True)
-        self.nav_button_home.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.nav_button_home.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.nav_button_home.setText("Home")
         self.nav_button_home.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -286,7 +296,9 @@ class MainWindow(QMainWindow):
 
         self.nav_button_assign = QToolButton()
         self.nav_button_assign.setCheckable(True)
-        self.nav_button_assign.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.nav_button_assign.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.nav_button_assign.setText("Assign")
         self.nav_button_assign.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -302,7 +314,9 @@ class MainWindow(QMainWindow):
 
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
-        self.nav_button_settings.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.nav_button_settings.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.nav_button_settings.setText("Settings")
         self.nav_button_settings.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -318,7 +332,9 @@ class MainWindow(QMainWindow):
 
         self.nav_button_about = QToolButton()
         self.nav_button_about.setCheckable(True)
-        self.nav_button_about.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.nav_button_about.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.nav_button_about.setText("About")
         self.nav_button_about.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -454,7 +470,7 @@ class MainWindow(QMainWindow):
             list(constants.FIELDS["pit"].keys()),
             list(constants.FIELDS["pit"].values()),
             "pit",
-            self
+            self,
         )
 
         self.pit_table_view = QTableView()
@@ -462,36 +478,61 @@ class MainWindow(QMainWindow):
         self.pit_table_view.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection
         )
-        self.pit_table_view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.pit_table_view.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
         self.pit_table_view.setModel(self.pit_model)
         self.pit_table_view.setHorizontalScrollMode(
             QAbstractItemView.ScrollMode.ScrollPerPixel
         )
+
         def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
             # ensure that the new data can be saved with the same type
 
-            self.database.update_data(form, topl.row(), list(constants.FIELDS[form].keys())[topl.column()], topl.model().data(topl, Qt.ItemDataRole.EditRole))
-            logging.debug(f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}")
+            self.database.update_data(
+                form,
+                topl.row(),
+                list(constants.FIELDS[form].keys())[topl.column()],
+                topl.model().data(topl, Qt.ItemDataRole.EditRole),
+            )
+            logging.debug(
+                f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
+            )
 
-        self.pit_table_view.dataChanged = lambda *args, **kwargs: table_data_edit("pit", *args, **kwargs)
-        def table_menu(form: str, model: data_models.ScoutingFormModel, table: QTableView):
+        self.pit_table_view.dataChanged = lambda *args, **kwargs: table_data_edit(
+            "pit", *args, **kwargs
+        )
+
+        def table_menu(
+            form: str, model: data_models.ScoutingFormModel, table: QTableView
+        ):
             if table.selectedIndexes():
                 menu = QMenu(self)
 
                 delete_action = QAction("Delete Row", self)
-                delete_action.triggered.connect(lambda: self.delete_db_row(form, self.pit_table_view.selectionModel().selectedRows()[0].row(), model))
+                delete_action.triggered.connect(
+                    lambda: self.delete_db_row(
+                        form,
+                        self.pit_table_view.selectionModel().selectedRows()[0].row(),
+                        model,
+                    )
+                )
 
                 deselect_action = QAction("Deselect Row", self)
-                deselect_action.triggered.connect(lambda: table.selectionModel().clearSelection())
+                deselect_action.triggered.connect(
+                    lambda: table.selectionModel().clearSelection()
+                )
 
                 menu.addAction(delete_action)
                 menu.addAction(deselect_action)
 
                 menu.popup(QCursor.pos())
-            
+
         self.pit_table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # self.pit_table_view.customContextMenuRequested.connect(table_menu)
-        self.pit_table_view.customContextMenuRequested.connect(lambda: table_menu("pit", self.pit_model, self.pit_table_view))
+        self.pit_table_view.customContextMenuRequested.connect(
+            lambda: table_menu("pit", self.pit_model, self.pit_table_view)
+        )
         self.data_view_pit_layout.addWidget(self.pit_table_view)
 
         # * ASSIGN * #
@@ -740,42 +781,73 @@ class MainWindow(QMainWindow):
         self.settings_data_box = QGroupBox("Data")
         self.settings_layout.addWidget(self.settings_data_box)
 
-        self.drive_layout = QVBoxLayout()
-        self.settings_data_box.setLayout(self.drive_layout)
+        self.data_layout = QVBoxLayout()
+        self.settings_data_box.setLayout(self.data_layout)
 
-        self.transfer_dir_label = QLabel("Transfer Directory")
-        self.drive_layout.addWidget(self.transfer_dir_label)
+        self.csv_dir_label = QLabel("CSV Auto-Export Directory")
+        self.data_layout.addWidget(self.csv_dir_label)
 
-        self.transfer_dir_layout = QHBoxLayout()
-        self.drive_layout.addLayout(self.transfer_dir_layout)
+        self.csv_dir_layout = QHBoxLayout()
+        self.data_layout.addLayout(self.csv_dir_layout)
 
-        self.transfer_dir_textbox = QLineEdit()
+        self.csv_dir_textbox = QLineEdit()
 
-        if settings.contains("transferDir"):
-            self.transfer_dir_textbox.setText(settings.value("transferDir"))
+        if settings.contains("csvDir"):
+            self.csv_dir_textbox.setText(settings.value("csvDir"))
 
-        self.transfer_dir_textbox.textChanged.connect(self.update_transfer_dir)
-        self.transfer_dir_layout.addWidget(self.transfer_dir_textbox)
+        self.csv_dir_textbox.textChanged.connect(self.update_csv_dir)
+        self.csv_dir_layout.addWidget(self.csv_dir_textbox)
 
-        self.transfer_dir_picker = QPushButton("Pick Dir")
-        self.transfer_dir_picker.clicked.connect(self.select_transfer_dir)
-        self.transfer_dir_layout.addWidget(self.transfer_dir_picker)
+        self.csv_dir_picker = QPushButton("Pick Dir")
+        self.csv_dir_picker.clicked.connect(self.select_csv_dir)
+        self.csv_dir_layout.addWidget(self.csv_dir_picker)
 
-        self.transfer_dir_icon = QLabel()
-        self.transfer_dir_layout.addWidget(self.transfer_dir_icon)
+        self.csv_dir_icon = QLabel()
+        self.csv_dir_layout.addWidget(self.csv_dir_icon)
 
-        valid = os.path.isdir(self.transfer_dir_textbox.text())
+        valid = os.path.isdir(self.csv_dir_textbox.text())
         if valid:
-            self.transfer_dir_icon.setPixmap(
+            self.csv_dir_icon.setPixmap(
                 qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
                     QSize(24, 24)
                 )
             )
         else:
-            self.transfer_dir_icon.setPixmap(
+            self.csv_dir_icon.setPixmap(
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
 
+        self.sqlite_file_label = QLabel("SQLite Database Location")
+        self.data_layout.addWidget(self.sqlite_file_label)
+
+        self.sqlite_file_layout = QHBoxLayout()
+        self.data_layout.addLayout(self.sqlite_file_layout)
+
+        self.sqlite_file_textbox = QLineEdit()
+        self.sqlite_file_textbox.setReadOnly(True)
+        self.sqlite_file_layout.addWidget(self.sqlite_file_textbox)
+
+        if settings.contains("sqliteFile"):
+            self.sqlite_file_textbox.setText(settings.value("sqliteFile"))
+
+        self.sqlite_file_picker = QPushButton("Create DB")
+        self.sqlite_file_picker.clicked.connect(self.select_sqlite_file)
+        self.sqlite_file_layout.addWidget(self.sqlite_file_picker)
+
+        self.sqlite_file_icon = QLabel()
+        self.sqlite_file_layout.addWidget(self.sqlite_file_icon)
+
+        valid = os.path.isfile(self.sqlite_file_textbox.text())
+        if valid:
+            self.sqlite_file_icon.setPixmap(
+                qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
+                    QSize(24, 24)
+                )
+            )
+        else:
+            self.sqlite_file_icon.setPixmap(
+                qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
+            )
 
         self.settings_dev_box = QGroupBox("Developer")
         self.settings_layout.addWidget(self.settings_dev_box)
@@ -861,10 +933,49 @@ class MainWindow(QMainWindow):
             self.set_touch_mode(settings.value("touchui", type=bool))
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
 
+    def on_database_error(self, msg: str, kind: data_manager.MessageType):
+        match kind:
+            case data_manager.MessageType.FATAL:
+                QMessageBox.critical(self, "Database Fatal Error", msg)
+            case data_manager.MessageType.ERROR:
+                QMessageBox.warning(self, "Database Error", msg)
+            case data_manager.MessageType.WARN:
+                QMessageBox.information(self, "Database Warning", msg)
+
     def delete_db_row(self, form: str, row: int, table: data_models.ScoutingFormModel):
         self.database.delete_row(form, row)
         logging.debug(f"Deleted row {row} from {form}")
         table.load_data(self.database.get_data(form))
+
+    def select_sqlite_file(self):
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Select SQLite Database",
+            f"scouting-frc-{settings.value('event', defaultValue='unknown')}.sqlite",
+            "SQLite Database (*.sqlite)",
+            options=QFileDialog.Option.DontConfirmOverwrite,
+        )
+        if filepath:
+            self.sqlite_file_textbox.setText(filepath)
+            if settings:
+                settings.setValue("sqliteFile", filepath)
+            self.database.connect_db_sqlite(filepath)
+            self.database.initialize()
+            for name, fields in constants.FIELDS.items():
+                self.database.set_fields(name, fields)
+            self.pit_model.load_data(self.database.get_data("pit"))
+
+            valid = os.path.isfile(filepath)
+            if valid:
+                self.sqlite_file_icon.setPixmap(
+                    qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
+                        QSize(24, 24)
+                    )
+                )
+            else:
+                self.sqlite_file_icon.setPixmap(
+                    qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
+                )
 
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""
@@ -900,32 +1011,32 @@ class MainWindow(QMainWindow):
     def on_event_changed(self):
         settings.setValue("event", self.event_entry.currentText())
 
-    def select_transfer_dir(self) -> None:
+    def select_csv_dir(self) -> None:
         """
         Pick file for transfer directory
         """
 
-        self.transfer_dir_textbox.setText(
+        self.csv_dir_textbox.setText(
             str(QFileDialog.getExistingDirectory(self, "Select Directory"))
         )
 
-    def update_transfer_dir(self) -> None:
+    def update_csv_dir(self) -> None:
         """
         Check if transfer dir is valid and set to persistent storage
         """
 
-        valid = os.path.isdir(self.transfer_dir_textbox.text())
+        valid = os.path.isdir(self.csv_dir_textbox.text())
         if valid:
-            self.transfer_dir_icon.setPixmap(
+            self.csv_dir_icon.setPixmap(
                 qtawesome.icon("mdi6.check-circle", color="#4caf50").pixmap(
                     QSize(24, 24)
                 )
             )
         else:
-            self.transfer_dir_icon.setPixmap(
+            self.csv_dir_icon.setPixmap(
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
-        settings.setValue("transferDir", self.transfer_dir_textbox.text())
+        settings.setValue("csvDir", self.csv_dir_textbox.text())
 
     def update_serial_ports(self):
         """
@@ -1114,7 +1225,7 @@ class MainWindow(QMainWindow):
 
             self.worker_thread = QThread()
 
-            self.data_worker = DataWorker(data, self.transfer_dir_textbox.text())
+            self.data_worker = DataWorker(data, self.csv_dir_textbox.text())
             self.data_worker.finished.connect(self.on_data_transfer_complete)
             self.data_worker.on_data_error.connect(self.on_data_error)
             self.data_worker.moveToThread(self.worker_thread)

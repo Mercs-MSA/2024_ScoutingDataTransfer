@@ -27,6 +27,14 @@ class DataManager(QObject):
         self.tables = tables
 
     def connect_db_sqlite(self, database_name="scouting.sqlite"):
+        if self.db:
+            self.db.commit()
+            self.db.close()
+            self.db.removeDatabase(self.db.databaseName())
+        if self.query:
+            self.query.clear()
+            self.query.finish()
+
         self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(database_name)
 
@@ -38,7 +46,10 @@ class DataManager(QObject):
             return
 
     def initialize(self):
-        self.query = QSqlQuery()
+        if not self.db:
+            raise RuntimeError("DB not created")
+    
+        self.query = QSqlQuery(self.db)
 
         # create empty tables
         for table in self.tables:
@@ -60,7 +71,7 @@ class DataManager(QObject):
         """
         if not self.query:
             raise RuntimeError("DB not initialized")
-        
+
         self.query.prepare(f"PRAGMA table_info({table})")
         if not self.query.exec():
             self.on_message.emit(
@@ -78,7 +89,7 @@ class DataManager(QObject):
         for field, field_type in fields.items():
             if field not in existing_fields:
                 self.query.prepare(
-                    f"ALTER TABLE {table} ADD COLUMN {field} {field_type}"
+                    f"ALTER TABLE '{table}' ADD COLUMN '{field}' '{field_type}'"
                 )
                 if not self.query.exec():
                     self.on_message.emit(
@@ -86,16 +97,6 @@ class DataManager(QObject):
                         MessageType.ERROR,
                     )
 
-        for field, field_type in fields.items():
-            if field not in existing_fields:
-                self.query.prepare(
-                    f"ALTER TABLE {table} ADD COLUMN {field} {field_type}"
-                )
-                if not self.query.exec():
-                    self.on_message.emit(
-                        f"Failed to add field {field}: {self.query.lastError().text()}",
-                        MessageType.ERROR,
-                    )
 
     def add_data(self, data: dict[str, Any]):
         """Add new data to database
@@ -105,7 +106,7 @@ class DataManager(QObject):
         """
         if not self.query:
             raise RuntimeError("DB not initialized")
-        
+
         table = data["form"]
         fields = constants.FIELDS[table]
         values = ", ".join(
@@ -132,7 +133,7 @@ class DataManager(QObject):
         """
         if not self.query:
             raise RuntimeError("DB not initialized")
-        
+
         query = f"SELECT * FROM {form}"
         self.query.exec(query)
         data = []
@@ -157,11 +158,11 @@ class DataManager(QObject):
         """
         if not self.query:
             raise RuntimeError("DB not initialized")
-        
+
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
         query = f"UPDATE {form} SET {field} = {value_str} WHERE id = {row+1}"
         return self.query.exec(query)
-    
+
     def delete_row(self, form: str, row: int) -> bool:
         """Delete a specific row
 
@@ -174,6 +175,6 @@ class DataManager(QObject):
         """
         if not self.query:
             raise RuntimeError("DB not initialized")
-        
+
         query = f"DELETE FROM {form} WHERE id = {row+1}"
         return self.query.exec(query)

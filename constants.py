@@ -9,7 +9,7 @@ from PySide6.QtSerialPort import QSerialPort
 
 FIELDS = {
     "pit": {
-        "form": "pit",
+        "form": "TEXT",
         "team": "INTEGER",
         "scouters": "TEXT",
         "length": "INTEGER",

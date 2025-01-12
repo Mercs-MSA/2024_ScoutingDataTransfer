@@ -15,7 +15,12 @@ import constants
 
 class ScoutingFormModel(QStandardItemModel):
     def __init__(
-        self, data: list[dict[str, str]], columns: list, column_types: list, form: str, parent=None
+        self,
+        data: list[dict[str, str]],
+        columns: list,
+        column_types: list,
+        form: str,
+        parent=None,
     ):
         QStandardItemModel.__init__(self, parent)
         self._data = data
@@ -63,22 +68,35 @@ class ScoutingFormModel(QStandardItemModel):
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if index.column() == 0:  # Reject updates to the first column
             QMessageBox.critical(
-                self.parent(),
-                "Error",
-                "Cannot edit form identifier column"
+                self.parent(), "Error", "Cannot edit form identifier column"
             )
             return False  # Explicitly reject the update
-        
 
-        if list(constants.FIELDS[self.form].values())[index.column()] in ["INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8"]:
+        if list(constants.FIELDS[self.form].values())[index.column()] in [
+            "INT",
+            "INTEGER",
+            "TINYINT",
+            "SMALLINT",
+            "MEDIUMINT",
+            "BIGINT",
+            "UNSIGNED BIG INT",
+            "INT2",
+            "INT8",
+        ]:
             try:
                 int(value)
             except ValueError:
-                QMessageBox.warning(self.parent(), "Invalid Input", "Please enter a valid integer.")
+                QMessageBox.warning(
+                    self.parent(), "Invalid Input", "Please enter a valid integer."
+                )
                 return False
         elif list(constants.FIELDS[self.form].values())[index.column()] == "BOOLEAN":
             if value not in ["0", "1"]:
-                QMessageBox.warning(self.parent(), "Invalid Input", "Please enter a valid boolean (0 or 1).")
+                QMessageBox.warning(
+                    self.parent(),
+                    "Invalid Input",
+                    "Please enter a valid boolean (0 or 1).",
+                )
                 return False
 
         QStandardItemModel.setData(self, index, value, role)
@@ -91,7 +109,8 @@ class ScoutingFormModel(QStandardItemModel):
             elif self._column_types[index.column()] == "BOOLEAN":
                 item.setIcon(
                     qtawesome.icon(
-                        "mdi6.circle", color="#4caf50" if bool(int(value)) else "#f44336"
+                        "mdi6.circle",
+                        color="#4caf50" if bool(int(value)) else "#f44336",
                     )
                 )
             elif self._column_types[index.column()] == "FLOAT":
