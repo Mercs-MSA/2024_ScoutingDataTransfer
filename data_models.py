@@ -24,7 +24,7 @@ class ScoutingFormModel(QStandardItemModel):
     ):
         QStandardItemModel.__init__(self, parent)
         self._data = data
-        self._columns = ["id", "timestamp"] + columns
+        self._columns = ["rowid", "timestamp"] + columns
         self._column_types = ["UNIQUE ID", "TIME"] + column_types
         self.form = form
 

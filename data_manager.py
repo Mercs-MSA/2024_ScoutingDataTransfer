@@ -54,7 +54,7 @@ class DataManager(QObject):
         # create empty tables
         for table in self.tables:
             self.query.prepare(
-                f"CREATE TABLE IF NOT EXISTS {table} (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
+                f"CREATE TABLE IF NOT EXISTS {table} (rowid INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
             )
             if not self.query.exec():
                 self.on_message.emit(
@@ -64,7 +64,7 @@ class DataManager(QObject):
 
         # robot pictures
         self.query.prepare(
-            "CREATE TABLE IF NOT EXISTS robot_pictures (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, team INTEGER, picture BLOB)"
+            "CREATE TABLE IF NOT EXISTS robot_pictures (rowid INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, team INTEGER, picture BLOB)"
         )
         if not self.query.exec():
             self.on_message.emit(
@@ -151,7 +151,7 @@ class DataManager(QObject):
         data = []
         while self.query.next():
             row = {}
-            row["id"] = self.query.value(0)
+            row["rowid"] = self.query.value(0)
             row["timestamp"] = self.query.value(1)
             for i, field in enumerate(constants.FIELDS[form]):
                 row[field] = self.query.value(i + 2)
@@ -174,7 +174,7 @@ class DataManager(QObject):
             raise RuntimeError("DB not initialized")
 
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
-        self.query.prepare(f"UPDATE {form} SET {field} = {value_str} WHERE id = {row}")
+        self.query.prepare(f"UPDATE {form} SET {field} = {value_str} WHERE rowid = {row}")
         return self.query.exec()
 
     def delete_row(self, form: str, row: int) -> bool:
@@ -190,5 +190,5 @@ class DataManager(QObject):
         if not self.query:
             raise RuntimeError("DB not initialized")
 
-        query = f"DELETE FROM {form} WHERE id = {row}"
+        query = f"DELETE FROM {form} WHERE rowid = {row}"
         return self.query.exec(query)
