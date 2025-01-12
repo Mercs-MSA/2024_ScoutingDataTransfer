@@ -64,7 +64,7 @@ import data_models
 import constants
 import utils
 
-__version__: typing.Final = "v2.0.0-state"
+__version__: typing.Final = "2025.0.0-b0"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
