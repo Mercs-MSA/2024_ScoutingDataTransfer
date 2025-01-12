@@ -67,6 +67,12 @@ FLOW_CONTROL: typing.Final = {
 }
 
 
+CUSTOM_COLORS_DARK: dict[str, str | dict[str, str]] | None = {
+    "background": "#111114",
+    "primary": "#FFB3A9",
+}
+
+
 class DataError(enum.Enum):
     """Potential error for worker"""
 
