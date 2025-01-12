@@ -11,8 +11,6 @@ import typing
 import datetime
 import json
 
-import pandas
-
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -61,6 +59,7 @@ import qtawesome
 
 import statbotics
 
+import data_manager
 import data_models
 import constants
 import utils
@@ -72,7 +71,7 @@ win: QMainWindow | None = None
 
 
 class DataWorker(QObject):
-    finished = Signal(dict)
+    finished = Signal(str)
     on_data_error = Signal(constants.DataError)
 
     def __init__(self, data: str, savedir: str) -> None:
@@ -82,125 +81,51 @@ class DataWorker(QObject):
 
     def run(
         self,
-        data_frames: pandas.DataFrame,
+        database: data_manager.DataManager,
         directory: str,
         event_id: str,
+        export_csv: bool = False
     ):
-        if not os.path.exists(directory):
-            msg = QMessageBox(win)
-            msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setText(f"Directory {directory}\ndoes not exist\nData import cancelled")
-            msg.setWindowTitle("Data Error")
-            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-            msg.exec()
-            self.finished.emit(data_frames)
-            return
         data = list(utils.convert_types(self.data.strip("\r\n").split("||")))
         form = data[0]
         logging.info("Data transfer started on form %s", str(form))
 
-        if form == "pit":
-            header = constants.PIT_DATA_HEADER
-            if len(data) != len(header):
-                self.on_data_error.emit(constants.DataError.DATA_MALFORMED)
-                self.finished.emit(data_frames)
-                return
-        elif form == "qual":
-            header = constants.QUAL_DATA_HEADER
-            if len(data) != len(header):
-                self.on_data_error.emit(constants.DataError.DATA_MALFORMED)
-                self.finished.emit(data_frames)
-                return
-        elif form == "playoff":
-            header = constants.PLAYOFF_DATA_HEADER
-            if len(data) != len(header):
-                self.on_data_error.emit(constants.DataError.DATA_MALFORMED)
-                self.finished.emit(data_frames)
-                return
-        else:
-            self.on_data_error.emit(constants.DataError.UNKNOWN_FORM)
-            self.finished.emit(data_frames)
-            return
+        header = list(constants.FIELDS[form].keys())
 
-        df = pandas.DataFrame([data], columns=header)
+        formatted_data = {}
+        for field, value in zip(header, data):
+            formatted_data[field] = value
 
-        add_to_df = True
-
-        if df["teamNumber"].iloc[0] == "frcnull":
-            self.on_data_error.emit(constants.DataError.TEAM_NUMBER_NULL)
-            self.finished.emit(data_frames)
-            return
-
-        if form == "qual" or form == "playoff":
-            if df["matchNumber"].iloc[0] is None:
-                self.on_data_error.emit(constants.DataError.MATCH_NUMBER_NULL)
-                self.finished.emit(data_frames)
+        if formatted_data in database.get_data(form):
+            if not self.on_repeated_data(form, formatted_data["team"]) == QMessageBox.StandardButton.Yes:
+                self.finished.emit(form)
                 return
 
-        # form type
-        if form == "pit":
-            # check for repeats
-            if int(df["teamNumber"].iloc[0].strip("frc")) in [
-                int(x.strip("frc")) for x in data_frames["pit"]["teamNumber"].to_list()
-            ]:
-                if (
-                    self.on_repeated_data("pit", df["teamNumber"].iloc[0])
-                    == QMessageBox.StandardButton.No
-                ):
-                    add_to_df = False
-        elif form == "qual":
-            # check for repeats
-            if (
-                int(df["teamNumber"].iloc[0].strip("frc"))
-                in [
-                    int(x.strip("frc"))
-                    for x in data_frames["qual"]["teamNumber"].to_list()
-                ]
-            ) and (
-                int(df["matchNumber"].iloc[0])
-                in [int(x) for x in data_frames["qual"]["matchNumber"].to_list()]
-            ):
-                if (
-                    self.on_repeated_data("qual", df["teamNumber"].iloc[0])
-                    == QMessageBox.StandardButton.No
-                ):
-                    add_to_df = False
-        elif form == "playoff":
-            # check for repeats
-            if (
-                int(df["teamNumber"].iloc[0].strip("frc"))
-                in [
-                    int(x.strip("frc"))
-                    for x in data_frames["playoff"]["teamNumber"].to_list()
-                ]
-            ) and (
-                int(df["matchNumber"].iloc[0])
-                in [int(x) for x in data_frames["playoff"]["matchNumber"].to_list()]
-            ):
-                if (
-                    self.on_repeated_data(
-                        "playoff", int(df["teamNumber"].iloc[0].strip("frc"))
-                    )
-                    == QMessageBox.StandardButton.No
-                ):
-                    add_to_df = False
+        database.add_data(formatted_data)
+        self.finished.emit(form)
 
-        if add_to_df:
-            data_frames[form] = pandas.concat([data_frames[form], df])
 
-        logging.info("transfering data to %s", directory)
+        # logging.info("transfering data to %s", directory)
 
         # create directory structure
-        for form in data_frames:
-            if not os.path.exists(os.path.join(directory, form)):
-                os.mkdir(os.path.join(directory, form))
+        # if not os.path.exists(directory):
+        #     msg = QMessageBox(win)
+        #     msg.setIcon(QMessageBox.Icon.Critical)
+        #     msg.setText(f"Directory {directory}\ndoes not exist\nData import cancelled")
+        #     msg.setWindowTitle("Data Error")
+        #     msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        #     msg.exec()
+        #     return
+        # for form in data_frames:
+        #     if not os.path.exists(os.path.join(directory, form)):
+        #         os.mkdir(os.path.join(directory, form))
 
-            data_frames[form].to_csv(
-                os.path.join(directory, form, f"{event_id}_{form}_total.csv"),
-                index=False,
-            )
+        #     data_frames[form].to_csv(
+        #         os.path.join(directory, form, f"{event_id}_{form}_total.csv"),
+        #         index=False,
+        #     )
+        # TODO: Implement csv export
 
-        self.finished.emit(data_frames)
 
     def on_repeated_data(self, form: str, team: int):
         """
@@ -328,13 +253,11 @@ class MainWindow(QMainWindow):
 
         self.is_scanning = False
 
-        self.data_buffer = ""  # data may come in split up
+        self.database = data_manager.DataManager()
+        for name, fields in constants.FIELDS.items():
+            self.database.set_fields(name, fields)
 
-        self.data_frames = {
-            "pit": pandas.DataFrame(),
-            "qual": pandas.DataFrame(),
-            "playoff": pandas.DataFrame(),
-        }
+        self.data_buffer = ""  # data may come in split up
 
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
@@ -471,7 +394,7 @@ class MainWindow(QMainWindow):
         self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
 
-        self.pit_model = data_models.PandasModel(self.data_frames["pit"])
+        self.pit_model = data_models.ListDictModel(self.database.get_data("pit"), list(constants.FIELDS["pit"].keys()))
 
         self.pit_table_view = QTableView()
         self.pit_table_view.setEditTriggers(
@@ -486,52 +409,6 @@ class MainWindow(QMainWindow):
             QAbstractItemView.ScrollMode.ScrollPerPixel
         )
         self.data_view_pit_layout.addWidget(self.pit_table_view)
-
-        self.data_view_qual_widget = QWidget()
-        self.data_view_tabs.addTab(self.data_view_qual_widget, "Qualifications")
-
-        self.data_view_qual_layout = QVBoxLayout()
-        self.data_view_qual_layout.setContentsMargins(0, 0, 0, 0)
-        self.data_view_qual_widget.setLayout(self.data_view_qual_layout)
-
-        self.qual_model = data_models.PandasModel(self.data_frames["qual"])
-
-        self.qual_table_view = QTableView()
-        self.qual_table_view.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
-        )
-        self.qual_table_view.setAlternatingRowColors(True)
-        self.qual_table_view.setSelectionMode(
-            QAbstractItemView.SelectionMode.NoSelection
-        )
-        self.qual_table_view.setModel(self.qual_model)
-        self.qual_table_view.setHorizontalScrollMode(
-            QAbstractItemView.ScrollMode.ScrollPerPixel
-        )
-        self.data_view_qual_layout.addWidget(self.qual_table_view)
-
-        self.data_view_playoff_widget = QWidget()
-        self.data_view_tabs.addTab(self.data_view_playoff_widget, "Playoffs")
-
-        self.data_view_playoff_layout = QVBoxLayout()
-        self.data_view_playoff_layout.setContentsMargins(0, 0, 0, 0)
-        self.data_view_playoff_widget.setLayout(self.data_view_playoff_layout)
-
-        self.playoff_model = data_models.PandasModel(self.data_frames["playoff"])
-
-        self.playoff_table_view = QTableView()
-        self.playoff_table_view.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
-        )
-        self.playoff_table_view.setAlternatingRowColors(True)
-        self.playoff_table_view.setSelectionMode(
-            QAbstractItemView.SelectionMode.NoSelection
-        )
-        self.playoff_table_view.setModel(self.playoff_model)
-        self.playoff_table_view.setHorizontalScrollMode(
-            QAbstractItemView.ScrollMode.ScrollPerPixel
-        )
-        self.data_view_playoff_layout.addWidget(self.playoff_table_view)
 
         # Scan manager (right side)
         self.scanner_widget = QWidget()
@@ -930,10 +807,7 @@ class MainWindow(QMainWindow):
         self.about_description.setText(
             "A simple tool to convert QR-code output from our "
             '<a href="https://github.com/Mercs-MSA/2024_ScoutingDataCollection">'
-            "2024_ScoutingDataCollection</a> using a USB Serial based QR/Barcode scanner. "
-            "Features include a data viewer, Statbotics event fetching, automatic exports, "
-            "automatic backup to attached volumes, support for pits scouting, "
-            "qualification and playoff scouting."
+            "2024_ScoutingDataCollection</a> using a USB Serial based QR/Barcode scanner."
         )
         self.about_description.setTextInteractionFlags(
             Qt.TextInteractionFlag.LinksAccessibleByMouse
@@ -948,7 +822,6 @@ class MainWindow(QMainWindow):
         self.spin_animation = qtawesome.Spin(self.connection_icon, interval=5, step=2)
 
         # * LOAD STARTING STATE *#
-        self.attempt_load_csv()
         self.update_serial_ports()
 
         if settings.contains("touchui"):
@@ -980,19 +853,9 @@ class MainWindow(QMainWindow):
                 self.pit_table_view.viewport(),
                 QScroller.ScrollerGestureType.TouchGesture,
             )
-            QScroller.grabGesture(
-                self.qual_table_view.viewport(),
-                QScroller.ScrollerGestureType.TouchGesture,
-            )
-            QScroller.grabGesture(
-                self.playoff_table_view.viewport(),
-                QScroller.ScrollerGestureType.TouchGesture,
-            )
         else:
             self.setStyleSheet("")
             QScroller.ungrabGesture(self.pit_table_view.viewport())
-            QScroller.ungrabGesture(self.qual_table_view.viewport())
-            QScroller.ungrabGesture(self.playoff_table_view.viewport())
 
         settings.setValue("touchui", enabled)
 
@@ -1025,42 +888,6 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
         settings.setValue("transferDir", self.transfer_dir_textbox.text())
-
-        self.attempt_load_csv()
-
-    def attempt_load_csv(self):
-        event_id = self.event_entry.currentText()
-        for form in self.data_frames:
-            if os.path.exists(
-                os.path.join(
-                    self.transfer_dir_textbox.text(),
-                    form,
-                    f"{event_id}_{form}_total.csv",
-                )
-            ):
-                self.data_frames[form] = pandas.read_csv(
-                    os.path.join(
-                        self.transfer_dir_textbox.text(),
-                        form,
-                        f"{event_id}_{form}_total.csv",
-                    )
-                )
-            elif form == "pit":
-                self.data_frames["pit"] = pandas.DataFrame(
-                    columns=constants.PIT_DATA_HEADER
-                )
-            elif form == "qual":
-                self.data_frames["qual"] = pandas.DataFrame(
-                    columns=constants.QUAL_DATA_HEADER
-                )
-            elif form == "playoff":
-                self.data_frames["playoff"] = pandas.DataFrame(
-                    columns=constants.PLAYOFF_DATA_HEADER
-                )
-
-        self.pit_model.load_data(self.data_frames["pit"])
-        self.qual_model.load_data(self.data_frames["qual"])
-        self.playoff_model.load_data(self.data_frames["playoff"])
 
     def update_serial_ports(self):
         """
@@ -1255,7 +1082,7 @@ class MainWindow(QMainWindow):
             self.data_worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(
                 lambda: self.data_worker.run(
-                    self.data_frames,
+                    self.database,
                     self.transfer_dir_textbox.text(),
                     self.event_entry.currentText(),
                 )
@@ -1308,15 +1135,12 @@ class MainWindow(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
-    def on_data_transfer_complete(self, df: pandas.DataFrame):
+    def on_data_transfer_complete(self, form: str):
         self.connection_icon.setIcon(
             qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4")
         )
 
-        self.data_frames = df
-        self.pit_model.load_data(self.data_frames["pit"])
-        self.qual_model.load_data(self.data_frames["qual"])
-        self.playoff_model.load_data(self.data_frames["playoff"])
+        self.pit_model.load_data(self.database.get_data(form))
 
         self.is_scanning = False
 
@@ -1532,7 +1356,6 @@ class MainWindow(QMainWindow):
         merged_teams = {
             str(d["team"]): d["team_name"] for d in self.assign_match_pit_teams
         }
-        print(merged_teams)
         output_sessions = []
 
         for slot in self.assign_match_tablet_slots:
