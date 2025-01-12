@@ -4,8 +4,8 @@ Qt data model for a pandas DataFrame
 
 import math
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QStandardItem, QStandardItemModel, QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QStandardItem, QStandardItemModel, QIcon
 import qtawesome
 
 import pandas

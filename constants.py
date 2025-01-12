@@ -5,7 +5,7 @@ Constant values for scouting transfer
 import typing
 import enum
 
-from PyQt6.QtSerialPort import QSerialPort
+from PySide6.QtSerialPort import QSerialPort
 
 BAUDS: typing.Final = [
     300,

@@ -61,8 +61,6 @@ import qtawesome
 
 import statbotics
 
-import disk_widget
-import disk_detector
 import data_models
 import constants
 import utils
@@ -77,17 +75,15 @@ class DataWorker(QObject):
     finished = Signal(dict)
     on_data_error = Signal(constants.DataError)
 
-    def __init__(self, data: str, savedir: str, savedisk: str | None) -> None:
+    def __init__(self, data: str, savedir: str) -> None:
         super().__init__()
         self.data = data
         self.savedir = savedir
-        self.savedisk = savedisk
 
     def run(
         self,
         data_frames: pandas.DataFrame,
         directory: str,
-        disk: disk_detector.Disk | None,
         event_id: str,
     ):
         if not os.path.exists(directory):
@@ -204,18 +200,6 @@ class DataWorker(QObject):
                 index=False,
             )
 
-        # create disk directory structure
-        if disk:
-            for form in data_frames:
-                if not os.path.exists(os.path.join(disk.mountpoint, form)):
-                    os.mkdir(os.path.join(disk.mountpoint, form))
-                    logging.info("Created directory structure on %s", disk.mountpoint)
-
-                data_frames[form].to_csv(
-                    os.path.join(disk.mountpoint, form, f"{event_id}_{form}_total.csv"),
-                    index=False,
-                )
-
         self.finished.emit(data_frames)
 
     def on_repeated_data(self, form: str, team: int):
@@ -267,12 +251,12 @@ class PitTeamWorker(QObject):
     def __init__(self, api: statbotics.Statbotics, event: str) -> None:
         super().__init__()
         self.api = api
-        self.event = event
+        self.eventcode = event
 
     def run(self):
         try:
             teams = self.api.get_team_events(
-                event=self.event, fields=["team", "team_name"]
+                event=self.eventcode, fields=["team", "team_name"]
             )
             self.finished.emit(teams)
         except Exception:
@@ -476,12 +460,6 @@ class MainWindow(QMainWindow):
             self.transfer_dir_icon.setPixmap(
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
-
-        self.disk_widget = disk_widget.DiskMgmtWidget(
-            predicate=disk_detector.scouting_disk_predicate
-        )
-        self.disk_widget.set_select_visible(False)
-        self.drive_layout.addWidget(self.disk_widget)
 
         self.data_view_tabs = QTabWidget()
         self.drive_layout.addWidget(self.data_view_tabs)
@@ -1269,14 +1247,9 @@ class MainWindow(QMainWindow):
         if not self.is_scanning:
             self.is_scanning = True
 
-            if self.disk_widget.get_selected_disk() is None:
-                disk = None
-            else:
-                disk = self.disk_widget.get_selected_disk().mountpoint
-
             self.worker_thread = QThread()
 
-            self.data_worker = DataWorker(data, self.transfer_dir_textbox.text(), disk)
+            self.data_worker = DataWorker(data, self.transfer_dir_textbox.text())
             self.data_worker.finished.connect(self.on_data_transfer_complete)
             self.data_worker.on_data_error.connect(self.on_data_error)
             self.data_worker.moveToThread(self.worker_thread)
@@ -1284,7 +1257,6 @@ class MainWindow(QMainWindow):
                 lambda: self.data_worker.run(
                     self.data_frames,
                     self.transfer_dir_textbox.text(),
-                    self.disk_widget.get_selected_disk(),
                     self.event_entry.currentText(),
                 )
             )
