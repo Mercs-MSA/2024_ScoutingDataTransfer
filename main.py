@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QScrollArea,
     QMenu,
+    QSizePolicy,
 )
 from PySide6.QtCore import (
     QSettings,
@@ -271,6 +272,7 @@ class MainWindow(QMainWindow):
 
         self.nav_button_home = QToolButton()
         self.nav_button_home.setCheckable(True)
+        self.nav_button_home.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.nav_button_home.setText("Home")
         self.nav_button_home.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -284,6 +286,7 @@ class MainWindow(QMainWindow):
 
         self.nav_button_assign = QToolButton()
         self.nav_button_assign.setCheckable(True)
+        self.nav_button_assign.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.nav_button_assign.setText("Assign")
         self.nav_button_assign.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -299,6 +302,7 @@ class MainWindow(QMainWindow):
 
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
+        self.nav_button_settings.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.nav_button_settings.setText("Settings")
         self.nav_button_settings.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -314,6 +318,7 @@ class MainWindow(QMainWindow):
 
         self.nav_button_about = QToolButton()
         self.nav_button_about.setCheckable(True)
+        self.nav_button_about.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.nav_button_about.setText("About")
         self.nav_button_about.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
@@ -444,10 +449,11 @@ class MainWindow(QMainWindow):
         self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
         self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
 
-        self.pit_model = data_models.ListDictModel(
+        self.pit_model = data_models.ScoutingFormModel(
             self.database.get_data("pit"),
             list(constants.FIELDS["pit"].keys()),
             list(constants.FIELDS["pit"].values()),
+            "pit",
             self
         )
 
@@ -462,6 +468,8 @@ class MainWindow(QMainWindow):
             QAbstractItemView.ScrollMode.ScrollPerPixel
         )
         def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
+            # ensure that the new data can be saved with the same type
+
             self.database.update_data(form, topl.row(), list(constants.FIELDS[form].keys())[topl.column()], topl.model().data(topl, Qt.ItemDataRole.EditRole))
             logging.debug(f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}")
         self.pit_table_view.dataChanged = lambda *args, **kwargs: table_data_edit("pit", *args, **kwargs)
