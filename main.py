@@ -458,33 +458,8 @@ class MainWindow(QMainWindow):
         self.data_view_tabs = QTabWidget()
         self.home_layout.addWidget(self.data_view_tabs)
 
-        self.data_view_pit_widget = QWidget()
-        self.data_view_tabs.addTab(self.data_view_pit_widget, "Pit")
-
-        self.data_view_pit_layout = QVBoxLayout()
-        self.data_view_pit_layout.setContentsMargins(0, 0, 0, 0)
-        self.data_view_pit_widget.setLayout(self.data_view_pit_layout)
-
-        self.pit_model = data_models.ScoutingFormModel(
-            self.database.get_data("pit"),
-            list(constants.FIELDS["pit"].keys()),
-            list(constants.FIELDS["pit"].values()),
-            "pit",
-            self,
-        )
-
-        self.pit_table_view = QTableView()
-        self.pit_table_view.setAlternatingRowColors(True)
-        self.pit_table_view.setSelectionMode(
-            QAbstractItemView.SelectionMode.SingleSelection
-        )
-        self.pit_table_view.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
-        )
-        self.pit_table_view.setModel(self.pit_model)
-        self.pit_table_view.setHorizontalScrollMode(
-            QAbstractItemView.ScrollMode.ScrollPerPixel
-        )
+        self.data_models: list[data_models.ScoutingFormModel] = []
+        self.data_viewers: list[QTableView] = []
 
         def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
             # ensure that the new data can be saved with the same type
@@ -499,10 +474,6 @@ class MainWindow(QMainWindow):
                 f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
             )
 
-        self.pit_table_view.dataChanged = lambda *args, **kwargs: table_data_edit(
-            "pit", *args, **kwargs
-        )
-
         def table_menu(
             form: str, model: data_models.ScoutingFormModel, table: QTableView
         ):
@@ -513,7 +484,7 @@ class MainWindow(QMainWindow):
                 delete_action.triggered.connect(
                     lambda: self.delete_db_row(
                         form,
-                        self.pit_table_view.selectionModel().selectedRows()[0].row(),
+                        table.selectionModel().selectedRows()[0].row(),
                         model,
                     )
                 )
@@ -528,12 +499,40 @@ class MainWindow(QMainWindow):
 
                 menu.popup(QCursor.pos())
 
-        self.pit_table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        # self.pit_table_view.customContextMenuRequested.connect(table_menu)
-        self.pit_table_view.customContextMenuRequested.connect(
-            lambda: table_menu("pit", self.pit_model, self.pit_table_view)
-        )
-        self.data_view_pit_layout.addWidget(self.pit_table_view)
+        for form in constants.FIELDS.keys():
+            model = data_models.ScoutingFormModel(
+                self.database.get_data(form),
+                list(constants.FIELDS[form].keys()),
+                list(constants.FIELDS[form].values()),
+                form,
+                self,
+            )
+            self.data_models.append(model)
+
+            view = QTableView()
+            view.setAlternatingRowColors(True)
+            view.setSelectionMode(
+                QAbstractItemView.SelectionMode.SingleSelection
+            )
+            view.setSelectionBehavior(
+                QAbstractItemView.SelectionBehavior.SelectRows
+            )
+            view.setModel(model)
+            view.setHorizontalScrollMode(
+                QAbstractItemView.ScrollMode.ScrollPerPixel
+            )
+
+            self.data_view_tabs.addTab(view, form.capitalize())
+
+            view.dataChanged = lambda *args, **kwargs: table_data_edit(
+                form, *args, **kwargs
+            )
+
+            view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            view.customContextMenuRequested.connect(
+                lambda: table_menu(form, model, view)
+            )
+            self.data_viewers.append(view)
 
         # * ASSIGN * #
         self.assign_widget = QTabWidget()
@@ -963,7 +962,9 @@ class MainWindow(QMainWindow):
             self.database.initialize()
             for name, fields in constants.FIELDS.items():
                 self.database.set_fields(name, fields)
-            self.pit_model.load_data(self.database.get_data("pit"))
+            
+            for model in self.data_models:
+                model.load_data(self.database.get_data(model.form))
 
             valid = os.path.isfile(filepath)
             if valid:
@@ -998,13 +999,17 @@ class MainWindow(QMainWindow):
                 "QScrollBar:vertical:handle { width: 20px; }"
                 "QScrollBar:horizontal:handle { height: 20px; }"
             )
-            QScroller.grabGesture(
-                self.pit_table_view.viewport(),
-                QScroller.ScrollerGestureType.TouchGesture,
-            )
+            for viewport in self.data_viewers:
+                QScroller.grabGesture(
+                    viewport.viewport(),
+                    QScroller.ScrollerGestureType.TouchGesture,
+                )
         else:
             self.setStyleSheet("")
-            QScroller.ungrabGesture(self.pit_table_view.viewport())
+            for viewport in self.data_viewers:
+                QScroller.ungrabGesture(
+                    viewport.viewport(),
+                )
 
         settings.setValue("touchui", enabled)
 
@@ -1283,7 +1288,8 @@ class MainWindow(QMainWindow):
             qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4")
         )
 
-        self.pit_model.load_data(self.database.get_data(form))
+        for model in self.data_models:
+            model.load_data(self.database.get_data(model.form))
 
         self.is_scanning = False
 
