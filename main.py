@@ -3,13 +3,11 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
+from pathlib import Path
 import sys
 import os
 import logging
-import traceback
 import typing
-import datetime
-import json
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -35,9 +33,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QScroller,
     QInputDialog,
-    QListWidget,
-    QListWidgetItem,
-    QScrollArea,
     QMenu,
     QSizePolicy,
 )
@@ -50,7 +45,6 @@ from PySide6.QtCore import (
     QObject,
     QModelIndex,
     QThread,
-    QPoint,
 )
 from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -184,6 +178,7 @@ class MainWindow(QMainWindow):
 
         self.database = data_manager.DataManager()
         self.database.on_message.connect(self.on_database_error)
+        self.database.on_data_updated.connect(self.on_database_update)
         if db_name:
             logging.info(f"Loading db at: {db_name}")
             self.database.connect_db_sqlite(database_name=db_name)
@@ -447,6 +442,27 @@ class MainWindow(QMainWindow):
             )
             self.data_models.append(model)
 
+            view_widget = QWidget()
+            self.data_view_tabs.addTab(view_widget, form.capitalize())
+
+            view_layout = QVBoxLayout()
+            view_layout.setContentsMargins(0, 0, 0, 0)
+            view_widget.setLayout(view_layout)
+
+            view_bar = QHBoxLayout()
+            view_layout.addLayout(view_bar)
+
+            view_bar.addStretch()
+
+            view_export = QToolButton()
+            view_export.setText("Export CSV")
+            view_export.setIcon(qtawesome.icon("mdi6.microsoft-excel"))
+            view_export.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            view_export.setIconSize(QSize(28, 28))
+            view_export.setFixedHeight(32)
+            view_export.clicked.connect(lambda: self.export_csv(form))
+            view_bar.addWidget(view_export)
+
             view = QTableView()
             view.setAlternatingRowColors(True)
             view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -454,7 +470,6 @@ class MainWindow(QMainWindow):
             view.setModel(model)
             view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 
-            self.data_view_tabs.addTab(view, form.capitalize())
 
             view.dataChanged = lambda *args, **kwargs: table_data_edit(
                 form, *args, **kwargs
@@ -464,10 +479,12 @@ class MainWindow(QMainWindow):
             view.customContextMenuRequested.connect(
                 lambda: table_menu(form, model, view)
             )
+            view_layout.addWidget(view)
+            
             self.data_viewers.append(view)
 
         # * ASSIGN * #
-        self.app_widget.insertWidget(self.ASSIGN_IDX, assigner.AssignerWidget(app))
+        self.app_widget.insertWidget(self.ASSIGN_IDX, assigner.AssignerWidget(app, self.sbapi))
 
         # * SETTINGS * #
         self.settings_widget = QWidget()
@@ -532,6 +549,12 @@ class MainWindow(QMainWindow):
         self.csv_enable_auto.setChecked(settings.value("csvAutoExport", type=bool, defaultValue=True)) # type: ignore
         self.csv_enable_auto.stateChanged.connect(self.set_csv_auto_export)
         self.csv_opts_layout.addWidget(self.csv_enable_auto)
+
+        self.csv_enable_identifiers = QCheckBox("Identifiers")
+        self.csv_enable_identifiers.setToolTip("Include SQL id and timestamps in CSV exports")
+        self.csv_enable_identifiers.setChecked(settings.value("csvIdentifiers", type=bool, defaultValue=False)) # type: ignore
+        self.csv_enable_identifiers.stateChanged.connect(self.set_csv_enable_identifiers)
+        self.csv_opts_layout.addWidget(self.csv_enable_identifiers)
 
         self.sqlite_file_label = QLabel("SQLite Database Location")
         self.data_layout.addWidget(self.sqlite_file_label)
@@ -661,6 +684,35 @@ class MainWindow(QMainWindow):
             case data_manager.MessageType.WARN:
                 QMessageBox.information(self, "Database Warning", msg)
 
+    def on_database_update(self):
+        logging.debug("Database Updated")
+        if settings.value("csvAutoExport", defaultValue=True, type=bool):
+            if not os.path.exists(settings.value("csvDir", type=str)):
+                try:
+                    os.makedirs(settings.value("csvDir", type=str))
+                    logging.info(f"Created directory for auto-export {settings.value('csvDir', type=str)}")
+                except Exception as e:
+                    QMessageBox.critical(
+                        self,
+                        "Error Creating Directory for Auto-Export",
+                        f"Could not create directory: {repr(e)}",
+                    )
+                    logging.error(f"Error creating directory for auto-export: {repr(e)}")
+
+            for form in constants.FIELDS.keys():
+                if not os.path.exists(Path(settings.value("csvDir", type=str), form)):
+                    os.mkdir(Path(settings.value("csvDir", type=str), form))
+                    logging.info(f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}")
+                # save csv
+                csv_data = self.database.to_csv(
+                    form, 
+                    headers=settings.value("csvHeaders", type=bool, defaultValue=True), # type: ignore
+                    identifiers=settings.value("csvIdentifiers", type=bool, defaultValue=False), # type: ignore
+                )
+                with open(Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w") as f:
+                    f.write(csv_data)
+                    logging.info(f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}")
+
     def delete_db_row(
         self, form: str, rowid: int, table: data_models.ScoutingFormModel
     ):
@@ -700,6 +752,23 @@ class MainWindow(QMainWindow):
                     qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
                 )
 
+    def export_csv(self, form: str):
+        csv = self.database.to_csv(
+                form, 
+                headers=settings.value("csvHeaders", type=bool, defaultValue=True), # type: ignore
+                identifiers=settings.value("csvIdentifiers", type=bool, defaultValue=False), # type: ignore
+            )
+        
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export to CSV",
+            f"{form}.csv",
+            "CSV File (*.csv)",
+        )
+        if filepath:
+            with open(filepath, "w") as file:
+                file.write(csv)
+
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""
 
@@ -716,6 +785,10 @@ class MainWindow(QMainWindow):
     def set_csv_auto_export(self, enabled: bool):
         if settings:
             settings.setValue("csvAutoExport", enabled)
+
+    def set_csv_enable_identifiers(self, enabled: bool):
+        if settings:
+            settings.setValue("csvIdentifiers", enabled)
 
     def set_touch_mode(self, enabled: bool):
         if enabled:
@@ -756,6 +829,8 @@ class MainWindow(QMainWindow):
         self.csv_dir_textbox.setText(
             str(QFileDialog.getExistingDirectory(self, "Select Directory"))
         )
+        if settings:
+            settings.setValue("csvDir", self.csv_dir_textbox.text())
 
     def update_csv_dir(self) -> None:
         """

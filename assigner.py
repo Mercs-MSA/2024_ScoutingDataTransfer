@@ -91,9 +91,10 @@ class MatchMatchWorker(QObject):
 
 
 class AssignerWidget(QTabWidget):
-    def __init__(self, app: QApplication | QCoreApplication):
+    def __init__(self, app: QApplication | QCoreApplication, sbapi: statbotics.Statbotics):
         super().__init__()
         self.app = app
+        self.sbapi = sbapi
 
         self.assign_pit_widget = QWidget()
         self.addTab(self.assign_pit_widget, "Pit")
