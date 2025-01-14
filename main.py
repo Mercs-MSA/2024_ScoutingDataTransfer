@@ -432,7 +432,7 @@ class MainWindow(QMainWindow):
                         break
 
                 imbuffer = QBuffer()
-                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(32, 32)).save(imbuffer, "PNG")
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(imbuffer, "PNG")
                 rowdata["warnBase64Icon"] = f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
                 
                 # Add include_file function to template context

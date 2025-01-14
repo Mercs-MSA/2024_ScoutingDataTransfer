@@ -1,16 +1,18 @@
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QToolButton, QLabel, QStackedLayout, QTextBrowser, QStackedWidget, QWidget
 from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtGui import QPixmap, QFont
 
 import qtawesome as qta
 
+import constants
 import ssw
 
 
 class Sidebar(QFrame):
     close_action = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, renderer: int = constants.SIDEBAR_RENDERER):
         super().__init__(parent)
 
         self.setFrameShape(QFrame.Shape.Box)
@@ -79,10 +81,16 @@ class Sidebar(QFrame):
         self.team_number.setFont(QFont(self.team_number.font().family(), 22, QFont.Weight.Bold))
         self.dataview_layout.addWidget(self.team_number)
 
-        self.html = QTextBrowser()
-        self.html.setReadOnly(True)
+        if renderer == 0:
+            self.html = QTextBrowser()
+            self.html.setReadOnly(True)
+        else:
+            self.html = QWebEngineView()
+            self.html.page().setBackgroundColor(Qt.GlobalColor.transparent)
+            self.html.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+            self.html.setHtml("<h1>QWebEngine ready</h1>") # prevent glitching on 1st load
         self.html.setMinimumHeight(200)
-        self.dataview_layout.addWidget(self.html)
+        self.dataview_layout.addWidget(self.html, 2)
 
         self.set_pixmaps([QPixmap("icons/generic_robot.png")])
 
@@ -109,7 +117,10 @@ class Sidebar(QFrame):
         self.team_number.setText(f"Team {team_number}")
 
     def set_html(self, html: str):
-        self.html.setText(html)
+        if isinstance(self.html, QTextBrowser):
+            self.html.setText(html)
+        else:
+            self.html.setHtml(html)
 
 class TeamEntryWidget(QFrame):
     """

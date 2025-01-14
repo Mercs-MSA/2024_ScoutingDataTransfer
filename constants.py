@@ -25,7 +25,7 @@ FIELDS = {
 
 # Sidebar
 # All forms MUST have a sidebar constructor
-# Each constructor is written in a watered-down version of HTML and CSS
+# Each constructor is written in HTML and CSS
 # Jinja2 syntax is allowed and required for accessing fields
 # `include_file` is a custom function that includes a file from the `templates` directory
 SIDEBAR_CONSTRUCTORS = {
@@ -34,6 +34,10 @@ SIDEBAR_CONSTRUCTORS = {
     {{ include_file('pit.html') }}
     """
 }
+
+# Sidebar Renderer
+# 0 = Basic html text renderer, 1 = Web renderer
+SIDEBAR_RENDERER = 1
 
 BAUDS: typing.Final = [
     300,

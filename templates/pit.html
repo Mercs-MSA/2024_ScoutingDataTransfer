@@ -1,6 +1,11 @@
 <!DOCTYPE html>
     <html>
     <style>
+    html {
+        scrollbar-color: #BB4A40 #161618;
+        scrollbar-width: medium;
+    }
+
     table {
         border-collapse: collapse;
         width: 100%;
@@ -10,10 +15,19 @@
         border: 1px solid #555;
         padding: 8px;
         text-align: left;
+        color: white;
+        font-family: sans-serif;
     }
     th {
         background-color: #BB4A40;
         font-weight: bold;
+        color: white;
+        font-family: sans-serif;
+    }
+
+    p, h1, h2, h3, h4 {
+        color: white;
+        font-family: sans-serif;
     }
     </style>
     <body>
@@ -54,7 +68,7 @@
     {% if autonExists %}
     <p>The robot has an auton. Under construction</p>
     {% else %}
-    <h2><img src="{{warnBase64Icon}}" alt="W"> No Auton</h2>
+    <h2><img src="{{warnBase64Icon}}" alt="W" height="32px"> No Auton</h2>
     {% endif %}
 
     <h3>Robot Strategy</h3>
