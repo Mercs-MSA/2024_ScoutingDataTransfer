@@ -18,8 +18,10 @@ class Sidebar(QFrame):
         self.setFrameShape(QFrame.Shape.Box)
 
         self.root_layout = QVBoxLayout(self)
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
 
         self.top_layout = QHBoxLayout()
+        self.top_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.addLayout(self.top_layout)
 
         self.top_layout.addStretch()
@@ -31,6 +33,7 @@ class Sidebar(QFrame):
         self.top_layout.addWidget(self.top_close)
 
         self.root_widget = QStackedWidget()
+        self.root_widget.setContentsMargins(0, 0, 0, 0)
         self.root_layout.addWidget(self.root_widget)
 
         self.unselected_widget = QWidget()
@@ -47,9 +50,11 @@ class Sidebar(QFrame):
         self.root_widget.insertWidget(1, self.dataview_widget)
 
         self.dataview_layout = QVBoxLayout()
+        self.dataview_layout.setContentsMargins(4, 0, 4, 4)
         self.dataview_widget.setLayout(self.dataview_layout)
 
         self.carousel_layout = QHBoxLayout()
+        self.carousel_layout.setContentsMargins(0, 0, 0, 0)
         self.dataview_layout.addLayout(self.carousel_layout)
 
         self.carousel_back = QToolButton()

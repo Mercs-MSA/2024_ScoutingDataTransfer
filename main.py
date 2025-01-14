@@ -214,9 +214,9 @@ class MainWindow(QMainWindow):
         )
         self.nav_button_home.setText("Home")
         self.nav_button_home.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
-        self.nav_button_home.setIconSize(QSize(48, 48))
+        self.nav_button_home.setIconSize(QSize(40, 40))
         self.nav_button_home.setIcon(qtawesome.icon("mdi6.home"))
         self.nav_button_home.setChecked(True)
         self.nav_button_home.clicked.connect(lambda: self.nav(self.HOME_IDX))
@@ -230,12 +230,12 @@ class MainWindow(QMainWindow):
         )
         self.nav_button_assign.setText("Assign")
         self.nav_button_assign.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
-        self.nav_button_assign.setIconSize(QSize(48, 48))
+        self.nav_button_assign.setIconSize(QSize(40, 40))
         self.nav_button_assign.setIcon(qtawesome.icon("mdi6.clipboard-list"))
         self.nav_button_assign.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
         self.nav_button_assign.clicked.connect(lambda: self.nav(self.ASSIGN_IDX))
         self.nav_layout.addWidget(self.nav_button_assign)
@@ -248,12 +248,12 @@ class MainWindow(QMainWindow):
         )
         self.nav_button_pictures.setText("Pictures")
         self.nav_button_pictures.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
-        self.nav_button_pictures.setIconSize(QSize(48, 48))
+        self.nav_button_pictures.setIconSize(QSize(40, 40))
         self.nav_button_pictures.setIcon(qtawesome.icon("mdi6.camera"))
         self.nav_button_pictures.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
         self.nav_button_pictures.clicked.connect(lambda: self.nav(self.PICTURES_IDX))
         self.nav_layout.addWidget(self.nav_button_pictures)
@@ -266,12 +266,12 @@ class MainWindow(QMainWindow):
         )
         self.nav_button_settings.setText("Settings")
         self.nav_button_settings.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
-        self.nav_button_settings.setIconSize(QSize(48, 48))
+        self.nav_button_settings.setIconSize(QSize(40, 40))
         self.nav_button_settings.setIcon(qtawesome.icon("mdi6.cog"))
         self.nav_button_settings.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
         self.nav_button_settings.clicked.connect(lambda: self.nav(self.SETTINGS_IDX))
         self.nav_layout.addWidget(self.nav_button_settings)
@@ -284,12 +284,12 @@ class MainWindow(QMainWindow):
         )
         self.nav_button_about.setText("About")
         self.nav_button_about.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
-        self.nav_button_about.setIconSize(QSize(48, 48))
+        self.nav_button_about.setIconSize(QSize(40, 40))
         self.nav_button_about.setIcon(qtawesome.icon("mdi6.information"))
         self.nav_button_about.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
         )
         self.nav_button_about.clicked.connect(lambda: self.nav(self.ABOUT_IDX))
         self.nav_layout.addWidget(self.nav_button_about)
@@ -384,14 +384,9 @@ class MainWindow(QMainWindow):
         self.serial_parity.currentTextChanged.connect(self.change_parity)
         self.serial_grid.addWidget(self.serial_parity, 1, 4)
 
-        self.serial_disconnect = QPushButton("Disconnect")
-        self.serial_disconnect.clicked.connect(self.disconnect_port)
-        self.serial_disconnect.setEnabled(False)
-        self.serial_grid.addWidget(self.serial_disconnect, 2, 0, 1, 6)
-
         self.connection_icon = qtawesome.IconWidget()
         self.connection_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.connection_icon.setIconSize(QSize(84, 84))
+        self.connection_icon.setIconSize(QSize(72, 72))
         self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
         self.scanner_layout.addWidget(self.connection_icon)
 
@@ -1039,6 +1034,12 @@ class MainWindow(QMainWindow):
         Attempt to connect to serial port
         """
 
+        if self.serial_connect.text() == "Disconnect":
+            self.serial.close()
+            self.set_serial_options_enabled(True)
+            self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
+            self.serial_connect.setText("Connect")
+
         ports = [
             port
             for port in QSerialPortInfo.availablePorts()
@@ -1096,14 +1097,7 @@ class MainWindow(QMainWindow):
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
 
-    def disconnect_port(self):
-        """
-        Disconnect from serial port
-        """
-
-        self.serial.close()
-        self.set_serial_options_enabled(True)
-        self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
+        self.serial_connect.setText("Disconnect")
 
     def on_serial_error(self):
         """
