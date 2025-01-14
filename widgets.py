@@ -1,0 +1,140 @@
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QToolButton, QLabel, QStackedLayout, QTextBrowser, QStackedWidget, QWidget
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QPixmap, QFont
+
+import qtawesome as qta
+
+import ssw
+
+
+class Sidebar(QFrame):
+    close_action = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setFrameShape(QFrame.Shape.Box)
+
+        self.root_layout = QVBoxLayout(self)
+
+        self.top_layout = QHBoxLayout()
+        self.root_layout.addLayout(self.top_layout)
+
+        self.top_layout.addStretch()
+
+        self.top_close = QToolButton()
+        self.top_close.setIcon(qta.icon("mdi6.close-circle", color="#f44336"))
+        self.top_close.setFixedSize(QSize(24, 24))
+        self.top_close.clicked.connect(self.close_action.emit)
+        self.top_layout.addWidget(self.top_close)
+
+        self.root_widget = QStackedWidget()
+        self.root_layout.addWidget(self.root_widget)
+
+        self.unselected_widget = QWidget()
+        self.root_widget.insertWidget(0, self.unselected_widget)
+
+        self.unselected_layout = QVBoxLayout()
+        self.unselected_widget.setLayout(self.unselected_layout)
+
+        self.unselected_text = QLabel("Select a datapoint to get started")
+        self.unselected_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.unselected_layout.addWidget(self.unselected_text)
+
+        self.dataview_widget = QWidget()
+        self.root_widget.insertWidget(1, self.dataview_widget)
+
+        self.dataview_layout = QVBoxLayout()
+        self.dataview_widget.setLayout(self.dataview_layout)
+
+        self.carousel_layout = QHBoxLayout()
+        self.dataview_layout.addLayout(self.carousel_layout)
+
+        self.carousel_back = QToolButton()
+        self.carousel_back.setIcon(qta.icon("mdi6.chevron-left"))
+        self.carousel_back.setIconSize(QSize(64, 64))
+        self.carousel_back.setFixedWidth(32)
+        self.carousel_layout.addWidget(self.carousel_back)
+
+        self.carousel = ssw.SlidingStackedWidget()
+        self.carousel.setFixedSize(QSize(250, 250))
+        self.carousel.setDirection(Qt.Axis.XAxis)
+        self.carousel_layout.addWidget(self.carousel)
+
+        self.carousel_forward = QToolButton()
+        self.carousel_forward.setIcon(qta.icon("mdi6.chevron-right"))
+        self.carousel_forward.setIconSize(QSize(64, 64))
+        self.carousel_forward.setFixedWidth(32)
+        self.carousel_layout.addWidget(self.carousel_forward)
+        
+        self.carousel_back.clicked.connect(self.carousel.slideInPrev)
+        self.carousel_forward.clicked.connect(self.carousel.slideInNext)
+
+        self.carousel_page_number = QLabel("Page 1/1")
+        self.carousel_page_number.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.dataview_layout.addWidget(self.carousel_page_number)
+        self.carousel.currentChanged.connect(lambda: self.carousel_page_number.setText(f"Page {self.carousel.currentIndex() + 1}/{self.carousel.count()}"))
+
+        self.team_number = QLabel("Team 0000")
+        self.team_number.setFont(QFont(self.team_number.font().family(), 22, QFont.Weight.Bold))
+        self.dataview_layout.addWidget(self.team_number)
+
+        self.html = QTextBrowser()
+        self.html.setReadOnly(True)
+        self.html.setMinimumHeight(200)
+        self.dataview_layout.addWidget(self.html)
+
+        self.set_pixmaps([QPixmap("icons/generic_robot.png")])
+
+    def set_selected(self, selected: bool):
+        if selected:
+            self.root_widget.setCurrentIndex(1)
+        else:
+            self.root_widget.setCurrentIndex(0)
+
+    def set_pixmaps(self, pixmaps: list[QPixmap]):
+        item: QStackedLayout
+        for item in reversed(self.carousel.children()):
+            self.carousel.removeWidget(item.widget())
+
+        for i, pixmap in enumerate(pixmaps):
+            widget = QLabel()
+            widget.setPixmap(pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.carousel.addWidget(widget)
+
+        self.carousel_page_number.setText(f"Page {self.carousel.currentIndex() + 1}/{len(pixmaps)}")
+
+    def set_team_number(self, team_number: str | int):
+        self.team_number.setText(f"Team {team_number}")
+
+    def set_html(self, html: str):
+        self.html.setText(html)
+
+class TeamEntryWidget(QFrame):
+    """
+    A widget that displays a team number and an arrow to the right
+    """
+    clicked = Signal(str)
+
+    def __init__(self, team_number: str | int, parent=None):
+        super().__init__(parent)
+        self.setFrameShape(QFrame.Shape.Box)
+
+        self.root_layout = QHBoxLayout(self)
+
+        self.team_number = QLabel(str(team_number))
+        self.team_number.setFont(QFont(self.team_number.font().family(), 12, QFont.Weight.Bold))
+        self.root_layout.addWidget(self.team_number)
+
+        self.root_layout.addStretch()
+
+        self.arrow = QLabel()
+        self.arrow.setPixmap(qta.icon("mdi6.chevron-right").pixmap(QSize(28, 28)))
+        self.root_layout.addWidget(self.arrow)
+
+        self.setFixedHeight(self.sizeHint().height())
+
+    def mousePressEvent(self, event):
+        self.clicked.emit(self.team_number.text())
+        super().mousePressEvent(event)

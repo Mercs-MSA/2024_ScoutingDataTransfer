@@ -7,6 +7,8 @@ import enum
 
 from PySide6.QtSerialPort import QSerialPort
 
+# Database fields
+# Update this to add more tables (forms), or database fields (form items)
 FIELDS = {
     "pit": {
         "form": "TEXT",
@@ -19,6 +21,18 @@ FIELDS = {
         "drivebase": "TEXT",
         "autonExists": "BOOLEAN",
     }
+}
+
+# Sidebar
+# All forms MUST have a sidebar constructor
+# Each constructor is written in a watered-down version of HTML and CSS
+# Jinja2 syntax is allowed and required for accessing fields
+# `include_file` is a custom function that includes a file from the `templates` directory
+SIDEBAR_CONSTRUCTORS = {
+    "pit": 
+    """
+    {{ include_file('pit.html') }}
+    """
 }
 
 BAUDS: typing.Final = [

@@ -3,6 +3,7 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
+from functools import partial
 from pathlib import Path
 import sys
 import os
@@ -35,6 +36,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QMenu,
     QSizePolicy,
+    QScrollArea,
 )
 from PySide6.QtCore import (
     QSettings,
@@ -45,8 +47,9 @@ from PySide6.QtCore import (
     QObject,
     QModelIndex,
     QThread,
+    QBuffer,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -57,7 +60,10 @@ import assigner
 import data_manager
 import data_models
 import constants
+import ssw
 import utils
+import widgets
+import jinja2
 
 __version__: typing.Final = "2025.0.0-b0"
 
@@ -149,7 +155,7 @@ class DataWorker(QObject):
 class MainWindow(QMainWindow):
     """Main Window"""
 
-    HOME_IDX, ASSIGN_IDX, SETTINGS_IDX, ABOUT_IDX = range(4)
+    HOME_IDX, ASSIGN_IDX, PICTURES_IDX, SETTINGS_IDX, ABOUT_IDX = range(5)
 
     def __init__(self) -> None:
         super().__init__()
@@ -234,6 +240,24 @@ class MainWindow(QMainWindow):
         self.nav_button_assign.clicked.connect(lambda: self.nav(self.ASSIGN_IDX))
         self.nav_layout.addWidget(self.nav_button_assign)
         self.navigation_buttons.append(self.nav_button_assign)
+
+        self.nav_button_pictures = QToolButton()
+        self.nav_button_pictures.setCheckable(True)
+        self.nav_button_pictures.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.nav_button_pictures.setText("Pictures")
+        self.nav_button_pictures.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
+        self.nav_button_pictures.setIconSize(QSize(48, 48))
+        self.nav_button_pictures.setIcon(qtawesome.icon("mdi6.camera"))
+        self.nav_button_pictures.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
+        self.nav_button_pictures.clicked.connect(lambda: self.nav(self.PICTURES_IDX))
+        self.nav_layout.addWidget(self.nav_button_pictures)
+        self.navigation_buttons.append(self.nav_button_pictures)
 
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
@@ -382,7 +406,39 @@ class MainWindow(QMainWindow):
         self.home_layout.addWidget(self.data_view_tabs)
 
         self.data_models: list[data_models.ScoutingFormModel] = []
-        self.data_viewers: list[QTableView] = []
+        self.data_viewers: dict[str, QTableView] = {}
+        self.data_sidebars: dict[str, widgets.Sidebar] = {}
+
+        def reload_sidebars():
+            for sidebar in self.data_sidebars:
+                rowid = self.data_viewers[sidebar].selectionModel().selectedRows()[0].siblingAtColumn(0).data()
+                if sidebar == "pit":
+                    self.data_sidebars[sidebar].set_team_number(self.data_viewers[sidebar].selectionModel().selectedRows()[0].siblingAtColumn(list(constants.FIELDS[sidebar].keys()).index("team")+2).data())
+
+                template_loader = jinja2.FileSystemLoader("templates")
+                template_env = jinja2.Environment(loader=template_loader)
+
+                def include_file(name, *args):
+                    """Helper function for jinja2 includes"""
+                    return template_env.get_template(name).render(*args)
+
+                template = jinja2.Template(constants.SIDEBAR_CONSTRUCTORS[sidebar], 
+                                 extensions=['jinja2.ext.do'])
+                
+                rowdata = {}
+                for row in self.database.get_data(sidebar):
+                    if row["rowid"] == int(rowid):
+                        rowdata = row
+                        break
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(32, 32)).save(imbuffer, "PNG")
+                rowdata["warnBase64Icon"] = f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                
+                # Add include_file function to template context
+                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+                
+                self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
         def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
             # ensure that the new data can be saved with the same type
@@ -396,6 +452,7 @@ class MainWindow(QMainWindow):
             logging.debug(
                 f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()-2]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
             )
+            reload_sidebars()
 
         def table_menu(
             form: str, model: data_models.ScoutingFormModel, table: QTableView
@@ -432,6 +489,16 @@ class MainWindow(QMainWindow):
 
                 menu.popup(QCursor.pos())
 
+        def selection_change(root, form: str, table: QTableView, sidebar: widgets.Sidebar, selected, deselected):
+            root(selected, deselected)
+
+            if len(table.selectionModel().selectedRows()) == 0:
+                sidebar.set_selected(False)
+                return
+            sidebar.set_selected(True)
+            reload_sidebars()
+
+
         for form in constants.FIELDS.keys():
             model = data_models.ScoutingFormModel(
                 self.database.get_data(form),
@@ -463,6 +530,9 @@ class MainWindow(QMainWindow):
             view_export.clicked.connect(lambda: self.export_csv(form))
             view_bar.addWidget(view_export)
 
+            view_side_by_side = QHBoxLayout()
+            view_layout.addLayout(view_side_by_side)
+
             view = QTableView()
             view.setAlternatingRowColors(True)
             view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -479,12 +549,66 @@ class MainWindow(QMainWindow):
             view.customContextMenuRequested.connect(
                 lambda: table_menu(form, model, view)
             )
-            view_layout.addWidget(view)
+            view_side_by_side.addWidget(view)
+
+            sidebar = widgets.Sidebar()
+            sidebar.close_action.connect(partial(view.clearSelection))
+            view_side_by_side.addWidget(sidebar)
+            self.data_sidebars[form] = sidebar
+            old = view.selectionChanged
+            view.selectionChanged = lambda selected, deselected: selection_change(old, form, view, sidebar, selected, deselected)
             
-            self.data_viewers.append(view)
+            self.data_viewers[form] = view
 
         # * ASSIGN * #
         self.app_widget.insertWidget(self.ASSIGN_IDX, assigner.AssignerWidget(app, self.sbapi))
+
+        # * PICTURES * #
+        self.pictures_widget = QWidget()
+        self.app_widget.insertWidget(self.PICTURES_IDX, self.pictures_widget)
+
+        self.pictures_layout = QHBoxLayout()
+        self.pictures_widget.setLayout(self.pictures_layout)
+
+        self.pictures_left_pane = QScrollArea()
+        self.pictures_left_pane.setWidgetResizable(True)
+        self.pictures_layout.addWidget(self.pictures_left_pane)
+
+        self.pictures_scroll_widget = QWidget()
+        self.pictures_left_pane.setWidget(self.pictures_scroll_widget)
+
+        self.pictures_scroll_layout = QVBoxLayout()
+        self.pictures_scroll_widget.setLayout(self.pictures_scroll_layout)
+
+        for entry in self.database.get_data("robot_pictures"):
+            entry_widget = widgets.TeamEntryWidget(entry["team"])
+            entry_widget.clicked.connect(self.load_team_pictures_panel)
+            self.pictures_scroll_layout.addWidget(entry_widget)
+
+        self.pictures_right_pane = QStackedWidget()
+        self.pictures_layout.addWidget(self.pictures_right_pane)
+
+        self.pictures_right_unselected_widget = QWidget()
+        self.pictures_right_pane.insertWidget(0, self.pictures_right_unselected_widget)
+
+        self.pictures_right_unselected_layout = QVBoxLayout()
+        self.pictures_right_unselected_widget.setLayout(self.pictures_right_unselected_layout)
+
+        self.pictures_right_unselected_layout.addWidget(QLabel("Select a team to view pictures"), alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.pictures_right_scroll = QScrollArea()
+        self.pictures_right_scroll.setWidgetResizable(True)
+        self.pictures_right_pane.insertWidget(1, self.pictures_right_scroll)
+
+        self.pictures_right_scroll_widget = QWidget()
+        self.pictures_right_scroll.setWidget(self.pictures_right_scroll_widget)
+
+        self.pictures_right_scroll_layout = QVBoxLayout()
+        self.pictures_right_scroll_widget.setLayout(self.pictures_right_scroll_layout)
+
+        self.pictures_right_team_label = QLabel("Team 0000")
+        self.pictures_right_team_label.setFont(QFont(self.pictures_right_team_label.font().family(), 22, QFont.Weight.Bold))
+        self.pictures_right_scroll_layout.addWidget(self.pictures_right_team_label)
 
         # * SETTINGS * #
         self.settings_widget = QWidget()
@@ -675,6 +799,10 @@ class MainWindow(QMainWindow):
             # noinspection PyTypeChecker
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
 
+    def load_team_pictures_panel(self, team: str):
+        self.pictures_right_pane.setCurrentIndex(1)
+        self.pictures_right_team_label.setText(f"Team {team}")
+
     def on_database_error(self, msg: str, kind: data_manager.MessageType):
         match kind:
             case data_manager.MessageType.FATAL:
@@ -802,14 +930,14 @@ class MainWindow(QMainWindow):
                 "QScrollBar:vertical:handle { width: 20px; }"
                 "QScrollBar:horizontal:handle { height: 20px; }"
             )
-            for viewport in self.data_viewers:
+            for viewport in self.data_viewers.values():
                 QScroller.grabGesture(
                     viewport.viewport(),
                     QScroller.ScrollerGestureType.TouchGesture,
                 )
         else:
             self.setStyleSheet("")
-            for viewport in self.data_viewers:
+            for viewport in self.data_viewers.values():
                 QScroller.ungrabGesture(
                     viewport.viewport(),
                 )

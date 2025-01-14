@@ -156,7 +156,7 @@ class DataManager(QObject):
             row = {}
             row["rowid"] = self.query.value(0)
             row["timestamp"] = self.query.value(1)
-            for i, field in enumerate(constants.FIELDS[form]):
+            for i, field in enumerate(constants.FIELDS[form] if form != "robot_pictures" else ["team", "picture"]):
                 row[field] = self.query.value(i + 2)
             data.append(row)
         return data

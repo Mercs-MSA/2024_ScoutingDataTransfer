@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+    <html>
+    <style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+    }
+    th, td {
+        border: 1px solid #555;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #BB4A40;
+        font-weight: bold;
+    }
+    </style>
+    <body>
+
+    <h4>Data</h4>
+    <p>Import Timestamp {{timestamp}} UTC</p>
+
+    <h3>Robot Physical</h3>
+
+    <table>
+    <tr>
+        <th>Length</th>
+        <th>Width</th>
+        <th>Height</th>
+        <th>Weight</th>
+    </tr>
+    <tr>
+        <td>{{length}}in</td>
+        <td>{{width}}in</td>
+        <td>{{height}}in</td>
+        <td>{{weight}}lbs</td>
+    </tr>
+    </table>
+
+    <h3>Robot Mechanism</h3>
+
+    <table>
+    <tr>
+        <th>Drivebase</th>
+    </tr>
+    <tr>
+        <td>{{drivebase}}</td>
+    </tr>
+    </table>
+
+    <h3>Robot Auton</h3>
+    
+    {% if autonExists %}
+    <p>The robot has an auton. Under construction</p>
+    {% else %}
+    <h2><img src="{{warnBase64Icon}}" alt="W"> No Auton</h2>
+    {% endif %}
+
+    <h3>Robot Strategy</h3>
+    <br>
+    <p>Under construction</p>
+
+    </body>
+    </html>
