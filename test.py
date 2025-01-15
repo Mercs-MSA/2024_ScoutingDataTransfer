@@ -1,5 +1,12 @@
 # Import necessary PyQt5 modules
-from PySide6.QtWidgets import QWidget, QApplication, QVBoxLayout, QStackedWidget, QLabel, QPushButton
+from PySide6.QtWidgets import (
+    QWidget,
+    QApplication,
+    QVBoxLayout,
+    QStackedWidget,
+    QLabel,
+    QPushButton,
+)
 import sys
 from PySide6.QtGui import QIcon
 from PySide6 import QtGui
@@ -18,7 +25,9 @@ class StackedWidget(QWidget):
         self.height = 200
         self.setWindowIcon(QtGui.QIcon("icon.png"))  # Set window icon
         self.setWindowTitle(self.title)  # Set window title
-        self.setGeometry(self.left, self.top, self.width, self.height)  # Set window geometry
+        self.setGeometry(
+            self.left, self.top, self.width, self.height
+        )  # Set window geometry
 
         # Call method to create stacked widget and display it
         self.stackedWidget()
@@ -37,11 +46,11 @@ class StackedWidget(QWidget):
         for x in range(0, 8):
             label = QLabel("Stacked Child: " + str(x))
             label.setFont(QtGui.QFont("sanserif", 15))
-            label.setStyleSheet('color:red')
+            label.setStyleSheet("color:red")
             self.stackedWidget.addWidget(label)  # Add label to the stacked widget
 
             self.button = QPushButton("Stack" + str(x))
-            self.button.setStyleSheet('background-color:green')
+            self.button.setStyleSheet("background-color:green")
             self.button.page = x
             self.button.clicked.connect(self.btn_clicked)  # Connect button click event
             vbox.addWidget(self.button)  # Add button to the layout
@@ -52,7 +61,9 @@ class StackedWidget(QWidget):
     # Method to handle button click events
     def btn_clicked(self):
         self.button = self.sender()  # Get the button that triggered the event
-        self.stackedWidget.setCurrentIndex(self.button.page - 1)  # Set current index of the stacked widget
+        self.stackedWidget.setCurrentIndex(
+            self.button.page - 1
+        )  # Set current index of the stacked widget
 
 
 # Create QApplication instance and main window

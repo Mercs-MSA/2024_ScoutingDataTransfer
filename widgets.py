@@ -1,4 +1,14 @@
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QToolButton, QLabel, QStackedLayout, QTextBrowser, QStackedWidget, QWidget
+from PySide6.QtWidgets import (
+    QFrame,
+    QVBoxLayout,
+    QHBoxLayout,
+    QToolButton,
+    QLabel,
+    QStackedLayout,
+    QTextBrowser,
+    QStackedWidget,
+    QWidget,
+)
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtGui import QPixmap, QFont
@@ -76,7 +86,7 @@ class Sidebar(QFrame):
         self.carousel_forward.setIconSize(QSize(64, 64))
         self.carousel_forward.setFixedWidth(32)
         self.carousel_layout.addWidget(self.carousel_forward)
-        
+
         self.carousel_back.clicked.connect(self.carousel.slideInPrev)
         self.carousel_forward.clicked.connect(self.carousel.slideInNext)
 
@@ -87,7 +97,11 @@ class Sidebar(QFrame):
 
         self.carousel_page_number = QLabel("Page 1/1")
         self.carousel_tools_layout.addWidget(self.carousel_page_number)
-        self.carousel.currentChanged.connect(lambda: self.carousel_page_number.setText(f"Page {self.carousel.currentIndex() + 1}/{self.carousel.count()}"))
+        self.carousel.currentChanged.connect(
+            lambda: self.carousel_page_number.setText(
+                f"Page {self.carousel.currentIndex() + 1}/{self.carousel.count()}"
+            )
+        )
 
         self.edit_images = QToolButton()
         self.edit_images.setIcon(qta.icon("mdi6.image-edit"))
@@ -95,11 +109,15 @@ class Sidebar(QFrame):
         self.edit_images.setIconSize(QSize(18, 18))
         self.edit_images.setFixedHeight(24)
         self.edit_images.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.edit_images.clicked.connect(lambda: self.edit_images_action.emit(int(self.team)))
+        self.edit_images.clicked.connect(
+            lambda: self.edit_images_action.emit(int(self.team))
+        )
         self.carousel_tools_layout.addWidget(self.edit_images)
 
         self.team_number = QLabel("Team 0000")
-        self.team_number.setFont(QFont(self.team_number.font().family(), 22, QFont.Weight.Bold))
+        self.team_number.setFont(
+            QFont(self.team_number.font().family(), 22, QFont.Weight.Bold)
+        )
         self.dataview_layout.addWidget(self.team_number)
 
         if renderer == 0:
@@ -109,7 +127,9 @@ class Sidebar(QFrame):
             self.html = QWebEngineView()
             self.html.page().setBackgroundColor(Qt.GlobalColor.transparent)
             self.html.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-            self.html.setHtml("<h1 style='color: white;'>Unknown page loading error</h1>") # prevent glitching on 1st load
+            self.html.setHtml(
+                "<h1 style='color: white;'>Unknown page loading error</h1>"
+            )  # prevent glitching on 1st load
         self.html.setMinimumHeight(200)
         self.dataview_layout.addWidget(self.html, 2)
 
@@ -123,16 +143,25 @@ class Sidebar(QFrame):
 
     def set_pixmaps(self, pixmaps: list[QPixmap]):
         item: QStackedLayout
-        for item in reversed(self.carousel.children()):
+        for item in reversed(self.carousel.children()):  # type: ignore
             self.carousel.removeWidget(item.widget())
 
         for i, pixmap in enumerate(pixmaps):
             widget = QLabel()
-            widget.setPixmap(pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            widget.setPixmap(
+                pixmap.scaled(
+                    250,
+                    250,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
             widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.carousel.addWidget(widget)
 
-        self.carousel_page_number.setText(f"Page {self.carousel.currentIndex() + 1}/{len(pixmaps)}")
+        self.carousel_page_number.setText(
+            f"Page {self.carousel.currentIndex() + 1}/{len(pixmaps)}"
+        )
 
     def set_team_number(self, team_number: str | int):
         self.team = team_number
@@ -144,10 +173,12 @@ class Sidebar(QFrame):
         else:
             self.html.setHtml(html)
 
+
 class TeamEntryWidget(QFrame):
     """
     A widget that displays a team number and an arrow to the right
     """
+
     clicked = Signal(str)
 
     def __init__(self, team_number: str | int, parent=None):
@@ -157,7 +188,9 @@ class TeamEntryWidget(QFrame):
         self.root_layout = QHBoxLayout(self)
 
         self.team_number = QLabel(str(team_number))
-        self.team_number.setFont(QFont(self.team_number.font().family(), 12, QFont.Weight.Bold))
+        self.team_number.setFont(
+            QFont(self.team_number.font().family(), 12, QFont.Weight.Bold)
+        )
         self.root_layout.addWidget(self.team_number)
 
         self.root_layout.addStretch()

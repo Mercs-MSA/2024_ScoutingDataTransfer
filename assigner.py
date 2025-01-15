@@ -6,8 +6,24 @@ from datetime import datetime
 import qtawesome
 import statbotics
 from PySide6.QtCore import QObject, Signal, Qt, QSize, QThread, QCoreApplication, QPoint
-from PySide6.QtWidgets import QTabWidget, QAbstractItemView, QListWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, \
-    QScrollArea, QWidget, QListWidgetItem, QMessageBox, QLineEdit, QInputDialog, QApplication, QFileDialog, QMenu
+from PySide6.QtWidgets import (
+    QTabWidget,
+    QAbstractItemView,
+    QListWidget,
+    QPushButton,
+    QHBoxLayout,
+    QVBoxLayout,
+    QLabel,
+    QScrollArea,
+    QWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QLineEdit,
+    QInputDialog,
+    QApplication,
+    QFileDialog,
+    QMenu,
+)
 
 import utils
 
@@ -23,9 +39,7 @@ class EventCodeWorker(QObject):
 
     def run(self):
         try:
-            events = self.api.get_events(
-                datetime.now().year, district=self.district
-            )
+            events = self.api.get_events(datetime.now().year, district=self.district)
             self.finished.emit(events)
         except Exception:
             traceback.print_exc()
@@ -91,7 +105,9 @@ class MatchMatchWorker(QObject):
 
 
 class AssignerWidget(QTabWidget):
-    def __init__(self, app: QApplication | QCoreApplication, sbapi: statbotics.Statbotics):
+    def __init__(
+        self, app: QApplication | QCoreApplication, sbapi: statbotics.Statbotics
+    ):
         super().__init__()
         self.app = app
         self.sbapi = sbapi
@@ -327,6 +343,7 @@ class AssignerWidget(QTabWidget):
 
         self.assign_match_tablets_layout = QHBoxLayout()
         self.assign_match_tablets_widget.setLayout(self.assign_match_tablets_layout)
+
     def change_assign_pit_tablet_count(self, change: int):
         if self.assign_pit_tablets + change in range(1, 13):
             self.assign_pit_tablets += change

@@ -29,8 +29,7 @@ FIELDS = {
 # Jinja2 syntax is allowed and required for accessing fields
 # `include_file` is a custom function that includes a file from the `templates` directory
 SIDEBAR_CONSTRUCTORS = {
-    "pit": 
-    """
+    "pit": """
     {{ include_file('pit.html') }}
     """
 }

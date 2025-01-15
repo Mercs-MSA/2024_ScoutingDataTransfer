@@ -1,5 +1,12 @@
 from PySide6.QtWidgets import QStackedWidget
-from PySide6.QtCore import QPoint, QEasingCurve, Qt, QParallelAnimationGroup, QPropertyAnimation, QAbstractAnimation
+from PySide6.QtCore import (
+    QPoint,
+    QEasingCurve,
+    Qt,
+    QParallelAnimationGroup,
+    QPropertyAnimation,
+    QAbstractAnimation,
+)
 
 CURRENT_DIRECTION = 0
 

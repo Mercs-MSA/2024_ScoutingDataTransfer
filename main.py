@@ -408,9 +408,23 @@ class MainWindow(QMainWindow):
 
         def reload_sidebars():
             for sidebar in self.data_sidebars:
-                rowid = self.data_viewers[sidebar].selectionModel().selectedRows()[0].siblingAtColumn(0).data()
+                rowid = (
+                    self.data_viewers[sidebar]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(0)
+                    .data()
+                )
                 if sidebar == "pit":
-                    self.data_sidebars[sidebar].set_team_number(self.data_viewers[sidebar].selectionModel().selectedRows()[0].siblingAtColumn(list(constants.FIELDS[sidebar].keys()).index("team")+2).data())
+                    self.data_sidebars[sidebar].set_team_number(
+                        self.data_viewers[sidebar]
+                        .selectionModel()
+                        .selectedRows()[0]
+                        .siblingAtColumn(
+                            list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                        )
+                        .data()
+                    )
 
                 template_loader = jinja2.FileSystemLoader("templates")
                 template_env = jinja2.Environment(loader=template_loader)
@@ -419,9 +433,11 @@ class MainWindow(QMainWindow):
                     """Helper function for jinja2 includes"""
                     return template_env.get_template(name).render(*args)
 
-                template = jinja2.Template(constants.SIDEBAR_CONSTRUCTORS[sidebar], 
-                                 extensions=['jinja2.ext.do'])
-                
+                template = jinja2.Template(
+                    constants.SIDEBAR_CONSTRUCTORS[sidebar],
+                    extensions=["jinja2.ext.do"],
+                )
+
                 rowdata = {}
                 for row in self.database.get_data(sidebar):
                     if row["rowid"] == int(rowid):
@@ -429,12 +445,16 @@ class MainWindow(QMainWindow):
                         break
 
                 imbuffer = QBuffer()
-                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(imbuffer, "PNG")
-                rowdata["warnBase64Icon"] = f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["warnBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
                 # Add include_file function to template context
                 rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
-                
+
                 self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
         def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
@@ -486,7 +506,14 @@ class MainWindow(QMainWindow):
 
                 menu.popup(QCursor.pos())
 
-        def selection_change(root, form: str, table: QTableView, sidebar: widgets.Sidebar, selected, deselected):
+        def selection_change(
+            root,
+            form: str,
+            table: QTableView,
+            sidebar: widgets.Sidebar,
+            selected,
+            deselected,
+        ):
             root(selected, deselected)
 
             if len(table.selectionModel().selectedRows()) == 0:
@@ -494,7 +521,6 @@ class MainWindow(QMainWindow):
                 return
             sidebar.set_selected(True)
             reload_sidebars()
-
 
         for form in constants.FIELDS.keys():
             model = data_models.ScoutingFormModel(
@@ -537,7 +563,6 @@ class MainWindow(QMainWindow):
             view.setModel(model)
             view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 
-
             view.dataChanged = lambda *args, **kwargs: table_data_edit(
                 form, *args, **kwargs
             )
@@ -554,12 +579,16 @@ class MainWindow(QMainWindow):
             view_side_by_side.addWidget(sidebar)
             self.data_sidebars[form] = sidebar
             old = view.selectionChanged
-            view.selectionChanged = lambda selected, deselected: selection_change(old, form, view, sidebar, selected, deselected)
-            
+            view.selectionChanged = lambda selected, deselected: selection_change(
+                old, form, view, sidebar, selected, deselected
+            )
+
             self.data_viewers[form] = view
 
         # * ASSIGN * #
-        self.app_widget.insertWidget(self.ASSIGN_IDX, assigner.AssignerWidget(app, self.sbapi))
+        self.app_widget.insertWidget(
+            self.ASSIGN_IDX, assigner.AssignerWidget(app, self.sbapi)
+        )
 
         # * PICTURES * #
         self.pictures_widget = QWidget()
@@ -571,7 +600,7 @@ class MainWindow(QMainWindow):
         self.pictures_left_pane = QFrame()
         self.pictures_left_pane.setFrameShape(QFrame.Shape.Box)
         self.pictures_layout.addWidget(self.pictures_left_pane)
-        
+
         self.pictures_left_layout = QVBoxLayout()
         self.pictures_left_pane.setLayout(self.pictures_left_layout)
 
@@ -584,7 +613,7 @@ class MainWindow(QMainWindow):
         self.pictures_add.clicked.connect(self.add_new_picture_team)
         self.pictures_topbar.addWidget(self.pictures_add)
 
-        self.pictures_load = QPushButton("Load") 
+        self.pictures_load = QPushButton("Load")
         self.pictures_load.setIcon(qtawesome.icon("mdi6.folder-open"))
         self.pictures_load.setIconSize(QSize(24, 24))
         self.pictures_topbar.addWidget(self.pictures_load)
@@ -615,9 +644,14 @@ class MainWindow(QMainWindow):
         self.pictures_right_pane.insertWidget(0, self.pictures_right_unselected_widget)
 
         self.pictures_right_unselected_layout = QVBoxLayout()
-        self.pictures_right_unselected_widget.setLayout(self.pictures_right_unselected_layout)
+        self.pictures_right_unselected_widget.setLayout(
+            self.pictures_right_unselected_layout
+        )
 
-        self.pictures_right_unselected_layout.addWidget(QLabel("Select a team to view pictures"), alignment=Qt.AlignmentFlag.AlignCenter)
+        self.pictures_right_unselected_layout.addWidget(
+            QLabel("Select a team to view pictures"),
+            alignment=Qt.AlignmentFlag.AlignCenter,
+        )
 
         self.pictures_right_scroll = QScrollArea()
         self.pictures_right_scroll.setWidgetResizable(True)
@@ -631,7 +665,9 @@ class MainWindow(QMainWindow):
         self.pictures_right_scroll_widget.setLayout(self.pictures_right_scroll_layout)
 
         self.pictures_right_team_label = QLabel("Team 0000")
-        self.pictures_right_team_label.setFont(QFont(self.pictures_right_team_label.font().family(), 22, QFont.Weight.Bold))
+        self.pictures_right_team_label.setFont(
+            QFont(self.pictures_right_team_label.font().family(), 22, QFont.Weight.Bold)
+        )
         self.pictures_right_scroll_layout.addWidget(self.pictures_right_team_label)
 
         # * SETTINGS * #
@@ -688,20 +724,32 @@ class MainWindow(QMainWindow):
 
         self.csv_enable_headers = QCheckBox("Headers")
         self.csv_enable_headers.setToolTip("Save headers with CSV files")
-        self.csv_enable_headers.setChecked(settings.value("csvHeaders", type=bool, defaultValue=True)) # type: ignore
+        self.csv_enable_headers.setChecked(
+            settings.value("csvHeaders", type=bool, defaultValue=True)
+        )  # type: ignore
         self.csv_enable_headers.stateChanged.connect(self.set_csv_enable_headers)
         self.csv_opts_layout.addWidget(self.csv_enable_headers)
 
         self.csv_enable_auto = QCheckBox("Auto-Export")
-        self.csv_enable_auto.setToolTip("Automatically export csv files to the set directory")
-        self.csv_enable_auto.setChecked(settings.value("csvAutoExport", type=bool, defaultValue=True)) # type: ignore
+        self.csv_enable_auto.setToolTip(
+            "Automatically export csv files to the set directory"
+        )
+        self.csv_enable_auto.setChecked(
+            settings.value("csvAutoExport", type=bool, defaultValue=True)
+        )  # type: ignore
         self.csv_enable_auto.stateChanged.connect(self.set_csv_auto_export)
         self.csv_opts_layout.addWidget(self.csv_enable_auto)
 
         self.csv_enable_identifiers = QCheckBox("Identifiers")
-        self.csv_enable_identifiers.setToolTip("Include SQL id and timestamps in CSV exports")
-        self.csv_enable_identifiers.setChecked(settings.value("csvIdentifiers", type=bool, defaultValue=False)) # type: ignore
-        self.csv_enable_identifiers.stateChanged.connect(self.set_csv_enable_identifiers)
+        self.csv_enable_identifiers.setToolTip(
+            "Include SQL id and timestamps in CSV exports"
+        )
+        self.csv_enable_identifiers.setChecked(
+            settings.value("csvIdentifiers", type=bool, defaultValue=False)
+        )  # type: ignore
+        self.csv_enable_identifiers.stateChanged.connect(
+            self.set_csv_enable_identifiers
+        )
         self.csv_opts_layout.addWidget(self.csv_enable_identifiers)
 
         self.sqlite_file_label = QLabel("SQLite Database Location")
@@ -854,28 +902,40 @@ class MainWindow(QMainWindow):
             if not os.path.exists(settings.value("csvDir", type=str)):
                 try:
                     os.makedirs(settings.value("csvDir", type=str))
-                    logging.info(f"Created directory for auto-export {settings.value('csvDir', type=str)}")
+                    logging.info(
+                        f"Created directory for auto-export {settings.value('csvDir', type=str)}"
+                    )
                 except Exception as e:
                     QMessageBox.critical(
                         self,
                         "Error Creating Directory for Auto-Export",
                         f"Could not create directory: {repr(e)}",
                     )
-                    logging.error(f"Error creating directory for auto-export: {repr(e)}")
+                    logging.error(
+                        f"Error creating directory for auto-export: {repr(e)}"
+                    )
 
             for form in constants.FIELDS.keys():
                 if not os.path.exists(Path(settings.value("csvDir", type=str), form)):
                     os.mkdir(Path(settings.value("csvDir", type=str), form))
-                    logging.info(f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}")
+                    logging.info(
+                        f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}"
+                    )
                 # save csv
                 csv_data = self.database.to_csv(
-                    form, 
-                    headers=settings.value("csvHeaders", type=bool, defaultValue=True), # type: ignore
-                    identifiers=settings.value("csvIdentifiers", type=bool, defaultValue=False), # type: ignore
+                    form,
+                    headers=settings.value("csvHeaders", type=bool, defaultValue=True),  # type: ignore
+                    identifiers=settings.value(
+                        "csvIdentifiers", type=bool, defaultValue=False
+                    ),  # type: ignore
                 )
-                with open(Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w") as f:
+                with open(
+                    Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w"
+                ) as f:
                     f.write(csv_data)
-                    logging.info(f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}")
+                    logging.info(
+                        f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}"
+                    )
 
     def delete_db_row(
         self, form: str, rowid: int, table: data_models.ScoutingFormModel
@@ -918,11 +978,11 @@ class MainWindow(QMainWindow):
 
     def export_csv(self, form: str):
         csv = self.database.to_csv(
-                form, 
-                headers=settings.value("csvHeaders", type=bool, defaultValue=True), # type: ignore
-                identifiers=settings.value("csvIdentifiers", type=bool, defaultValue=False), # type: ignore
-            )
-        
+            form,
+            headers=settings.value("csvHeaders", type=bool, defaultValue=True),  # type: ignore
+            identifiers=settings.value("csvIdentifiers", type=bool, defaultValue=False),  # type: ignore
+        )
+
         filepath, _ = QFileDialog.getSaveFileName(
             self,
             "Export to CSV",

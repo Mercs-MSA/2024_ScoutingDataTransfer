@@ -49,7 +49,7 @@ class DataManager(QObject):
     def initialize(self):
         if not self.db:
             raise RuntimeError("DB not created")
-    
+
         self.query = QSqlQuery(self.db)
 
         # create empty tables
@@ -110,7 +110,6 @@ class DataManager(QObject):
                         MessageType.ERROR,
                     )
 
-
     def add_data(self, data: dict[str, Any]):
         """Add new data to database
 
@@ -156,7 +155,11 @@ class DataManager(QObject):
             row = {}
             row["rowid"] = self.query.value(0)
             row["timestamp"] = self.query.value(1)
-            for i, field in enumerate(constants.FIELDS[form] if form != "robot_pictures" else ["team", "picture"]):
+            for i, field in enumerate(
+                constants.FIELDS[form]
+                if form != "robot_pictures"
+                else ["team", "picture"]
+            ):
                 row[field] = self.query.value(i + 2)
             data.append(row)
         return data
@@ -177,7 +180,9 @@ class DataManager(QObject):
             raise RuntimeError("DB not initialized")
 
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
-        self.query.prepare(f"UPDATE {form} SET {field} = {value_str} WHERE rowid = {row}")
+        self.query.prepare(
+            f"UPDATE {form} SET {field} = {value_str} WHERE rowid = {row}"
+        )
 
         ret: bool = self.query.exec()
         self.on_data_updated.emit()
@@ -200,7 +205,7 @@ class DataManager(QObject):
         ret: bool = self.query.exec(query)
         self.on_data_updated.emit()
         return ret
-    
+
     def to_csv(self, form: str, headers: bool = True, identifiers: bool = False) -> str:
         """Convert the database to csv
 
@@ -224,5 +229,10 @@ class DataManager(QObject):
         if headers:
             csv_data.append(list(constants.FIELDS[form].keys()))
         csv_data.extend([list(row.values()) for row in data])
-        csv_str = "\n".join([",".join([f"\"{x}\"" if "," in x else x for x in map(str, row)]) for row in csv_data])
+        csv_str = "\n".join(
+            [
+                ",".join([f'"{x}"' if "," in x else x for x in map(str, row)])
+                for row in csv_data
+            ]
+        )
         return csv_str
