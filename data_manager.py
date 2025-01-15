@@ -1,4 +1,5 @@
 from enum import Enum
+import json
 from typing import Any
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
@@ -163,6 +164,29 @@ class DataManager(QObject):
                 row[field] = self.query.value(i + 2)
             data.append(row)
         return data
+
+    def add_robot_pictures(self, team: int, pictures: list[bytes]):
+        """Add robot pictures to database
+
+        Args:
+            team (int): Team number
+            pictures (list[bytes]): List of pictures as bytes
+        """
+        if not self.query:
+            raise RuntimeError("DB not initialized")
+
+        pics = {"picture": []}
+        for picture in pictures:
+            pics["picture"].append(picture)
+
+        self.query.prepare("INSERT INTO robot_pictures (team, picture) VALUES (?, ?)")
+        self.query.addBindValue(team)
+        self.query.addBindValue(json.dumps(pics))
+        if not self.query.exec():
+            self.on_message.emit(
+                f"Failed to insert robot pictures: {self.query.lastError().text()}",
+                MessageType.ERROR,
+            )
 
     def update_data(self, form: str, row: int, field: str, value: Any) -> bool:
         """Update a specific field in a row

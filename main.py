@@ -3,7 +3,9 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
+import base64
 from functools import partial
+import json
 from pathlib import Path
 import sys
 import os
@@ -48,8 +50,9 @@ from PySide6.QtCore import (
     QModelIndex,
     QThread,
     QBuffer,
+    QByteArray,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -60,7 +63,6 @@ import assigner
 import data_manager
 import data_models
 import constants
-import ssw
 import utils
 import widgets
 import jinja2
@@ -406,57 +408,6 @@ class MainWindow(QMainWindow):
         self.data_viewers: dict[str, QTableView] = {}
         self.data_sidebars: dict[str, widgets.Sidebar] = {}
 
-        def reload_sidebars():
-            for sidebar in self.data_sidebars:
-                rowid = (
-                    self.data_viewers[sidebar]
-                    .selectionModel()
-                    .selectedRows()[0]
-                    .siblingAtColumn(0)
-                    .data()
-                )
-                if sidebar == "pit":
-                    self.data_sidebars[sidebar].set_team_number(
-                        self.data_viewers[sidebar]
-                        .selectionModel()
-                        .selectedRows()[0]
-                        .siblingAtColumn(
-                            list(constants.FIELDS[sidebar].keys()).index("team") + 2
-                        )
-                        .data()
-                    )
-
-                template_loader = jinja2.FileSystemLoader("templates")
-                template_env = jinja2.Environment(loader=template_loader)
-
-                def include_file(name, *args):
-                    """Helper function for jinja2 includes"""
-                    return template_env.get_template(name).render(*args)
-
-                template = jinja2.Template(
-                    constants.SIDEBAR_CONSTRUCTORS[sidebar],
-                    extensions=["jinja2.ext.do"],
-                )
-
-                rowdata = {}
-                for row in self.database.get_data(sidebar):
-                    if row["rowid"] == int(rowid):
-                        rowdata = row
-                        break
-
-                imbuffer = QBuffer()
-                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(
-                    QSize(30, 30)
-                ).save(imbuffer, "PNG")
-                rowdata["warnBase64Icon"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-
-                # Add include_file function to template context
-                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
-
-                self.data_sidebars[sidebar].set_html(template.render(rowdata))
-
         def table_data_edit(form: str, topl: QModelIndex, _: QModelIndex, __: list):
             # ensure that the new data can be saved with the same type
 
@@ -469,7 +420,7 @@ class MainWindow(QMainWindow):
             logging.debug(
                 f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()-2]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
             )
-            reload_sidebars()
+            self.reload_sidebars()
 
         def table_menu(
             form: str, model: data_models.ScoutingFormModel, table: QTableView
@@ -520,7 +471,7 @@ class MainWindow(QMainWindow):
                 sidebar.set_selected(False)
                 return
             sidebar.set_selected(True)
-            reload_sidebars()
+            self.reload_sidebars()
 
         for form in constants.FIELDS.keys():
             model = data_models.ScoutingFormModel(
@@ -871,6 +822,98 @@ class MainWindow(QMainWindow):
             # noinspection PyTypeChecker
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
 
+    def reload_sidebars(self):
+            for sidebar in self.data_sidebars:
+                rowid = (
+                    self.data_viewers[sidebar]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(0)
+                    .data()
+                )
+                if sidebar == "pit":
+                    self.data_sidebars[sidebar].set_team_number(
+                        self.data_viewers[sidebar]
+                        .selectionModel()
+                        .selectedRows()[0]
+                        .siblingAtColumn(
+                            list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                        )
+                        .data()
+                    )
+
+                template_loader = jinja2.FileSystemLoader("templates")
+                template_env = jinja2.Environment(loader=template_loader)
+
+                def include_file(name, *args):
+                    """Helper function for jinja2 includes"""
+                    return template_env.get_template(name).render(*args)
+
+                template = jinja2.Template(
+                    constants.SIDEBAR_CONSTRUCTORS[sidebar],
+                    extensions=["jinja2.ext.do"],
+                )
+
+                rowdata = {}
+                for row in self.database.get_data(sidebar):
+                    if row["rowid"] == int(rowid):
+                        rowdata = row
+                        break
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["warnBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                # Add include_file function to template context
+                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+
+                self.data_sidebars[sidebar].set_html(template.render(rowdata))
+
+                if int(
+                    self.data_viewers[sidebar]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(
+                        list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                    )
+                    .data()
+                ) in [x["team"] for x in self.database.get_data("robot_pictures")]:
+                    pms = []
+                    pics = json.loads(
+                        [
+                            x
+                            for x in self.database.get_data("robot_pictures")
+                            if x["team"]
+                            == int(
+                                self.data_viewers[sidebar]
+                                .selectionModel()
+                                .selectedRows()[0]
+                                .siblingAtColumn(
+                                    list(constants.FIELDS[sidebar].keys()).index("team")
+                                    + 2
+                                )
+                                .data()
+                            )
+                        ][0]["picture"]
+                    )["picture"]
+                    for x in pics:
+                        pm = QPixmap()
+                        pm.loadFromData(
+                            base64.b64decode(x.replace("data:image/png;base64,", ""))
+                        )
+                        pms.append(pm)
+
+                    self.data_sidebars[sidebar].set_pixmaps(pms)
+                else:
+                    self.data_sidebars[sidebar].set_pixmaps(
+                        [QPixmap("icons/generic_robot.png")]
+                    )
+
+
     def edit_pictures(self, team: int):
         self.nav(self.PICTURES_IDX)
         self.load_team_pictures_panel(team)
@@ -886,6 +929,19 @@ class MainWindow(QMainWindow):
         self.pictures_right_pane.setCurrentIndex(0)
         wizard = wizards.NewPicturesTeamWizard(self)
         wizard.exec()
+        team = int(wizard.get_team_number())
+        pixmaps = wizard.get_pixmaps()
+
+        blobs = []
+        for pixmap in pixmaps:
+            buffer = QBuffer()
+            pixmap.save(buffer, "PNG")
+            blobs.append(
+                f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
+            )
+
+        self.database.add_robot_pictures(team, blobs)
+        self.reload_sidebars()
 
     def on_database_error(self, msg: str, kind: data_manager.MessageType):
         match kind:

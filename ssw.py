@@ -12,7 +12,7 @@ CURRENT_DIRECTION = 0
 
 
 class SlidingStackedWidget(QStackedWidget):
-    def __init__(self, parent=None, anim=QEasingCurve.Type.OutSine, speed=300):
+    def __init__(self, parent=None, anim=QEasingCurve.Type.OutSine, speed=100):
         super(SlidingStackedWidget, self).__init__(parent)
 
         self.m_animation_type = anim
@@ -24,42 +24,42 @@ class SlidingStackedWidget(QStackedWidget):
         self.m_pnow = QPoint(0, 0)
         self.m_active = False
 
-    def getDirection(self):
+    def get_direction(self):
         return self.m_direction
 
-    def setDirection(self, direction):
+    def set_direction(self, direction):
         self.m_direction = direction
 
-    def setSpeed(self, speed):
+    def set_speed(self, speed):
         self.m_speed = speed
 
-    def getAnimation(self):
+    def get_animation(self):
         return self.m_animation_type
 
-    def setAnimation(self, animationtype):
+    def set_animation(self, animationtype):
         self.m_animation_type = animationtype
 
-    def setWrap(self, wrap):
+    def set_wrap(self, wrap):
         self.m_wrap = wrap
 
-    def slideInPrev(self):
+    def sldie_in_prev(self):
         now = self.currentIndex()
         if self.m_wrap or now > 0:
-            self.slideInIdx(now - 1)
+            self.slide_in_idx(now - 1)
 
-    def slideInNext(self):
+    def slide_in_next(self):
         now = self.currentIndex()
         if self.m_wrap or now < (self.count() - 1):
-            self.slideInIdx(now + 1)
+            self.slide_in_idx(now + 1)
 
-    def slideInIdx(self, idx):
+    def slide_in_idx(self, idx):
         if idx > (self.count() - 1):
             idx = idx % self.count()
         elif idx < 0:
             idx = (idx + self.count()) % self.count()
-        self.slideInWgt(self.widget(idx))
+        self.slide_in_wgt(self.widget(idx))
 
-    def slideInWgt(self, newwidget):
+    def slide_in_wgt(self, newwidget):
         if self.m_active:
             return
 
@@ -97,7 +97,8 @@ class SlidingStackedWidget(QStackedWidget):
         self.widget(_next).raise_()
 
         # noinspection PyArgumentList
-        anim_group = QParallelAnimationGroup(self, finished=self.animationDoneSlot)
+        anim_group = QParallelAnimationGroup(self)
+        anim_group.finished.connect(self.animation_done_slot)
 
         for index, start, end in zip(
             (_now, _next), (pnow, pnext - offset), (pnow + offset, pnext)
@@ -106,11 +107,12 @@ class SlidingStackedWidget(QStackedWidget):
             animation = QPropertyAnimation(
                 self.widget(index),
                 b"pos",
-                duration=self.m_speed,
-                easingCurve=self.m_animation_type,
-                startValue=start,
-                endValue=end,
             )
+
+            animation.setDuration(self.m_speed)
+            animation.setEasingCurve(self.m_animation_type)
+            animation.setStartValue(start)
+            animation.setEndValue(end)
             anim_group.addAnimation(animation)
 
         self.m_next = _next
@@ -118,7 +120,7 @@ class SlidingStackedWidget(QStackedWidget):
         self.m_active = True
         anim_group.start(QAbstractAnimation.DeletionPolicy.DeleteWhenStopped)
 
-    def animationDoneSlot(self):
+    def animation_done_slot(self):
         self.setCurrentIndex(self.m_next)
         self.widget(self.m_now).hide()
         self.widget(self.m_now).move(self.m_pnow)

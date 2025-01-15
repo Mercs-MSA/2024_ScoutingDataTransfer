@@ -77,8 +77,8 @@ class Sidebar(QFrame):
         self.carousel_layout.addWidget(self.carousel_back)
 
         self.carousel = ssw.SlidingStackedWidget()
-        self.carousel.setFixedSize(QSize(250, 250))
-        self.carousel.setDirection(Qt.Axis.XAxis)
+        self.carousel.setFixedSize(QSize(300, 300))
+        self.carousel.set_direction(Qt.Axis.XAxis)
         self.carousel_layout.addWidget(self.carousel)
 
         self.carousel_forward = QToolButton()
@@ -87,8 +87,8 @@ class Sidebar(QFrame):
         self.carousel_forward.setFixedWidth(32)
         self.carousel_layout.addWidget(self.carousel_forward)
 
-        self.carousel_back.clicked.connect(self.carousel.slideInPrev)
-        self.carousel_forward.clicked.connect(self.carousel.slideInNext)
+        self.carousel_back.clicked.connect(self.carousel.sldie_in_prev)
+        self.carousel_forward.clicked.connect(self.carousel.slide_in_next)
 
         self.carousel_tools_layout = QHBoxLayout()
         self.carousel_tools_layout.setContentsMargins(0, 0, 0, 0)
@@ -133,8 +133,6 @@ class Sidebar(QFrame):
         self.html.setMinimumHeight(200)
         self.dataview_layout.addWidget(self.html, 2)
 
-        self.set_pixmaps([QPixmap("icons/generic_robot.png")])
-
     def set_selected(self, selected: bool):
         if selected:
             self.root_widget.setCurrentIndex(1)
@@ -144,14 +142,16 @@ class Sidebar(QFrame):
     def set_pixmaps(self, pixmaps: list[QPixmap]):
         item: QStackedLayout
         for item in reversed(self.carousel.children()):  # type: ignore
-            self.carousel.removeWidget(item.widget())
+            self.carousel.removeWidget(
+                item.widget() if isinstance(item, QStackedLayout) else item
+            )
 
         for i, pixmap in enumerate(pixmaps):
             widget = QLabel()
             widget.setPixmap(
                 pixmap.scaled(
-                    250,
-                    250,
+                    300,
+                    300,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
