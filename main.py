@@ -65,6 +65,8 @@ import utils
 import widgets
 import jinja2
 
+import wizards
+
 __version__: typing.Final = "2025.0.0-b0"
 
 settings: QSettings | None = None
@@ -548,6 +550,7 @@ class MainWindow(QMainWindow):
 
             sidebar = widgets.Sidebar()
             sidebar.close_action.connect(partial(view.clearSelection))
+            sidebar.edit_images_action.connect(self.edit_pictures)
             view_side_by_side.addWidget(sidebar)
             self.data_sidebars[form] = sidebar
             old = view.selectionChanged
@@ -565,12 +568,36 @@ class MainWindow(QMainWindow):
         self.pictures_layout = QHBoxLayout()
         self.pictures_widget.setLayout(self.pictures_layout)
 
-        self.pictures_left_pane = QScrollArea()
-        self.pictures_left_pane.setWidgetResizable(True)
+        self.pictures_left_pane = QFrame()
+        self.pictures_left_pane.setFrameShape(QFrame.Shape.Box)
         self.pictures_layout.addWidget(self.pictures_left_pane)
+        
+        self.pictures_left_layout = QVBoxLayout()
+        self.pictures_left_pane.setLayout(self.pictures_left_layout)
+
+        self.pictures_topbar = QHBoxLayout()
+        self.pictures_left_layout.addLayout(self.pictures_topbar)
+
+        self.pictures_add = QPushButton("Add")
+        self.pictures_add.setIcon(qtawesome.icon("mdi6.plus"))
+        self.pictures_add.setIconSize(QSize(24, 24))
+        self.pictures_add.clicked.connect(self.add_new_picture_team)
+        self.pictures_topbar.addWidget(self.pictures_add)
+
+        self.pictures_load = QPushButton("Load") 
+        self.pictures_load.setIcon(qtawesome.icon("mdi6.folder-open"))
+        self.pictures_load.setIconSize(QSize(24, 24))
+        self.pictures_topbar.addWidget(self.pictures_load)
+
+        self.pictures_topbar.addStretch()
+
+        self.pictures_team_scroll = QScrollArea()
+        self.pictures_team_scroll.setWidgetResizable(True)
+        self.pictures_team_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.pictures_left_layout.addWidget(self.pictures_team_scroll)
 
         self.pictures_scroll_widget = QWidget()
-        self.pictures_left_pane.setWidget(self.pictures_scroll_widget)
+        self.pictures_team_scroll.setWidget(self.pictures_scroll_widget)
 
         self.pictures_scroll_layout = QVBoxLayout()
         self.pictures_scroll_widget.setLayout(self.pictures_scroll_layout)
@@ -581,6 +608,7 @@ class MainWindow(QMainWindow):
             self.pictures_scroll_layout.addWidget(entry_widget)
 
         self.pictures_right_pane = QStackedWidget()
+        self.pictures_right_pane.setFrameShape(QFrame.Shape.Box)
         self.pictures_layout.addWidget(self.pictures_right_pane)
 
         self.pictures_right_unselected_widget = QWidget()
@@ -593,6 +621,7 @@ class MainWindow(QMainWindow):
 
         self.pictures_right_scroll = QScrollArea()
         self.pictures_right_scroll.setWidgetResizable(True)
+        self.pictures_right_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.pictures_right_pane.insertWidget(1, self.pictures_right_scroll)
 
         self.pictures_right_scroll_widget = QWidget()
@@ -794,9 +823,21 @@ class MainWindow(QMainWindow):
             # noinspection PyTypeChecker
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
 
-    def load_team_pictures_panel(self, team: str):
-        self.pictures_right_pane.setCurrentIndex(1)
-        self.pictures_right_team_label.setText(f"Team {team}")
+    def edit_pictures(self, team: int):
+        self.nav(self.PICTURES_IDX)
+        self.load_team_pictures_panel(team)
+
+    def load_team_pictures_panel(self, team: int | str):
+        if int(team) in [x["team"] for x in self.database.get_data("robot_pictures")]:
+            self.pictures_right_pane.setCurrentIndex(1)
+            self.pictures_right_team_label.setText(f"Team {team}")
+        else:
+            self.add_new_picture_team()
+
+    def add_new_picture_team(self):
+        self.pictures_right_pane.setCurrentIndex(0)
+        wizard = wizards.NewPicturesTeamWizard(self)
+        wizard.exec()
 
     def on_database_error(self, msg: str, kind: data_manager.MessageType):
         match kind:

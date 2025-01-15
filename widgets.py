@@ -11,11 +11,14 @@ import ssw
 
 class Sidebar(QFrame):
     close_action = Signal()
+    edit_images_action = Signal(int)
 
     def __init__(self, parent=None, renderer: int = constants.SIDEBAR_RENDERER):
         super().__init__(parent)
 
         self.setFrameShape(QFrame.Shape.Box)
+
+        self.team = 0
 
         self.root_layout = QVBoxLayout(self)
         self.root_layout.setContentsMargins(0, 0, 0, 0)
@@ -77,10 +80,23 @@ class Sidebar(QFrame):
         self.carousel_back.clicked.connect(self.carousel.slideInPrev)
         self.carousel_forward.clicked.connect(self.carousel.slideInNext)
 
+        self.carousel_tools_layout = QHBoxLayout()
+        self.carousel_tools_layout.setContentsMargins(0, 0, 0, 0)
+        self.carousel_tools_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.dataview_layout.addLayout(self.carousel_tools_layout)
+
         self.carousel_page_number = QLabel("Page 1/1")
-        self.carousel_page_number.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.dataview_layout.addWidget(self.carousel_page_number)
+        self.carousel_tools_layout.addWidget(self.carousel_page_number)
         self.carousel.currentChanged.connect(lambda: self.carousel_page_number.setText(f"Page {self.carousel.currentIndex() + 1}/{self.carousel.count()}"))
+
+        self.edit_images = QToolButton()
+        self.edit_images.setIcon(qta.icon("mdi6.image-edit"))
+        self.edit_images.setText("Edit Images")
+        self.edit_images.setIconSize(QSize(18, 18))
+        self.edit_images.setFixedHeight(24)
+        self.edit_images.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.edit_images.clicked.connect(lambda: self.edit_images_action.emit(int(self.team)))
+        self.carousel_tools_layout.addWidget(self.edit_images)
 
         self.team_number = QLabel("Team 0000")
         self.team_number.setFont(QFont(self.team_number.font().family(), 22, QFont.Weight.Bold))
@@ -93,7 +109,7 @@ class Sidebar(QFrame):
             self.html = QWebEngineView()
             self.html.page().setBackgroundColor(Qt.GlobalColor.transparent)
             self.html.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-            self.html.setHtml("<h1>QWebEngine ready</h1>") # prevent glitching on 1st load
+            self.html.setHtml("<h1 style='color: white;'>Unknown page loading error</h1>") # prevent glitching on 1st load
         self.html.setMinimumHeight(200)
         self.dataview_layout.addWidget(self.html, 2)
 
@@ -119,6 +135,7 @@ class Sidebar(QFrame):
         self.carousel_page_number.setText(f"Page {self.carousel.currentIndex() + 1}/{len(pixmaps)}")
 
     def set_team_number(self, team_number: str | int):
+        self.team = team_number
         self.team_number.setText(f"Team {team_number}")
 
     def set_html(self, html: str):
