@@ -63,6 +63,7 @@ import assigner
 import data_manager
 import data_models
 import constants
+import nav
 import utils
 import widgets
 import jinja2
@@ -342,7 +343,7 @@ class MainWindow(QMainWindow):
         self.serial_grid.addWidget(self.serial_refresh, 1, 5)
 
         self.serial_connect = QPushButton("Connect")
-        self.serial_connect.clicked.connect(self.connect_to_port)
+        self.serial_connect.clicked.connect(self.toggle_connection)
         self.serial_grid.addWidget(self.serial_connect, 0, 5)
 
         self.serial_baud = QComboBox()
@@ -583,21 +584,24 @@ class MainWindow(QMainWindow):
 
         self.pictures_topbar.addStretch()
 
-        self.pictures_team_scroll = QScrollArea()
-        self.pictures_team_scroll.setWidgetResizable(True)
-        self.pictures_team_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.pictures_left_layout.addWidget(self.pictures_team_scroll)
+        # self.pictures_team_scroll = QScrollArea()
+        # self.pictures_team_scroll.setWidgetResizable(True)
+        # self.pictures_team_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        # self.pictures_left_layout.addWidget(self.pictures_team_scroll)
 
-        self.pictures_scroll_widget = QWidget()
-        self.pictures_team_scroll.setWidget(self.pictures_scroll_widget)
+        # self.pictures_scroll_widget = QWidget()
+        # self.pictures_team_scroll.setWidget(self.pictures_scroll_widget)
 
-        self.pictures_scroll_layout = QVBoxLayout()
-        self.pictures_scroll_widget.setLayout(self.pictures_scroll_layout)
+        # self.pictures_scroll_layout = QVBoxLayout()
+        # self.pictures_scroll_widget.setLayout(self.pictures_scroll_layout)
+
+
+        self.pictures_team_browser = nav.TeamExplorerWidget()
+        self.pictures_team_browser.team_open.connect(self.load_team_pictures_panel)
+        self.pictures_left_layout.addWidget(self.pictures_team_browser)
 
         for entry in self.database.get_data("robot_pictures"):
-            entry_widget = widgets.TeamEntryWidget(entry["team"])
-            entry_widget.clicked.connect(self.load_team_pictures_panel)
-            self.pictures_scroll_layout.addWidget(entry_widget)
+            self.pictures_team_browser.add_team(str(entry["team"]), qtawesome.icon("mdi6.robot"), entry["team"])
 
         self.pictures_right_pane = QStackedWidget()
         self.pictures_right_pane.setFrameShape(QFrame.Shape.Box)
@@ -939,7 +943,8 @@ class MainWindow(QMainWindow):
 
     def add_new_picture_team(self):
         self.pictures_right_pane.setCurrentIndex(0)
-        wizard = wizards.NewPicturesTeamWizard(self)
+        existing_teams = [x["team"] for x in self.database.get_data("robot_pictures")]
+        wizard = wizards.NewPicturesTeamWizard(existing_teams, self)
         if not wizard.exec():
             return
         
@@ -1209,7 +1214,7 @@ class MainWindow(QMainWindow):
         self.serial.setParity(parity)
         settings.setValue("parity", self.serial_parity.currentText())
 
-    def connect_to_port(self):
+    def toggle_connection(self):
         """
         Attempt to connect to serial port
         """
@@ -1219,6 +1224,7 @@ class MainWindow(QMainWindow):
             self.set_serial_options_enabled(True)
             self.connection_icon.setIcon(qtawesome.icon("mdi6.serial-port"))
             self.serial_connect.setText("Connect")
+            return
 
         ports = [
             port
@@ -1432,7 +1438,6 @@ class MainWindow(QMainWindow):
         """
 
         self.serial_port.setEnabled(ena)
-        self.serial_connect.setEnabled(ena)
         self.serial_refresh.setEnabled(ena)
         self.serial_port.setEnabled(ena)
         self.serial_baud.setEnabled(ena)
@@ -1440,7 +1445,6 @@ class MainWindow(QMainWindow):
         self.serial_stop.setEnabled(ena)
         self.serial_flow.setEnabled(ena)
         self.serial_parity.setEnabled(ena)
-        self.serial_disconnect.setEnabled(not ena)
 
     def emulate_scan(self):
         with open("example_scan.txt", "r", encoding="utf-8") as file:

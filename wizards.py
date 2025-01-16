@@ -22,6 +22,7 @@ from PySide6.QtGui import (
     QImage,
     QDragEnterEvent,
     QDropEvent,
+    QValidator,
 )
 from pillow_heif import register_heif_opener
 from PIL import Image
@@ -83,9 +84,21 @@ class DragDropLabel(QLabel):
         self.setStyleSheet("border: 2px dashed #1F1F22; min-height: 50px;")
 
 
+class TeamNumberValidator(QValidator):
+    def __init__(self, invalid_teams: list[int]):
+        super().__init__()
+        self.invalid_teams = invalid_teams
+
+    def validate(self, arg__1, arg__2):
+        if (arg__1 in [str(x) for x in self.invalid_teams]) or not arg__1.isnumeric() or len(arg__1) > 5:
+            return QValidator.State.Intermediate
+        else:
+            return QValidator.State.Acceptable
+
+        
 class NewPicturesTeamWizard(QWizard):
     class Page1(QWizardPage):
-        def __init__(self, parent=None):
+        def __init__(self, existing_teams: list[int] = [], parent=None):
             super().__init__(parent)
 
             self.setTitle("New Team Wizard")
@@ -97,10 +110,23 @@ class NewPicturesTeamWizard(QWizard):
             self.team_number = QLineEdit()
             self.team_number.setPlaceholderText("6369")
             self.team_number.textChanged.connect(lambda: self.completeChanged.emit())
+            self.team_number.textChanged.connect(self.check_team_number)
+            self.team_number.setValidator(TeamNumberValidator(existing_teams))
             layout.addRow(QLabel("Team Number"), self.team_number)
 
+            self.team_valid = QLabel("Team number is valid")
+            layout.addRow(self.team_valid)
+
+        def check_team_number(self):
+            if self.team_number.validator().validate(self.team_number.text(), 0) == QValidator.State.Acceptable:
+                self.team_valid.setText("Team number is valid")
+                self.team_valid.setStyleSheet("color: green")
+            else:
+                self.team_valid.setText("Team number is invalid")
+                self.team_valid.setStyleSheet("color: red")
+
         def isComplete(self) -> bool:
-            return self.team_number.text().isnumeric()
+            return self.team_number.validator().validate(self.team_number.text(), 0) == QValidator.State.Acceptable
 
     class Page2(QWizardPage):
         def __init__(self, parent=None):
@@ -195,7 +221,7 @@ class NewPicturesTeamWizard(QWizard):
                     self.file_list.addItem(QListWidgetItem(file))
             self.statusLabel.setText(f"{self.file_list.count()}/5 images uploaded")
 
-    def __init__(self, parent=None):
+    def __init__(self, existing_teams: list[int] = [], parent=None):
         super().__init__(parent)
 
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
@@ -204,10 +230,10 @@ class NewPicturesTeamWizard(QWizard):
         self.setWindowTitle("New Team Wizard")
         self.setPixmap(QWizard.WizardPixmap.BannerPixmap, self.generate_banner())
         self.setPixmap(
-            QWizard.WizardPixmap.LogoPixmap, qta.icon("ph.robot").pixmap(64, 64)
+            QWizard.WizardPixmap.LogoPixmap, qta.icon("mdi6.robot").pixmap(64, 64)
         )
 
-        self.setPage(0, self.Page1(self))
+        self.setPage(0, self.Page1(existing_teams, self))
         self.setPage(1, self.Page2(self))
 
     def resizeEvent(self, event: QResizeEvent) -> None:
