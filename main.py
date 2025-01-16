@@ -201,12 +201,12 @@ class MainWindow(QMainWindow):
         self.root_widget = QWidget()
         self.setCentralWidget(self.root_widget)
 
-        self.root_layout = QVBoxLayout()
+        self.root_layout = QHBoxLayout()
         self.root_widget.setLayout(self.root_layout)
 
         # App navigation
 
-        self.nav_layout = QHBoxLayout()
+        self.nav_layout = QVBoxLayout()
         self.root_layout.addLayout(self.nav_layout)
 
         self.navigation_buttons: list[QToolButton] = []
@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
         self.nav_button_home = QToolButton()
         self.nav_button_home.setCheckable(True)
         self.nav_button_home.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.nav_button_home.setText("Home")
         self.nav_button_home.setToolButtonStyle(
@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
         self.nav_button_assign = QToolButton()
         self.nav_button_assign.setCheckable(True)
         self.nav_button_assign.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.nav_button_assign.setText("Assign")
         self.nav_button_assign.setToolButtonStyle(
@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
         self.nav_button_pictures = QToolButton()
         self.nav_button_pictures.setCheckable(True)
         self.nav_button_pictures.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.nav_button_pictures.setText("Pictures")
         self.nav_button_pictures.setToolButtonStyle(
@@ -266,7 +266,7 @@ class MainWindow(QMainWindow):
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
         self.nav_button_settings.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.nav_button_settings.setText("Settings")
         self.nav_button_settings.setToolButtonStyle(
@@ -284,7 +284,7 @@ class MainWindow(QMainWindow):
         self.nav_button_about = QToolButton()
         self.nav_button_about.setCheckable(True)
         self.nav_button_about.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.nav_button_about.setText("About")
         self.nav_button_about.setToolButtonStyle(
