@@ -534,12 +534,12 @@ class MainWindow(QMainWindow):
             view.customContextMenuRequested.connect(
                 lambda: table_menu(form, model, view)
             )
-            view_side_by_side.addWidget(view)
+            view_side_by_side.addWidget(view, 7)
 
             sidebar = widgets.Sidebar()
             sidebar.close_action.connect(partial(view.clearSelection))
             sidebar.edit_images_action.connect(self.edit_pictures)
-            view_side_by_side.addWidget(sidebar)
+            view_side_by_side.addWidget(sidebar, 3)
             self.data_sidebars[form] = sidebar
             old = view.selectionChanged
             view.selectionChanged = lambda selected, deselected: selection_change(
@@ -949,7 +949,7 @@ class MainWindow(QMainWindow):
         blobs = []
         for pixmap in pixmaps:
             buffer = QBuffer()
-            pixmap.save(buffer, "PNG")
+            pixmap.scaled(constants.PICTURE_SAVE_MAX_RESOLUTION, aspectMode=Qt.AspectRatioMode.KeepAspectRatioByExpanding, mode=Qt.TransformationMode.SmoothTransformation).save(buffer, "PNG")
             blobs.append(
                 f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
             )

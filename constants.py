@@ -6,6 +6,7 @@ import typing
 import enum
 
 from PySide6.QtSerialPort import QSerialPort
+from PySide6.QtCore import QSize
 
 # Database fields
 # Update this to add more tables (forms), or database fields (form items)
@@ -37,6 +38,14 @@ SIDEBAR_CONSTRUCTORS = {
 # Sidebar Renderer
 # 0 = Basic html text renderer, 1 = Web renderer
 SIDEBAR_RENDERER = 1
+
+# Picture Save Max Resolution
+# Max resolution for saving pictures, will use original image's aspect ratio
+PICTURE_SAVE_MAX_RESOLUTION = QSize(512, 512)
+
+# Picture Display Max Resolution
+# Max resolution for displaying pictures, will use original image's aspect ratio
+PICTURE_DISPLAY_MAX_RESOLUTION = QSize(300, 300)
 
 BAUDS: typing.Final = [
     300,

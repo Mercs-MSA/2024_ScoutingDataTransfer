@@ -77,7 +77,7 @@ class Sidebar(QFrame):
         self.carousel_layout.addWidget(self.carousel_back)
 
         self.carousel = ssw.SlidingStackedWidget()
-        self.carousel.setFixedSize(QSize(300, 300))
+        self.carousel.setFixedSize(constants.PICTURE_DISPLAY_MAX_RESOLUTION)
         self.carousel.set_direction(Qt.Axis.XAxis)
         self.carousel_layout.addWidget(self.carousel)
 
