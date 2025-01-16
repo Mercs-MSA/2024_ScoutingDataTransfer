@@ -19,18 +19,18 @@ class TeamExplorerWidget(QWidget):
 
         # Create list widget
         self.list_widget = QListWidget()
-        self.list_widget.setViewMode(QListWidget.IconMode)
+        self.list_widget.setViewMode(QListWidget.ViewMode.ListMode)
         self.list_widget.setIconSize(QSize(64, 64))
         self.list_widget.setSpacing(10)
         self.list_widget.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self.list_widget.setMovement(QListWidget.Static)
+        self.list_widget.setMovement(QListWidget.Movement.Static)
         
         # Enable selection
-        self.list_widget.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         
         # Connect signals
         self.list_widget.itemClicked.connect(self._handle_item_click)
-        self.list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list_widget.customContextMenuRequested.connect(self._show_context_menu)
         
         layout.addWidget(self.list_widget)
@@ -38,12 +38,16 @@ class TeamExplorerWidget(QWidget):
     def add_team(self, name: str, icon: QIcon, team_number: int):
         """Add a new team to the widget."""
         item = QListWidgetItem(icon, name)
-        item.setData(Qt.UserRole, team_number)  # Store team number in item data
+        item.setData(Qt.ItemDataRole.UserRole, team_number)  # Store team number in item data
         self.list_widget.addItem(item)
+
+    def clear_teams(self):
+        """Remove all teams from the widget."""
+        self.list_widget.clear()
 
     def _handle_item_click(self, item: QListWidgetItem):
         """Handle left-click on item."""
-        team_number = item.data(Qt.UserRole)
+        team_number = item.data(Qt.ItemDataRole.UserRole)
         self.team_open.emit(team_number)
 
     def _show_context_menu(self, position):
@@ -52,7 +56,7 @@ class TeamExplorerWidget(QWidget):
         if not item:
             return
 
-        team_number = item.data(Qt.UserRole)
+        team_number = item.data(Qt.ItemDataRole.UserRole)
         
         # Create context menu
         context_menu = QMenu(self)

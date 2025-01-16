@@ -598,10 +598,9 @@ class MainWindow(QMainWindow):
 
         self.pictures_team_browser = nav.TeamExplorerWidget()
         self.pictures_team_browser.team_open.connect(self.load_team_pictures_panel)
+        self.pictures_team_browser.team_delete.connect(self.remove_picture_team)
         self.pictures_left_layout.addWidget(self.pictures_team_browser)
-
-        for entry in self.database.get_data("robot_pictures"):
-            self.pictures_team_browser.add_team(str(entry["team"]), qtawesome.icon("mdi6.robot"), entry["team"])
+        self.reload_picture_teams()
 
         self.pictures_right_pane = QStackedWidget()
         self.pictures_right_pane.setFrameShape(QFrame.Shape.Box)
@@ -840,6 +839,10 @@ class MainWindow(QMainWindow):
 
     def reload_sidebars(self):
             for sidebar in self.data_sidebars:
+                if len(self.data_viewers[sidebar]
+                    .selectionModel()
+                    .selectedRows()) == 0:
+                    continue
                 rowid = (
                     self.data_viewers[sidebar]
                     .selectionModel()
@@ -929,6 +932,10 @@ class MainWindow(QMainWindow):
                         [QPixmap("icons/generic_robot.png")]
                     )
 
+    def reload_picture_teams(self):
+        self.pictures_team_browser.clear_teams()
+        for entry in self.database.get_data("robot_pictures"):
+            self.pictures_team_browser.add_team(str(entry["team"]), qtawesome.icon("mdi6.robot"), entry["team"])
 
     def edit_pictures(self, team: int):
         self.nav(self.PICTURES_IDX)
@@ -959,17 +966,27 @@ class MainWindow(QMainWindow):
                 f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
             )
 
-        if int(team) in [x["team"] for x in self.database.get_data("robot_pictures")]:
-            QMessageBox.critical(
-                self,
-                "Team Already Has Pictures",
-                f"Team {team} already has pictures",
-            )
-            return
-
-
         self.database.add_robot_pictures(team, blobs)
         self.reload_sidebars()
+        self.reload_picture_teams()
+
+    def remove_picture_team(self, team: int):
+        ret = QMessageBox.question(
+            self,
+            "Delete Team",
+            f"Are you sure you want to delete all pictures for team {team}?",
+            QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+        )
+        if ret == QMessageBox.StandardButton.Yes:
+            # find rowid of team
+            rowid = [
+                x["rowid"]
+                for x in self.database.get_data("robot_pictures")
+                if x["team"] == team
+            ][0]
+            self.database.delete_row("robot_pictures", rowid)
+            self.reload_sidebars()
+            self.reload_picture_teams()
 
     def on_database_error(self, msg: str, kind: data_manager.MessageType):
         match kind:
