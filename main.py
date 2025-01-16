@@ -210,15 +210,17 @@ class MainWindow(QMainWindow):
         self.root_layout.addLayout(self.nav_layout)
 
         self.navigation_buttons: list[QToolButton] = []
+        
+        self.nav_layout.addStretch()
 
         self.nav_button_home = QToolButton()
         self.nav_button_home.setCheckable(True)
         self.nav_button_home.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
         )
         self.nav_button_home.setText("Home")
         self.nav_button_home.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_home.setIconSize(QSize(40, 40))
         self.nav_button_home.setIcon(qtawesome.icon("mdi6.home"))
@@ -227,77 +229,87 @@ class MainWindow(QMainWindow):
         self.nav_layout.addWidget(self.nav_button_home)
         self.navigation_buttons.append(self.nav_button_home)
 
+        self.nav_layout.addStretch()
+
         self.nav_button_assign = QToolButton()
         self.nav_button_assign.setCheckable(True)
         self.nav_button_assign.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
         )
         self.nav_button_assign.setText("Assign")
         self.nav_button_assign.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_assign.setIconSize(QSize(40, 40))
         self.nav_button_assign.setIcon(qtawesome.icon("mdi6.clipboard-list"))
         self.nav_button_assign.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_assign.clicked.connect(lambda: self.nav(self.ASSIGN_IDX))
         self.nav_layout.addWidget(self.nav_button_assign)
         self.navigation_buttons.append(self.nav_button_assign)
 
+        self.nav_layout.addStretch()
+
         self.nav_button_pictures = QToolButton()
         self.nav_button_pictures.setCheckable(True)
         self.nav_button_pictures.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
         )
         self.nav_button_pictures.setText("Pictures")
         self.nav_button_pictures.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_pictures.setIconSize(QSize(40, 40))
         self.nav_button_pictures.setIcon(qtawesome.icon("mdi6.camera"))
         self.nav_button_pictures.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_pictures.clicked.connect(lambda: self.nav(self.PICTURES_IDX))
         self.nav_layout.addWidget(self.nav_button_pictures)
         self.navigation_buttons.append(self.nav_button_pictures)
 
+        self.nav_layout.addStretch()
+
         self.nav_button_settings = QToolButton()
         self.nav_button_settings.setCheckable(True)
         self.nav_button_settings.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
         )
         self.nav_button_settings.setText("Settings")
         self.nav_button_settings.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_settings.setIconSize(QSize(40, 40))
         self.nav_button_settings.setIcon(qtawesome.icon("mdi6.cog"))
         self.nav_button_settings.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_settings.clicked.connect(lambda: self.nav(self.SETTINGS_IDX))
         self.nav_layout.addWidget(self.nav_button_settings)
         self.navigation_buttons.append(self.nav_button_settings)
 
+        self.nav_layout.addStretch()
+
         self.nav_button_about = QToolButton()
         self.nav_button_about.setCheckable(True)
         self.nav_button_about.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
         )
         self.nav_button_about.setText("About")
         self.nav_button_about.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_about.setIconSize(QSize(40, 40))
         self.nav_button_about.setIcon(qtawesome.icon("mdi6.information"))
         self.nav_button_about.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_about.clicked.connect(lambda: self.nav(self.ABOUT_IDX))
         self.nav_layout.addWidget(self.nav_button_about)
         self.navigation_buttons.append(self.nav_button_about)
+
+        self.nav_layout.addStretch()
 
         self.app_widget = QStackedWidget()
         self.root_layout.addWidget(self.app_widget)
@@ -928,7 +940,9 @@ class MainWindow(QMainWindow):
     def add_new_picture_team(self):
         self.pictures_right_pane.setCurrentIndex(0)
         wizard = wizards.NewPicturesTeamWizard(self)
-        wizard.exec()
+        if not wizard.exec():
+            return
+        
         team = int(wizard.get_team_number())
         pixmaps = wizard.get_pixmaps()
 
@@ -939,6 +953,15 @@ class MainWindow(QMainWindow):
             blobs.append(
                 f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
             )
+
+        if int(team) in [x["team"] for x in self.database.get_data("robot_pictures")]:
+            QMessageBox.critical(
+                self,
+                "Team Already Has Pictures",
+                f"Team {team} already has pictures",
+            )
+            return
+
 
         self.database.add_robot_pictures(team, blobs)
         self.reload_sidebars()
