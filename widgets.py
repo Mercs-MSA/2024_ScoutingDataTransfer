@@ -140,11 +140,11 @@ class Sidebar(QFrame):
             self.root_widget.setCurrentIndex(0)
 
     def set_pixmaps(self, pixmaps: list[QPixmap]):
-        item: QStackedLayout
-        for item in reversed(self.carousel.children()):  # type: ignore
-            self.carousel.removeWidget(
-                item.widget() if isinstance(item, QStackedLayout) else item
-            )
+        for _ in self.carousel.children():  # type: ignore
+            w= self.carousel.widget(0)
+            if w:
+                self.carousel.removeWidget(w)
+                w.setParent(None)
 
         for i, pixmap in enumerate(pixmaps):
             widget = QLabel()
