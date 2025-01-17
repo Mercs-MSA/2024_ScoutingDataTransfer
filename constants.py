@@ -19,6 +19,14 @@ FIELDS = {
         "width": "INTEGER",
         "height": "INTEGER",
         "weight": "INTEGER",
+        "lOne": "BOOLEAN",
+        "lTwo": "BOOLEAN",
+        "lThree": "BOOLEAN",
+        "lFour": "BOOLEAN",
+        "driverYears": "INTEGER",
+        "operatorYears": "INTEGER",
+        "coachYears": "INTEGER",
+        "isCoachAdult": "BOOLEAN",
         "drivebase": "TEXT",
         "autonExists": "BOOLEAN",
     }
@@ -102,7 +110,7 @@ CUSTOM_COLORS_DARK: dict[str, str | dict[str, str]] | None = {
 class DataError(enum.Enum):
     """Potential error for worker"""
 
-    DATA_MALFORMED = 0
+    LENGTH_MISMATCH = 0
     UNKNOWN_FORM = 1
     TEAM_NUMBER_NULL = 2
     MATCH_NUMBER_NULL = 3

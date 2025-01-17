@@ -61,8 +61,6 @@ class ScoutingFormModel(QStandardItemModel):
                     icon = QIcon()
                 item.setIcon(icon)
                 items.append(item)
-            # data_row = [QStandardItem(str(x)) for x in row.values()]
-            # self.appendRow(data_row)
             self.appendRow(items)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):

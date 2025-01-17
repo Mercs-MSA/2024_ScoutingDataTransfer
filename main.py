@@ -111,30 +111,17 @@ class DataWorker(QObject):
             ):
                 self.finished.emit(form)
                 return
+            
+        if len(formatted_data) != len(header):
+            logging.error(
+                "Data length mismatch: %s != %s", len(formatted_data), len(header)
+            )
+            self.on_data_error.emit(constants.DataError.LENGTH_MISMATCH)
+            self.finished.emit(form)
+            return
 
         database.add_data(formatted_data)
         self.finished.emit(form)
-
-        # logging.info("transfering data to %s", directory)
-
-        # create directory structure
-        # if not os.path.exists(directory):
-        #     msg = QMessageBox(win)
-        #     msg.setIcon(QMessageBox.Icon.Critical)
-        #     msg.setText(f"Directory {directory}\ndoes not exist\nData import cancelled")
-        #     msg.setWindowTitle("Data Error")
-        #     msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        #     msg.exec()
-        #     return
-        # for form in data_frames:
-        #     if not os.path.exists(os.path.join(directory, form)):
-        #         os.mkdir(os.path.join(directory, form))
-
-        #     data_frames[form].to_csv(
-        #         os.path.join(directory, form, f"{event_id}_{form}_total.csv"),
-        #         index=False,
-        #     )
-        # TODO: Implement csv export
 
     def on_repeated_data(self, form: str, team: int):
         """
