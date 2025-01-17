@@ -141,7 +141,7 @@ class Sidebar(QFrame):
 
     def set_pixmaps(self, pixmaps: list[QPixmap]):
         for _ in self.carousel.children():  # type: ignore
-            w= self.carousel.widget(0)
+            w = self.carousel.widget(0)
             if w:
                 self.carousel.removeWidget(w)
                 w.setParent(None)

@@ -90,12 +90,16 @@ class TeamNumberValidator(QValidator):
         self.invalid_teams = invalid_teams
 
     def validate(self, arg__1, arg__2):
-        if (arg__1 in [str(x) for x in self.invalid_teams]) or not arg__1.isnumeric() or len(arg__1) > 5:
+        if (
+            (arg__1 in [str(x) for x in self.invalid_teams])
+            or not arg__1.isnumeric()
+            or len(arg__1) > 5
+        ):
             return QValidator.State.Intermediate
         else:
             return QValidator.State.Acceptable
 
-        
+
 class NewPicturesTeamWizard(QWizard):
     class Page1(QWizardPage):
         def __init__(self, existing_teams: list[int] = [], parent=None):
@@ -118,7 +122,10 @@ class NewPicturesTeamWizard(QWizard):
             layout.addRow(self.team_valid)
 
         def check_team_number(self):
-            if self.team_number.validator().validate(self.team_number.text(), 0) == QValidator.State.Acceptable:
+            if (
+                self.team_number.validator().validate(self.team_number.text(), 0)
+                == QValidator.State.Acceptable
+            ):
                 self.team_valid.setText("Team number is valid")
                 self.team_valid.setStyleSheet("color: green")
             else:
@@ -126,7 +133,10 @@ class NewPicturesTeamWizard(QWizard):
                 self.team_valid.setStyleSheet("color: red")
 
         def isComplete(self) -> bool:
-            return self.team_number.validator().validate(self.team_number.text(), 0) == QValidator.State.Acceptable
+            return (
+                self.team_number.validator().validate(self.team_number.text(), 0)
+                == QValidator.State.Acceptable
+            )
 
     class Page2(QWizardPage):
         def __init__(self, parent=None):

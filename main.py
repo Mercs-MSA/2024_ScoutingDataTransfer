@@ -211,7 +211,7 @@ class MainWindow(QMainWindow):
         self.root_layout.addLayout(self.nav_layout)
 
         self.navigation_buttons: list[QToolButton] = []
-        
+
         self.nav_layout.addStretch()
 
         self.nav_button_home = QToolButton()
@@ -584,18 +584,6 @@ class MainWindow(QMainWindow):
 
         self.pictures_topbar.addStretch()
 
-        # self.pictures_team_scroll = QScrollArea()
-        # self.pictures_team_scroll.setWidgetResizable(True)
-        # self.pictures_team_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        # self.pictures_left_layout.addWidget(self.pictures_team_scroll)
-
-        # self.pictures_scroll_widget = QWidget()
-        # self.pictures_team_scroll.setWidget(self.pictures_scroll_widget)
-
-        # self.pictures_scroll_layout = QVBoxLayout()
-        # self.pictures_scroll_widget.setLayout(self.pictures_scroll_layout)
-
-
         self.pictures_team_browser = nav.TeamExplorerWidget()
         self.pictures_team_browser.team_open.connect(self.load_team_pictures_panel)
         self.pictures_team_browser.team_delete.connect(self.remove_picture_team)
@@ -838,61 +826,18 @@ class MainWindow(QMainWindow):
             self.settings_touchui.setChecked(settings.value("touchui", type=bool))
 
     def reload_sidebars(self):
-            for sidebar in self.data_sidebars:
-                if len(self.data_viewers[sidebar]
-                    .selectionModel()
-                    .selectedRows()) == 0:
-                    continue
-                rowid = (
-                    self.data_viewers[sidebar]
-                    .selectionModel()
-                    .selectedRows()[0]
-                    .siblingAtColumn(0)
-                    .data()
-                )
-                if sidebar == "pit":
-                    self.data_sidebars[sidebar].set_team_number(
-                        self.data_viewers[sidebar]
-                        .selectionModel()
-                        .selectedRows()[0]
-                        .siblingAtColumn(
-                            list(constants.FIELDS[sidebar].keys()).index("team") + 2
-                        )
-                        .data()
-                    )
-
-                template_loader = jinja2.FileSystemLoader("templates")
-                template_env = jinja2.Environment(loader=template_loader)
-
-                def include_file(name, *args):
-                    """Helper function for jinja2 includes"""
-                    return template_env.get_template(name).render(*args)
-
-                template = jinja2.Template(
-                    constants.SIDEBAR_CONSTRUCTORS[sidebar],
-                    extensions=["jinja2.ext.do"],
-                )
-
-                rowdata = {}
-                for row in self.database.get_data(sidebar):
-                    if row["rowid"] == int(rowid):
-                        rowdata = row
-                        break
-
-                imbuffer = QBuffer()
-                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(
-                    QSize(30, 30)
-                ).save(imbuffer, "PNG")
-                rowdata["warnBase64Icon"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-
-                # Add include_file function to template context
-                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
-
-                self.data_sidebars[sidebar].set_html(template.render(rowdata))
-
-                if int(
+        for sidebar in self.data_sidebars:
+            if len(self.data_viewers[sidebar].selectionModel().selectedRows()) == 0:
+                continue
+            rowid = (
+                self.data_viewers[sidebar]
+                .selectionModel()
+                .selectedRows()[0]
+                .siblingAtColumn(0)
+                .data()
+            )
+            if sidebar == "pit":
+                self.data_sidebars[sidebar].set_team_number(
                     self.data_viewers[sidebar]
                     .selectionModel()
                     .selectedRows()[0]
@@ -900,42 +845,84 @@ class MainWindow(QMainWindow):
                         list(constants.FIELDS[sidebar].keys()).index("team") + 2
                     )
                     .data()
-                ) in [x["team"] for x in self.database.get_data("robot_pictures")]:
-                    pms = []
-                    pics = json.loads(
-                        [
-                            x
-                            for x in self.database.get_data("robot_pictures")
-                            if x["team"]
-                            == int(
-                                self.data_viewers[sidebar]
-                                .selectionModel()
-                                .selectedRows()[0]
-                                .siblingAtColumn(
-                                    list(constants.FIELDS[sidebar].keys()).index("team")
-                                    + 2
-                                )
-                                .data()
-                            )
-                        ][0]["picture"]
-                    )["picture"]
-                    for x in pics:
-                        pm = QPixmap()
-                        pm.loadFromData(
-                            base64.b64decode(x.replace("data:image/png;base64,", ""))
-                        )
-                        pms.append(pm)
+                )
 
-                    self.data_sidebars[sidebar].set_pixmaps(pms)
-                else:
-                    self.data_sidebars[sidebar].set_pixmaps(
-                        [QPixmap("icons/generic_robot.png")]
+            template_loader = jinja2.FileSystemLoader("templates")
+            template_env = jinja2.Environment(loader=template_loader)
+
+            def include_file(name, *args):
+                """Helper function for jinja2 includes"""
+                return template_env.get_template(name).render(*args)
+
+            template = jinja2.Template(
+                constants.SIDEBAR_CONSTRUCTORS[sidebar],
+                extensions=["jinja2.ext.do"],
+            )
+
+            rowdata = {}
+            for row in self.database.get_data(sidebar):
+                if row["rowid"] == int(rowid):
+                    rowdata = row
+                    break
+
+            imbuffer = QBuffer()
+            qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
+                imbuffer, "PNG"
+            )
+            rowdata["warnBase64Icon"] = (
+                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+            )
+
+            # Add include_file function to template context
+            rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+
+            self.data_sidebars[sidebar].set_html(template.render(rowdata))
+
+            if int(
+                self.data_viewers[sidebar]
+                .selectionModel()
+                .selectedRows()[0]
+                .siblingAtColumn(
+                    list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                )
+                .data()
+            ) in [x["team"] for x in self.database.get_data("robot_pictures")]:
+                pms = []
+                pics = json.loads(
+                    [
+                        x
+                        for x in self.database.get_data("robot_pictures")
+                        if x["team"]
+                        == int(
+                            self.data_viewers[sidebar]
+                            .selectionModel()
+                            .selectedRows()[0]
+                            .siblingAtColumn(
+                                list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                            )
+                            .data()
+                        )
+                    ][0]["picture"]
+                )["picture"]
+                for x in pics:
+                    pm = QPixmap()
+                    pm.loadFromData(
+                        base64.b64decode(x.replace("data:image/png;base64,", ""))
                     )
+                    pms.append(pm)
+
+                self.data_sidebars[sidebar].set_pixmaps(pms)
+            else:
+                self.data_sidebars[sidebar].set_pixmaps(
+                    [QPixmap("icons/generic_robot.png")]
+                )
 
     def reload_picture_teams(self):
         self.pictures_team_browser.clear_teams()
         for entry in self.database.get_data("robot_pictures"):
-            self.pictures_team_browser.add_team(str(entry["team"]), qtawesome.icon("mdi6.robot"), entry["team"])
+            self.pictures_team_browser.add_team(
+                str(entry["team"]), qtawesome.icon("mdi6.robot"), entry["team"]
+            )
 
     def edit_pictures(self, team: int):
         self.nav(self.PICTURES_IDX)
@@ -954,14 +941,18 @@ class MainWindow(QMainWindow):
         wizard = wizards.NewPicturesTeamWizard(existing_teams, self)
         if not wizard.exec():
             return
-        
+
         team = int(wizard.get_team_number())
         pixmaps = wizard.get_pixmaps()
 
         blobs = []
         for pixmap in pixmaps:
             buffer = QBuffer()
-            pixmap.scaled(constants.PICTURE_SAVE_MAX_RESOLUTION, aspectMode=Qt.AspectRatioMode.KeepAspectRatioByExpanding, mode=Qt.TransformationMode.SmoothTransformation).save(buffer, "PNG")
+            pixmap.scaled(
+                constants.PICTURE_SAVE_MAX_RESOLUTION,
+                aspectMode=Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                mode=Qt.TransformationMode.SmoothTransformation,
+            ).save(buffer, "PNG")
             blobs.append(
                 f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
             )
@@ -975,7 +966,8 @@ class MainWindow(QMainWindow):
             self,
             "Delete Team",
             f"Are you sure you want to delete all pictures for team {team}?",
-            QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.No,
         )
         if ret == QMessageBox.StandardButton.Yes:
             # find rowid of team

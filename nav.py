@@ -1,12 +1,19 @@
-from PySide6.QtWidgets import (QListWidget, QListWidgetItem, QMenu, 
-                              QAbstractItemView, QWidget, QVBoxLayout)
+from PySide6.QtWidgets import (
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
+    QAbstractItemView,
+    QWidget,
+    QVBoxLayout,
+)
 from PySide6.QtCore import Signal, Qt, QSize
 from PySide6.QtGui import QIcon
+
 
 class TeamExplorerWidget(QWidget):
     # Define custom signals
     team_delete = Signal(int)  # Emitted when delete is selected from context menu
-    team_open = Signal(int)    # Emitted when item is clicked or opened from menu
+    team_open = Signal(int)  # Emitted when item is clicked or opened from menu
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -24,21 +31,25 @@ class TeamExplorerWidget(QWidget):
         self.list_widget.setSpacing(10)
         self.list_widget.setResizeMode(QListWidget.ResizeMode.Adjust)
         self.list_widget.setMovement(QListWidget.Movement.Static)
-        
+
         # Enable selection
-        self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        
+        self.list_widget.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
+
         # Connect signals
         self.list_widget.itemClicked.connect(self._handle_item_click)
         self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list_widget.customContextMenuRequested.connect(self._show_context_menu)
-        
+
         layout.addWidget(self.list_widget)
 
     def add_team(self, name: str, icon: QIcon, team_number: int):
         """Add a new team to the widget."""
         item = QListWidgetItem(icon, name)
-        item.setData(Qt.ItemDataRole.UserRole, team_number)  # Store team number in item data
+        item.setData(
+            Qt.ItemDataRole.UserRole, team_number
+        )  # Store team number in item data
         self.list_widget.addItem(item)
 
     def clear_teams(self):
@@ -57,17 +68,17 @@ class TeamExplorerWidget(QWidget):
             return
 
         team_number = item.data(Qt.ItemDataRole.UserRole)
-        
+
         # Create context menu
         context_menu = QMenu(self)
-        
+
         # Add menu actions
         open_action = context_menu.addAction("Open")
         delete_action = context_menu.addAction("Delete ALL team pictures")
-        
+
         # Show menu and handle selection
         action = context_menu.exec_(self.list_widget.mapToGlobal(position))
-        
+
         if action == open_action:
             self.team_open.emit(team_number)
         elif action == delete_action:
