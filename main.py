@@ -577,11 +577,6 @@ class MainWindow(QMainWindow):
         self.pictures_add.clicked.connect(self.add_new_picture_team)
         self.pictures_topbar.addWidget(self.pictures_add)
 
-        self.pictures_load = QPushButton("Load")
-        self.pictures_load.setIcon(qtawesome.icon("mdi6.folder-open"))
-        self.pictures_load.setIconSize(QSize(24, 24))
-        self.pictures_topbar.addWidget(self.pictures_load)
-
         self.pictures_topbar.addStretch()
 
         self.pictures_team_browser = nav.TeamExplorerWidget()
