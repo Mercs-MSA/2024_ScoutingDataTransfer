@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QListWidget,
     QListWidgetItem,
+    QSplitter,
 )
 from PySide6.QtCore import (
     QSettings,
@@ -65,6 +66,7 @@ import data_models
 import constants
 import nav
 import utils
+import viewer
 import widgets
 import jinja2
 
@@ -111,7 +113,7 @@ class DataWorker(QObject):
             ):
                 self.finished.emit(form)
                 return
-            
+
         if len(formatted_data) != len(header):
             logging.error(
                 "Data length mismatch: %s != %s", len(formatted_data), len(header)
@@ -168,6 +170,8 @@ class MainWindow(QMainWindow):
         self.worker_thread = None
 
         self.is_scanning = False
+
+        self.image_viewer: viewer.ImageViewer | None = None
 
         db_name: str | None = None
         if settings:
@@ -304,15 +308,13 @@ class MainWindow(QMainWindow):
 
         # * HOME * #
 
-        self.home_widget = QWidget()
+        self.home_widget = QSplitter()
+        self.home_widget.setOrientation(Qt.Orientation.Vertical)
         self.app_widget.insertWidget(self.HOME_IDX, self.home_widget)
-
-        self.home_layout = QVBoxLayout()
-        self.home_widget.setLayout(self.home_layout)
 
         # Scan manager
         self.scanner_widget = QWidget()
-        self.home_layout.addWidget(self.scanner_widget)
+        self.home_widget.addWidget(self.scanner_widget)
 
         self.scanner_layout = QHBoxLayout()
         self.scanner_widget.setLayout(self.scanner_layout)
@@ -396,13 +398,9 @@ class MainWindow(QMainWindow):
 
         self.scanner_layout.addStretch()
 
-        self.hline = QFrame()
-        self.hline.setFrameShape(QFrame.Shape.HLine)
-        self.home_layout.addWidget(self.hline)
-
         # Data manager (left side)
         self.data_view_tabs = QTabWidget()
-        self.home_layout.addWidget(self.data_view_tabs)
+        self.home_widget.addWidget(self.data_view_tabs)
 
         self.data_models: list[data_models.ScoutingFormModel] = []
         self.data_viewers: dict[str, QTableView] = {}
@@ -558,11 +556,11 @@ class MainWindow(QMainWindow):
         self.pictures_topbar = QHBoxLayout()
         self.pictures_left_layout.addLayout(self.pictures_topbar)
 
-        self.pictures_add = QPushButton("Add")
-        self.pictures_add.setIcon(qtawesome.icon("mdi6.plus"))
-        self.pictures_add.setIconSize(QSize(24, 24))
-        self.pictures_add.clicked.connect(self.add_new_picture_team)
-        self.pictures_topbar.addWidget(self.pictures_add)
+        self.pictures_add_team = QPushButton("Add Team")
+        self.pictures_add_team.setIcon(qtawesome.icon("mdi6.plus"))
+        self.pictures_add_team.setIconSize(QSize(24, 24))
+        self.pictures_add_team.clicked.connect(self.add_new_picture_team)
+        self.pictures_topbar.addWidget(self.pictures_add_team)
 
         self.pictures_topbar.addStretch()
 
@@ -607,11 +605,16 @@ class MainWindow(QMainWindow):
         # large icons
         self.pictures_browser_list.setViewMode(QListWidget.ViewMode.ListMode)
         self.pictures_browser_list.setIconSize(constants.PICTURE_BROWSER_MAX_RESOLUTION)
-        self.pictures_browser_list.setMinimumWidth(self.pictures_browser_list.sizeHintForColumn(0))
         self.pictures_browser_list.setMovement(QListWidget.Movement.Static)
-        self.pictures_browser_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.pictures_browser_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.pictures_browser_list.setMinimumWidth(constants.PICTURE_BROWSER_MAX_RESOLUTION.width() + 300)
+        self.pictures_browser_list.setVerticalScrollMode(
+            QAbstractItemView.ScrollMode.ScrollPerPixel
+        )
+        self.pictures_browser_list.setSelectionMode(
+            QListWidget.SelectionMode.NoSelection
+        )
+        self.pictures_browser_list.setMinimumWidth(
+            constants.PICTURE_BROWSER_MAX_RESOLUTION.width() + 300
+        )
         self.pictures_browser_list.setSpacing(10)
 
         # * SETTINGS * #
@@ -864,17 +867,17 @@ class MainWindow(QMainWindow):
             )
 
             imbuffer = QBuffer()
-            qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(QSize(30, 30)).save(
-                imbuffer, "PNG"
-            )
+            qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
+                QSize(30, 30)
+            ).save(imbuffer, "PNG")
             rowdata["xBase64Icon"] = (
                 f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
             )
 
             imbuffer = QBuffer()
-            qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(QSize(30, 30)).save(
-                imbuffer, "PNG"
-            )
+            qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
+                QSize(30, 30)
+            ).save(imbuffer, "PNG")
             rowdata["checkBase64Icon"] = (
                 f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
             )
@@ -884,6 +887,8 @@ class MainWindow(QMainWindow):
 
             self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
+            data = self.database.get_data("robot_pictures")
+
             if int(
                 self.data_viewers[sidebar]
                 .selectionModel()
@@ -892,12 +897,12 @@ class MainWindow(QMainWindow):
                     list(constants.FIELDS[sidebar].keys()).index("team") + 2
                 )
                 .data()
-            ) in [x["team"] for x in self.database.get_data("robot_pictures")]:
+            ) in [x["team"] for x in data]:
                 pms = []
                 pics = json.loads(
                     [
                         x
-                        for x in self.database.get_data("robot_pictures")
+                        for x in data
                         if x["team"]
                         == int(
                             self.data_viewers[sidebar]
@@ -935,22 +940,23 @@ class MainWindow(QMainWindow):
         self.load_team_pictures_panel(team)
 
     def load_team_pictures_panel(self, team: int | str):
-        if int(team) in [x["team"] for x in self.database.get_data("robot_pictures")]:
+        data = self.database.get_data("robot_pictures")
+        if int(team) in [x["team"] for x in data]:
             self.pictures_right_pane.setCurrentIndex(1)
             self.pictures_right_team_label.setText(f"Team {team}")
             self.pictures_browser_list.clear()
             for image in json.loads(
-                [
-                    x
-                    for x in self.database.get_data("robot_pictures")
-                    if x["team"] == int(team)
-                ][0]["picture"])["picture"]:
+                [x for x in data if x["team"] == int(team)][0]["picture"]
+            )["picture"]:
                 # create pixmap from base64
                 pixmap = QPixmap()
                 pixmap.loadFromData(
                     base64.b64decode(image.replace("data:image/png;base64,", ""))
                 )
                 item = QListWidgetItem()
+                item.setSizeHint(
+                    QSize(300, constants.PICTURE_BROWSER_MAX_RESOLUTION.height() + 20)
+                )
                 item.setIcon(QIcon(pixmap))
 
                 widget = QWidget()
@@ -961,30 +967,48 @@ class MainWindow(QMainWindow):
                 top_layout = QHBoxLayout()
                 layout.addLayout(top_layout)
 
-                image_icon = qtawesome.IconWidget()
-                image_icon.setIconSize(QSize(64, 64))
-                image_icon.setIcon(qtawesome.icon("mdi6.image"))
-                top_layout.addWidget(image_icon)
-
                 image_text = QLabel(f"Robot Image\nTeam {team}")
                 image_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 top_layout.addWidget(image_text)
 
                 # delete, view buttons
                 delete_button = QPushButton("Delete")
-                # delete_button.clicked.connect(
-                    # lambda: self.delete_picture(team, pixmap)
-                # )
+                delete_button.clicked.connect(
+                    partial(self.delete_picture, int(team), image)
+                )
                 layout.addWidget(delete_button)
 
                 view_button = QPushButton("View")
-                # view_button.clicked.connect(lambda: self.view_picture(pixmap))
+                view_button.clicked.connect(partial(self.view_image, int(team), image))
                 layout.addWidget(view_button)
 
                 self.pictures_browser_list.addItem(item)
                 self.pictures_browser_list.setItemWidget(item, widget)
         else:
             self.add_new_picture_team()
+
+    def view_image(self, team: int | str, data: str):
+        team = int(team)
+
+        pixmap = QPixmap()
+        pixmap.loadFromData(
+            base64.b64decode(data.replace("data:image/png;base64,", ""))
+        )
+
+        self.image_viewer = viewer.ImageViewer(pixmap, team)
+        self.image_viewer.show()
+
+    def delete_picture(self, team: int, base64: str):
+        data = self.database.get_data("robot_pictures")
+        rowid = [x["rowid"] for x in data if x["team"] == team][0]
+        pictures = json.loads([x for x in data if x["team"] == team][0]["picture"])[
+            "picture"
+        ]
+        pictures.remove(base64)
+        self.database.update_data(
+            "robot_pictures", rowid, "picture", json.dumps({"picture": pictures})
+        )
+        self.load_team_pictures_panel(team)
 
     def add_new_picture_team(self):
         self.pictures_right_pane.setCurrentIndex(0)

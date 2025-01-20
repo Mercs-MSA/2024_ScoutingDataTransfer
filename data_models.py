@@ -2,6 +2,7 @@
 Qt data model for a pandas DataFrame
 """
 
+import logging
 import math
 from typing import Any
 
@@ -39,14 +40,15 @@ class ScoutingFormModel(QStandardItemModel):
 
     def load_data(self, data: list[dict[str, Any]]):
         self._data = data
-        print(data)
         self.clear()
         for row in data:
             items = []
             for i, value in enumerate(list(row.values())):
                 # print(list(row.keys()))
-                if not list(row.keys())[i] == self.headerData(i, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole):
-                    print("Error: Column names do not match")
+                if not list(row.keys())[i] == self.headerData(
+                    i, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole
+                ):
+                    logging.error("Error: Column names do not match")
                 item = QStandardItem(str(value))
                 # set item icon
                 if isinstance(value, float) and math.isnan(value):
@@ -151,7 +153,13 @@ class ScoutingFormModel(QStandardItemModel):
             and role == Qt.ItemDataRole.DisplayRole
         ):
             return f"{self._columns[section]}\n{self._column_types[section]}"
-        elif orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
+        elif (
+            orientation == Qt.Orientation.Vertical
+            and role == Qt.ItemDataRole.DisplayRole
+        ):
             return section + 1
-        elif orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.UserRole:
+        elif (
+            orientation == Qt.Orientation.Horizontal
+            and role == Qt.ItemDataRole.UserRole
+        ):
             return self._columns[section]

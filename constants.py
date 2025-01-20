@@ -49,7 +49,7 @@ SIDEBAR_RENDERER = 1
 
 # Picture Save Max Resolution
 # Max resolution for saving pictures, will use original image's aspect ratio
-PICTURE_SAVE_MAX_RESOLUTION = QSize(512, 512)
+PICTURE_SAVE_MAX_RESOLUTION = QSize(1280, 720)
 
 # Picture Display Max Resolution
 # Max resolution for displaying pictures, will use original image's aspect ratio
@@ -58,6 +58,18 @@ PICTURE_DISPLAY_MAX_RESOLUTION = QSize(350, 300)
 # Picture Browser Max Resolution
 # Max resolution for displaying pictures in the picture browser, will use original image's aspect ratio
 PICTURE_BROWSER_MAX_RESOLUTION = QSize(250, 200)
+
+# Image Viewer Navigator Scale
+# Scale for the navigator in the image viewer window
+IMAGE_VIEWER_NAVIGATOR_SCALE = 0.2
+
+# Image Viewer Default Zoom
+# Default zoom level in image viewer window
+IMAGE_VIEWER_DEFAULT_ZOOM = 1.0
+
+# Image Viewer Zoom Range
+# Min/max zoom values
+IMAGE_VIEWER_ZOOM_RANGE = (1.0, 3.0)
 
 BAUDS: typing.Final = [
     300,

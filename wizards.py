@@ -1,3 +1,4 @@
+import logging
 from PySide6.QtWidgets import (
     QWizard,
     QWizardPage,
@@ -208,7 +209,7 @@ class NewPicturesTeamWizard(QWizard):
                         qimage = QImage.fromData(buffer.getvalue())
                         pixmap = QPixmap.fromImage(qimage)
                     except Exception as e:
-                        print(f"Error converting HEIC preview: {e}")
+                        logging.error(f"Error converting HEIC preview: {e}")
                         return
                 else:
                     pixmap = QPixmap(file_path)
@@ -304,7 +305,7 @@ class NewPicturesTeamWizard(QWizard):
                     pixmap = QPixmap.fromImage(qimage)
 
                 except Exception as e:
-                    print(f"Error converting HEIC file: {e}")
+                    logging.error(f"Error converting HEIC file: {e}")
                     continue
             else:
                 # Handle regular image formats
