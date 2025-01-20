@@ -61,15 +61,15 @@ PICTURE_BROWSER_MAX_RESOLUTION = QSize(250, 200)
 
 # Image Viewer Navigator Scale
 # Scale for the navigator in the image viewer window
-IMAGE_VIEWER_NAVIGATOR_SCALE = 0.2
+IMAGE_VIEWER_NAVIGATOR_SCALE = 0.25
 
 # Image Viewer Default Zoom
 # Default zoom level in image viewer window
-IMAGE_VIEWER_DEFAULT_ZOOM = 1.0
+IMAGE_VIEWER_DEFAULT_ZOOM = 0.95
 
 # Image Viewer Zoom Range
 # Min/max zoom values
-IMAGE_VIEWER_ZOOM_RANGE = (1.0, 3.0)
+IMAGE_VIEWER_ZOOM_RANGE = (0.95, 3.0)
 
 BAUDS: typing.Final = [
     300,

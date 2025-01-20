@@ -995,6 +995,8 @@ class MainWindow(QMainWindow):
             base64.b64decode(data.replace("data:image/png;base64,", ""))
         )
 
+        if self.image_viewer:
+            self.image_viewer.close()
         self.image_viewer = viewer.ImageViewer(pixmap, team)
         self.image_viewer.show()
 

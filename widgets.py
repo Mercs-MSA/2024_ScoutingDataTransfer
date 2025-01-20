@@ -4,19 +4,19 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QToolButton,
     QLabel,
-    QStackedLayout,
     QTextBrowser,
     QStackedWidget,
     QWidget,
 )
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtGui import QPixmap, QFont
+from PySide6.QtGui import QPixmap, QFont, QMouseEvent
 
 import qtawesome as qta
 
 import constants
 import ssw
+import viewer
 
 
 class Sidebar(QFrame):
@@ -29,6 +29,9 @@ class Sidebar(QFrame):
         self.setFrameShape(QFrame.Shape.Box)
 
         self.team = 0
+        self.pixmaps: list[QPixmap] = []
+
+        self.image_viewer: viewer.ImageViewer | None = None
 
         self.root_layout = QVBoxLayout(self)
         self.root_layout.setContentsMargins(0, 0, 0, 0)
@@ -79,6 +82,7 @@ class Sidebar(QFrame):
         self.carousel = ssw.SlidingStackedWidget()
         self.carousel.setFixedSize(constants.PICTURE_DISPLAY_MAX_RESOLUTION)
         self.carousel.set_direction(Qt.Axis.XAxis)
+        self.carousel.mousePressEvent = self.open_image_viewer
         self.carousel_layout.addWidget(self.carousel)
 
         self.carousel_forward = QToolButton()
@@ -156,6 +160,7 @@ class Sidebar(QFrame):
             self.root_widget.setCurrentIndex(0)
 
     def set_pixmaps(self, pixmaps: list[QPixmap]):
+        self.pixmaps = pixmaps
         for _ in self.carousel.children():  # type: ignore
             w = self.carousel.widget(0)
             if w:
@@ -188,6 +193,14 @@ class Sidebar(QFrame):
             self.html.setText(html)
         else:
             self.html.setHtml(html)
+
+    def open_image_viewer(self, event: QMouseEvent):
+        if self.image_viewer:
+            self.image_viewer.close()
+        self.image_viewer = viewer.ImageViewer(
+            self.pixmaps[self.carousel.currentIndex()], int(self.team)
+        )
+        self.image_viewer.show()
 
 
 class TeamEntryWidget(QFrame):
