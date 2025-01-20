@@ -127,6 +127,21 @@ class Sidebar(QFrame):
             self.html = QWebEngineView()
             self.html.page().setBackgroundColor(Qt.GlobalColor.transparent)
             self.html.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+            self.last_scroll = 0
+            
+            # Save scroll position before loading new content
+            self.html.loadStarted.connect(
+                lambda: setattr(self, 'last_scroll', 
+                              self.html.page().scrollPosition().y())
+            )
+            
+            # Restore scroll position after loading completes
+            self.html.loadFinished.connect(
+                lambda: self.html.page().runJavaScript(
+                    f"window.scrollTo(0, {self.last_scroll});"
+                )
+            )
+            
             self.html.setHtml(
                 "<h1 style='color: white;'>Unknown page loading error</h1>"
             )  # prevent glitching on 1st load

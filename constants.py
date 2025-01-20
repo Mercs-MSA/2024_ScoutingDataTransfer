@@ -53,7 +53,11 @@ PICTURE_SAVE_MAX_RESOLUTION = QSize(512, 512)
 
 # Picture Display Max Resolution
 # Max resolution for displaying pictures, will use original image's aspect ratio
-PICTURE_DISPLAY_MAX_RESOLUTION = QSize(300, 300)
+PICTURE_DISPLAY_MAX_RESOLUTION = QSize(350, 300)
+
+# Picture Browser Max Resolution
+# Max resolution for displaying pictures in the picture browser, will use original image's aspect ratio
+PICTURE_BROWSER_MAX_RESOLUTION = QSize(250, 200)
 
 BAUDS: typing.Final = [
     300,

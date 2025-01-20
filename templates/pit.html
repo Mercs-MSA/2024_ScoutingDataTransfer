@@ -1,79 +1,159 @@
-<!DOCTYPE html>
-    <html>
-    <style>
+<!doctype html>
+<html>
+  <style>
     html {
-        scrollbar-color: #BB4A40 #161618;
-        scrollbar-width: medium;
+      scrollbar-color: #424243 #161618;
+      scrollbar-width: medium;
+      background-color: #111114;
     }
 
     table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 12px 0;
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0;
+      table-layout: fixed;
     }
-    th, td {
-        border: 1px solid #555;
-        padding: 6px;
-        text-align: left;
-        color: white;
-        font-family: sans-serif;
+
+    th,
+    td {
+      border: 1px solid #555;
+      padding: 6px;
+      text-align: left;
+      color: white;
+      font-family: sans-serif;
     }
     th {
-        background-color: #BB4A40;
-        font-weight: bold;
-        color: white;
-        font-family: sans-serif;
+      background-color: #bb4a40;
+      font-weight: bold;
+      color: white;
+      font-family: sans-serif;
+    }
+    .coral > th {
+      background-color: #8a40bb;
+      font-weight: bold;
+      color: white;
+      font-family: sans-serif;
     }
 
-    p, h1, h2, h3, h4 {
-        color: white;
-        font-family: sans-serif;
+    p,
+    h1,
+    h2,
+    h3,
+    h4 {
+      color: white;
+      font-family: sans-serif;
     }
-    </style>
-    <body>
-
+  </style>
+  <body>
     <h4>Data</h4>
     <p>Import Timestamp {{timestamp}} UTC</p>
 
     <h3>Robot Physical</h3>
 
     <table>
-    <tr>
+      <tr>
         <th>Length</th>
         <th>Width</th>
         <th>Height</th>
         <th>Weight</th>
-    </tr>
-    <tr>
+      </tr>
+      <tr>
         <td>{{length}}in</td>
         <td>{{width}}in</td>
         <td>{{height}}in</td>
         <td>{{weight}}lbs</td>
-    </tr>
+      </tr>
     </table>
 
     <h3>Robot Mechanism</h3>
 
     <table>
-    <tr>
+      <tr>
         <th>Drivebase</th>
-    </tr>
-    <tr>
+      </tr>
+      <tr>
         <td>{{drivebase}}</td>
-    </tr>
+      </tr>
     </table>
 
     <h3>Robot Auton</h3>
-    
+
     {% if autonExists %}
     <p>The robot has an auton. Under construction</p>
     {% else %}
-    <h2><img src="{{warnBase64Icon}}" alt="W" height="32px"> No Auton</h2>
+    <h2><img src="{{warnBase64Icon}}" alt="W" height="32px" /> No Auton</h2>
     {% endif %}
 
-    <h3>Robot Strategy</h3>
-    <br>
+    <h3>Robot Scoring</h3>
+
+    <h4>Coral</h4>
+
+    <table>
+      <tr class="coral">
+        <th>L1</th>
+        <th>L2</th>
+        <th>L3</th>
+        <th>L4</th>
+      </tr>
+      <tr>
+        <td>
+          <img
+            src="{{checkBase64Icon if lOne else xBase64Icon}}"
+            style="vertical-align:middle;"
+            alt="W"
+            height=22px"
+          />
+          {{"Yes" if lOne else "No"}}
+        </td>
+        <td>
+            <img
+              src="{{checkBase64Icon if lTwo else xBase64Icon}}"
+              style="vertical-align:middle;"
+              alt="W"
+              height=22px"
+            />
+            {{"Yes" if lTwo else "No"}}</td>
+        <td>
+            <img
+              src="{{checkBase64Icon if lThree else xBase64Icon}}"
+              style="vertical-align:middle;"
+              alt="W"
+              height=22px"
+            />
+            {{"Yes" if lThree else "No"}}</td>
+        <td>
+            <img
+              src="{{checkBase64Icon if lFour else xBase64Icon}}"
+              style="vertical-align:middle;"
+              alt="W"
+              height=22px"
+            />
+            {{"Yes" if lFour else "No"}}</td>
+      </tr>
+    </table>
+
+    <h4>Algae</h4>
+    <br />
     <p>Under construction</p>
 
-    </body>
-    </html>
+    <h3>Robot Strategy</h3>
+    <br />
+    <p>Under construction</p>
+
+    <h3>Drive Team Experience</h3>
+
+    <table>
+        <tr>
+          <th>Driver</th>
+          <th>Operator</th>
+          <th>Coach</th>
+        </tr>
+        <tr>
+          <td>{{driverYears}} Years</td>
+          <td>{{operatorYears}} Years</td>
+          <td>{{coachYears}} Years {{"(Adult)" if isCoachAdult}}</td>
+        </tr>
+      </table>
+
+  </body>
+</html>

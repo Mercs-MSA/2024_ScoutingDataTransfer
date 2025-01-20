@@ -99,6 +99,14 @@ class DataManager(QObject):
         while self.query.next():
             existing_fields.append(self.query.value("name"))
 
+        # Check for extra fields
+        for field in existing_fields:
+            if field not in fields and field not in ['rowid', 'timestamp']:
+                self.on_message.emit(
+                    f"Extra field '{field}' found in table '{table}', database cleanup recommended",
+                    MessageType.WARN
+                )
+
         # Add new fields to table
         for field, field_type in fields.items():
             if field not in existing_fields:
@@ -154,14 +162,14 @@ class DataManager(QObject):
         data = []
         while self.query.next():
             row = {}
-            row["rowid"] = self.query.value(0)
-            row["timestamp"] = self.query.value(1)
-            for i, field in enumerate(
-                constants.FIELDS[form]
-                if form != "robot_pictures"
-                else ["team", "picture"]
+            row["rowid"] = self.query.value("rowid")
+            row["timestamp"] = self.query.value("timestamp")
+            for field in (
+            constants.FIELDS[form]
+            if form != "robot_pictures"
+            else ["team", "picture"]
             ):
-                row[field] = self.query.value(i + 2)
+                row[field] = self.query.value(field)
             data.append(row)
         return data
 

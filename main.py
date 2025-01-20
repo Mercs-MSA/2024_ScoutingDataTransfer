@@ -38,7 +38,8 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QMenu,
     QSizePolicy,
-    QScrollArea,
+    QListWidget,
+    QListWidgetItem,
 )
 from PySide6.QtCore import (
     QSettings,
@@ -50,7 +51,6 @@ from PySide6.QtCore import (
     QModelIndex,
     QThread,
     QBuffer,
-    QByteArray,
 )
 from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
 
         self.pictures_left_pane = QFrame()
         self.pictures_left_pane.setFrameShape(QFrame.Shape.Box)
-        self.pictures_layout.addWidget(self.pictures_left_pane)
+        self.pictures_layout.addWidget(self.pictures_left_pane, 1)
 
         self.pictures_left_layout = QVBoxLayout()
         self.pictures_left_pane.setLayout(self.pictures_left_layout)
@@ -574,7 +574,7 @@ class MainWindow(QMainWindow):
 
         self.pictures_right_pane = QStackedWidget()
         self.pictures_right_pane.setFrameShape(QFrame.Shape.Box)
-        self.pictures_layout.addWidget(self.pictures_right_pane)
+        self.pictures_layout.addWidget(self.pictures_right_pane, 3)
 
         self.pictures_right_unselected_widget = QWidget()
         self.pictures_right_pane.insertWidget(0, self.pictures_right_unselected_widget)
@@ -589,22 +589,30 @@ class MainWindow(QMainWindow):
             alignment=Qt.AlignmentFlag.AlignCenter,
         )
 
-        self.pictures_right_scroll = QScrollArea()
-        self.pictures_right_scroll.setWidgetResizable(True)
-        self.pictures_right_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.pictures_right_pane.insertWidget(1, self.pictures_right_scroll)
-
-        self.pictures_right_scroll_widget = QWidget()
-        self.pictures_right_scroll.setWidget(self.pictures_right_scroll_widget)
+        self.pictures_right_browser = QFrame()
+        self.pictures_right_browser.setFrameShape(QFrame.Shape.NoFrame)
+        self.pictures_right_pane.insertWidget(1, self.pictures_right_browser)
 
         self.pictures_right_scroll_layout = QVBoxLayout()
-        self.pictures_right_scroll_widget.setLayout(self.pictures_right_scroll_layout)
+        self.pictures_right_browser.setLayout(self.pictures_right_scroll_layout)
 
         self.pictures_right_team_label = QLabel("Team 0000")
         self.pictures_right_team_label.setFont(
             QFont(self.pictures_right_team_label.font().family(), 22, QFont.Weight.Bold)
         )
         self.pictures_right_scroll_layout.addWidget(self.pictures_right_team_label)
+
+        self.pictures_browser_list = QListWidget()
+        self.pictures_right_scroll_layout.addWidget(self.pictures_browser_list)
+        # large icons
+        self.pictures_browser_list.setViewMode(QListWidget.ViewMode.ListMode)
+        self.pictures_browser_list.setIconSize(constants.PICTURE_BROWSER_MAX_RESOLUTION)
+        self.pictures_browser_list.setMinimumWidth(self.pictures_browser_list.sizeHintForColumn(0))
+        self.pictures_browser_list.setMovement(QListWidget.Movement.Static)
+        self.pictures_browser_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.pictures_browser_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.pictures_browser_list.setMinimumWidth(constants.PICTURE_BROWSER_MAX_RESOLUTION.width() + 300)
+        self.pictures_browser_list.setSpacing(10)
 
         # * SETTINGS * #
         self.settings_widget = QWidget()
@@ -855,6 +863,22 @@ class MainWindow(QMainWindow):
                 f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
             )
 
+            imbuffer = QBuffer()
+            qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(QSize(30, 30)).save(
+                imbuffer, "PNG"
+            )
+            rowdata["xBase64Icon"] = (
+                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+            )
+
+            imbuffer = QBuffer()
+            qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(QSize(30, 30)).save(
+                imbuffer, "PNG"
+            )
+            rowdata["checkBase64Icon"] = (
+                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+            )
+
             # Add include_file function to template context
             rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
 
@@ -914,6 +938,51 @@ class MainWindow(QMainWindow):
         if int(team) in [x["team"] for x in self.database.get_data("robot_pictures")]:
             self.pictures_right_pane.setCurrentIndex(1)
             self.pictures_right_team_label.setText(f"Team {team}")
+            self.pictures_browser_list.clear()
+            for image in json.loads(
+                [
+                    x
+                    for x in self.database.get_data("robot_pictures")
+                    if x["team"] == int(team)
+                ][0]["picture"])["picture"]:
+                # create pixmap from base64
+                pixmap = QPixmap()
+                pixmap.loadFromData(
+                    base64.b64decode(image.replace("data:image/png;base64,", ""))
+                )
+                item = QListWidgetItem()
+                item.setIcon(QIcon(pixmap))
+
+                widget = QWidget()
+
+                layout = QVBoxLayout()
+                widget.setLayout(layout)
+
+                top_layout = QHBoxLayout()
+                layout.addLayout(top_layout)
+
+                image_icon = qtawesome.IconWidget()
+                image_icon.setIconSize(QSize(64, 64))
+                image_icon.setIcon(qtawesome.icon("mdi6.image"))
+                top_layout.addWidget(image_icon)
+
+                image_text = QLabel(f"Robot Image\nTeam {team}")
+                image_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                top_layout.addWidget(image_text)
+
+                # delete, view buttons
+                delete_button = QPushButton("Delete")
+                # delete_button.clicked.connect(
+                    # lambda: self.delete_picture(team, pixmap)
+                # )
+                layout.addWidget(delete_button)
+
+                view_button = QPushButton("View")
+                # view_button.clicked.connect(lambda: self.view_picture(pixmap))
+                layout.addWidget(view_button)
+
+                self.pictures_browser_list.addItem(item)
+                self.pictures_browser_list.setItemWidget(item, widget)
         else:
             self.add_new_picture_team()
 
@@ -1164,6 +1233,8 @@ class MainWindow(QMainWindow):
         """
         Set baud rate from combo box
         """
+        if not settings:
+            return
 
         baud = int(self.serial_baud.currentText())
         self.serial.setBaudRate(baud)
@@ -1173,6 +1244,8 @@ class MainWindow(QMainWindow):
         """
         Set data bits from combo box
         """
+        if not settings:
+            return
 
         bits = constants.DATA_BITS[self.serial_bits.currentText()]
         self.serial.setDataBits(bits)
@@ -1182,6 +1255,8 @@ class MainWindow(QMainWindow):
         """
         Set stop bits from combo box
         """
+        if not settings:
+            return
 
         stop_bits = constants.STOP_BITS[self.serial_stop.currentText()]
         self.serial.setStopBits(stop_bits)
@@ -1191,6 +1266,8 @@ class MainWindow(QMainWindow):
         """
         Set flow control from combo box
         """
+        if not settings:
+            return
 
         flow = constants.FLOW_CONTROL[self.serial_flow.currentText()]
         self.serial.setFlowControl(flow)
@@ -1200,6 +1277,8 @@ class MainWindow(QMainWindow):
         """
         Set parity type from combo box
         """
+        if not settings:
+            return
 
         parity = constants.PARITY[self.serial_parity.currentText()]
         self.serial.setParity(parity)
@@ -1253,7 +1332,7 @@ class MainWindow(QMainWindow):
         parity = constants.PARITY[self.serial_parity.currentText()]
         self.serial.setParity(parity)
 
-        ok = self.serial.open(QIODevice.ReadWrite)
+        ok = self.serial.open(QIODevice.OpenModeFlag.ReadWrite)
         if ok:
             logging.info("Connected to serial")
             self.set_serial_options_enabled(False)
