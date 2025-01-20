@@ -1001,6 +1001,15 @@ class MainWindow(QMainWindow):
         self.image_viewer.show()
 
     def delete_picture(self, team: int, base64: str):
+        if not QMessageBox.question(
+            self,
+            "Delete Picture",
+            f"Are you sure you want to delete this picture for team {team}?",
+            QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.No,
+        ) == QMessageBox.StandardButton.Yes:
+            return
+
         data = self.database.get_data("robot_pictures")
         rowid = [x["rowid"] for x in data if x["team"] == team][0]
         pictures = json.loads([x for x in data if x["team"] == team][0]["picture"])[
