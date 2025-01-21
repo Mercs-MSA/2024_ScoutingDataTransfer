@@ -87,3 +87,10 @@ class TeamExplorerWidget(QWidget):
     def clear(self):
         """Remove all teams from the widget."""
         self.list_widget.clear()
+
+    def get_selected_team(self) -> int:
+        """Return the team number of the selected item."""
+        item = self.list_widget.currentItem()
+        if item:
+            return item.data(Qt.ItemDataRole.UserRole)
+        return 0

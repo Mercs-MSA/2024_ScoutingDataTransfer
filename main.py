@@ -5,6 +5,7 @@ Transfer data form scouting tablets using qr code scanner
 
 import base64
 from functools import partial
+import io
 import json
 from pathlib import Path
 import sys
@@ -53,10 +54,13 @@ from PySide6.QtCore import (
     QThread,
     QBuffer,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
+
+from PIL import Image
+from pillow_heif import register_heif_opener
 
 import statbotics
 
@@ -77,6 +81,7 @@ __version__: typing.Final = "2025.0.0-b0"
 settings: QSettings | None = None
 win: QMainWindow | None = None
 
+register_heif_opener() # add support for heif images
 
 class DataWorker(QObject):
     finished = Signal(str)
@@ -562,6 +567,12 @@ class MainWindow(QMainWindow):
         self.pictures_add_team.clicked.connect(self.add_new_picture_team)
         self.pictures_topbar.addWidget(self.pictures_add_team)
 
+        self.pictures_add = QPushButton("Add Picture")
+        self.pictures_add.setIcon(qtawesome.icon("mdi6.plus"))
+        self.pictures_add.setIconSize(QSize(24, 24))
+        self.pictures_add.clicked.connect(self.add_picture)
+        self.pictures_topbar.addWidget(self.pictures_add)
+
         self.pictures_topbar.addStretch()
 
         self.pictures_team_browser = nav.TeamExplorerWidget()
@@ -1020,6 +1031,79 @@ class MainWindow(QMainWindow):
             "robot_pictures", rowid, "picture", json.dumps({"picture": pictures})
         )
         self.load_team_pictures_panel(team)
+
+    def add_picture(self):
+        # retrieve selected team
+        team = self.pictures_team_browser.get_selected_team()
+        if team is None:
+            return
+        
+        # open file(s) dialog, png, jpg, jpeg, bmp, heic
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Select Picture(s)",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.heic)",
+        )
+
+        if not files:
+            return
+        
+        # load images
+        pixmaps = []
+        for file in files:
+            # convert heic
+            if file.lower().endswith(".heic"):
+                try:
+                    # Open HEIC file with Pillow
+                    heic_image = Image.open(file)
+
+                    # Convert to RGB (HEIC might be in a different color space)
+                    rgb_image = heic_image.convert("RGB")
+
+                    # Convert PIL Image to bytes
+                    buffer = io.BytesIO()
+                    rgb_image.save(buffer, format="PNG")
+                    buffer.seek(0)
+
+                    # Create QImage from bytes
+                    image_data = buffer.getvalue()
+                    qimage = QImage.fromData(image_data)
+                    pixmap = QPixmap.fromImage(qimage)
+
+                except Exception as e:
+                    logger.error(f"Error converting HEIC file: {e}")
+                    continue
+            else:
+                # Handle regular image formats
+                pixmap = QPixmap(file)
+            pixmaps.append(pixmap)
+
+        # save images to db
+        blobs = []
+        for pixmap in pixmaps:
+            buffer = QBuffer()
+            pixmap.scaled(
+                constants.PICTURE_SAVE_MAX_RESOLUTION,
+                aspectMode=Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                mode=Qt.TransformationMode.SmoothTransformation,
+            ).save(buffer, "PNG")
+            blobs.append(
+                f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
+            )
+        
+        data = self.database.get_data("robot_pictures")
+        rowid = [x["rowid"] for x in data if x["team"] == team][0]
+        pictures = json.loads([x for x in data if x["team"] == team][0]["picture"])[
+            "picture"
+        ]
+        pictures.extend(blobs)
+        self.database.update_data(
+            "robot_pictures", rowid, "picture", json.dumps({"picture": pictures})
+        )
+
+        self.load_team_pictures_panel(team)
+        self.reload_sidebars()
 
     def add_new_picture_team(self):
         self.pictures_right_pane.setCurrentIndex(0)
