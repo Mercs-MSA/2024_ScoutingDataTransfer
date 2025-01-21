@@ -12,6 +12,7 @@ from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtGui import QPixmap, QFont, QMouseEvent
 
+from loguru import logger
 import qtawesome as qta
 
 import constants
@@ -197,6 +198,11 @@ class Sidebar(QFrame):
     def open_image_viewer(self, event: QMouseEvent):
         if self.image_viewer:
             self.image_viewer.close()
+
+        if len(self.pixmaps) == 0:
+            logger.warning("No images to display")
+            return
+
         self.image_viewer = viewer.ImageViewer(
             self.pixmaps[self.carousel.currentIndex()], int(self.team)
         )

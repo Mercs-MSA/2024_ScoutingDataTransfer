@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import sys
 import os
-import logging
+from loguru import logger
 import typing
 
 from PySide6.QtWidgets import (
@@ -53,7 +53,7 @@ from PySide6.QtCore import (
     QThread,
     QBuffer,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -93,7 +93,7 @@ class DataWorker(QObject):
     ):
         data = list(utils.convert_types(self.data.strip("\r\n").split("||")))
         form = data[0]
-        logging.info("Data transfer started on form %s", str(form))
+        logger.info("Data transfer started on form %s", str(form))
 
         header = list(constants.FIELDS[form].keys())
 
@@ -115,7 +115,7 @@ class DataWorker(QObject):
                 return
 
         if len(formatted_data) != len(header):
-            logging.error(
+            logger.error(
                 "Data length mismatch: %s != %s", len(formatted_data), len(header)
             )
             self.on_data_error.emit(constants.DataError.LENGTH_MISMATCH)
@@ -130,7 +130,7 @@ class DataWorker(QObject):
         Display a warning for importing a repeat
         """
 
-        logging.warning("Attempting to import repeated data team number: %s", team)
+        logger.warning("Attempting to import repeated data team number: %s", team)
 
         msg = QMessageBox(win)
         msg.setIcon(QMessageBox.Icon.Warning)
@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
         self.database.on_message.connect(self.on_database_error)
         self.database.on_data_updated.connect(self.on_database_update)
         if db_name:
-            logging.info(f"Loading db at: {db_name}")
+            logger.info(f"Loading db at: {db_name}")
             self.database.connect_db_sqlite(database_name=db_name)
             self.database.initialize()
             for name, fields in constants.FIELDS.items():
@@ -415,7 +415,7 @@ class MainWindow(QMainWindow):
                 list(constants.FIELDS[form].keys())[topl.column() - 2],
                 topl.model().data(topl, Qt.ItemDataRole.EditRole),
             )
-            logging.debug(
+            logger.debug(
                 f"Data updated: {form}, {topl.row()}, {list(constants.FIELDS[form].keys())[topl.column()-2]}, {topl.model().data(topl, Qt.ItemDataRole.EditRole)}"
             )
             self.reload_sidebars()
@@ -1076,12 +1076,12 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, "Database Warning", msg)
 
     def on_database_update(self):
-        logging.debug("Database Updated")
+        logger.debug("Database Updated")
         if settings.value("csvAutoExport", defaultValue=True, type=bool):
             if not os.path.exists(settings.value("csvDir", type=str)):
                 try:
                     os.makedirs(settings.value("csvDir", type=str))
-                    logging.info(
+                    logger.info(
                         f"Created directory for auto-export {settings.value('csvDir', type=str)}"
                     )
                 except Exception as e:
@@ -1090,14 +1090,14 @@ class MainWindow(QMainWindow):
                         "Error Creating Directory for Auto-Export",
                         f"Could not create directory: {repr(e)}",
                     )
-                    logging.error(
+                    logger.error(
                         f"Error creating directory for auto-export: {repr(e)}"
                     )
 
             for form in constants.FIELDS.keys():
                 if not os.path.exists(Path(settings.value("csvDir", type=str), form)):
                     os.mkdir(Path(settings.value("csvDir", type=str), form))
-                    logging.info(
+                    logger.info(
                         f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}"
                     )
                 # save csv
@@ -1112,14 +1112,14 @@ class MainWindow(QMainWindow):
                     Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w"
                 ) as f:
                     f.write(csv_data)
-                    logging.info(
+                    logger.info(
                         f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}"
                     )
 
     def delete_db_row(
         self, form: str, rowid: int, table: data_models.ScoutingFormModel
     ):
-        logging.debug(f"Deleted row {rowid} from {form} with rowid {rowid}")
+        logger.debug(f"Deleted row {rowid} from {form} with rowid {rowid}")
         self.database.delete_row(form, rowid)
         table.load_data(self.database.get_data(form))
 
@@ -1369,13 +1369,13 @@ class MainWindow(QMainWindow):
 
         ok = self.serial.open(QIODevice.OpenModeFlag.ReadWrite)
         if ok:
-            logging.info("Connected to serial")
+            logger.info("Connected to serial")
             self.set_serial_options_enabled(False)
             self.connection_icon.setIcon(
                 qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4")
             )
         else:
-            logging.error("Can't connect to serial port, %s", self.serial.error().name)
+            logger.error("Can't connect to serial port, %s", self.serial.error().name)
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText(
@@ -1529,7 +1529,7 @@ class MainWindow(QMainWindow):
         """
         Display a data rx error
         """
-        logging.error("Data rx error: %s", errcode.name)
+        logger.error("Data rx error: %s", errcode.name)
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
         msg.setText(f"Error when recieving data:\n{errcode.name}")
@@ -1567,8 +1567,6 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("icons/mercs.png"))
     app.setApplicationVersion(__version__)

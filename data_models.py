@@ -2,7 +2,7 @@
 Qt data model for a pandas DataFrame
 """
 
-import logging
+from loguru import logger
 import math
 from typing import Any
 
@@ -48,7 +48,7 @@ class ScoutingFormModel(QStandardItemModel):
                 if not list(row.keys())[i] == self.headerData(
                     i, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole
                 ):
-                    logging.error("Error: Column names do not match")
+                    logger.error("Error: Column names do not match")
                 item = QStandardItem(str(value))
                 # set item icon
                 if isinstance(value, float) and math.isnan(value):

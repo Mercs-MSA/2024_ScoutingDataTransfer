@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from PySide6.QtWidgets import (
     QWizard,
     QWizardPage,
@@ -209,7 +209,7 @@ class NewPicturesTeamWizard(QWizard):
                         qimage = QImage.fromData(buffer.getvalue())
                         pixmap = QPixmap.fromImage(qimage)
                     except Exception as e:
-                        logging.error(f"Error converting HEIC preview: {e}")
+                        logger.error(f"Error converting HEIC preview: {e}")
                         return
                 else:
                     pixmap = QPixmap(file_path)
@@ -305,7 +305,7 @@ class NewPicturesTeamWizard(QWizard):
                     pixmap = QPixmap.fromImage(qimage)
 
                 except Exception as e:
-                    logging.error(f"Error converting HEIC file: {e}")
+                    logger.error(f"Error converting HEIC file: {e}")
                     continue
             else:
                 # Handle regular image formats
