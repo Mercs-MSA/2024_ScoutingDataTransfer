@@ -84,7 +84,8 @@ class DataManager(QObject):
             fields (dict[str, str]): Keys=field names, values=type
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return
 
         self.query.prepare(f"PRAGMA table_info({table})")
         if not self.query.exec():
@@ -126,7 +127,8 @@ class DataManager(QObject):
             data (dict[str, Any]): Key=field names, values=data
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return
 
         table = data["form"]
         fields = constants.FIELDS[table]
@@ -155,7 +157,8 @@ class DataManager(QObject):
             list[dict[str, Any]]: List of data
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return []
 
         query = f"SELECT * FROM {form}"
         self.query.exec(query)
@@ -181,7 +184,8 @@ class DataManager(QObject):
             pictures (list[bytes]): List of pictures as bytes
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return
 
         pics = {"picture": []}
         for picture in pictures:
@@ -209,7 +213,8 @@ class DataManager(QObject):
             bool: True if update successful, False otherwise
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return False
 
         value_str = f"'{value}'" if isinstance(value, str) else str(value)
         self.query.prepare(
@@ -231,7 +236,8 @@ class DataManager(QObject):
             bool: True if delete successful, False otherwise
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return False
 
         query = f"DELETE FROM {form} WHERE rowid = {row}"
         ret: bool = self.query.exec(query)
@@ -246,7 +252,8 @@ class DataManager(QObject):
             headers (bool, optional): Export data headers. Defaults to True.
         """
         if not self.query:
-            raise RuntimeError("DB not initialized")
+            self.on_message.emit("DB not initialized\nCreate a new database in settings", MessageType.FATAL)
+            return ""
 
         query = f"SELECT * FROM {form}"
         self.query.exec(query)
