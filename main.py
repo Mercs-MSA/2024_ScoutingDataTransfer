@@ -72,16 +72,18 @@ import nav
 import utils
 import viewer
 import widgets
-import jinja2
-
 import wizards
+from utils import report_versions
+
+import jinja2
 
 __version__: typing.Final = "2025.0.0-b0"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
 
-register_heif_opener() # add support for heif images
+register_heif_opener()  # add support for heif images
+
 
 class DataWorker(QObject):
     finished = Signal(str)
@@ -1012,13 +1014,16 @@ class MainWindow(QMainWindow):
         self.image_viewer.show()
 
     def delete_picture(self, team: int, base64: str):
-        if not QMessageBox.question(
-            self,
-            "Delete Picture",
-            f"Are you sure you want to delete this picture for team {team}?",
-            QMessageBox.StandardButton.Yes,
-            QMessageBox.StandardButton.No,
-        ) == QMessageBox.StandardButton.Yes:
+        if (
+            not QMessageBox.question(
+                self,
+                "Delete Picture",
+                f"Are you sure you want to delete this picture for team {team}?",
+                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        ):
             return
 
         data = self.database.get_data("robot_pictures")
@@ -1037,7 +1042,7 @@ class MainWindow(QMainWindow):
         team = self.pictures_team_browser.get_selected_team()
         if team is None:
             return
-        
+
         # open file(s) dialog, png, jpg, jpeg, bmp, heic
         files, _ = QFileDialog.getOpenFileNames(
             self,
@@ -1048,7 +1053,7 @@ class MainWindow(QMainWindow):
 
         if not files:
             return
-        
+
         # load images
         pixmaps = []
         for file in files:
@@ -1091,7 +1096,7 @@ class MainWindow(QMainWindow):
             blobs.append(
                 f"data:image/png;base64,{buffer.data().toBase64().data().decode()}"
             )
-        
+
         data = self.database.get_data("robot_pictures")
         rowid = [x["rowid"] for x in data if x["team"] == team][0]
         pictures = json.loads([x for x in data if x["team"] == team][0]["picture"])[
@@ -1174,9 +1179,7 @@ class MainWindow(QMainWindow):
                         "Error Creating Directory for Auto-Export",
                         f"Could not create directory: {repr(e)}",
                     )
-                    logger.error(
-                        f"Error creating directory for auto-export: {repr(e)}"
-                    )
+                    logger.error(f"Error creating directory for auto-export: {repr(e)}")
 
             for form in constants.FIELDS.keys():
                 if not os.path.exists(Path(settings.value("csvDir", type=str), form)):
@@ -1650,6 +1653,18 @@ class MainWindow(QMainWindow):
         event.accept()
 
 
+def spinup():
+    logger.info(f"Scouting Transfer App Version {__version__}")
+    report_versions(logger)
+
+    with open("style.qss", "r", encoding="utf-8") as file:
+        qdarktheme.setup_theme(
+            additional_qss=file.read(), custom_colors=constants.CUSTOM_COLORS_DARK
+        )
+    qtawesome.dark(app)
+    MainWindow()
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("icons/mercs.png"))
@@ -1657,10 +1672,6 @@ if __name__ == "__main__":
     app.setApplicationName("6369 Scouting Data Transfer")
 
     settings = QSettings("Mercs", "ScoutingDataTransfer")
-    with open("style.qss", "r", encoding="utf-8") as file:
-        qdarktheme.setup_theme(
-            additional_qss=file.read(), custom_colors=constants.CUSTOM_COLORS_DARK
-        )
-    qtawesome.dark(app)
-    win = MainWindow()
+    spinup()
+
     sys.exit(app.exec())
