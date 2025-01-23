@@ -102,6 +102,12 @@ class DataWorker(QObject):
         form = data[0]
         logger.info("Data transfer started on form %s", str(form))
 
+        if form not in constants.FIELDS:
+            logger.error("Unknown form: %s", form)
+            self.on_data_error.emit(constants.DataError.UNKNOWN_FORM)
+            self.finished.emit(form)
+            return
+
         header = list(constants.FIELDS[form].keys())
 
         formatted_data = {}
