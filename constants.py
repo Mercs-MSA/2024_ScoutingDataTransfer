@@ -10,6 +10,12 @@ from PySide6.QtCore import QSize
 
 # Database fields
 # Update this to add more tables (forms), or database fields (form items)
+
+#!# IMPORTANT
+#*# Unsupported field names (used internally by the program)
+### - rowid, timestamp, warnBase64Icon, xBase64Icon, checkBase64Icon, logo16Base64, include_file, generator
+#*# Required fields: `form` (index 0 - TEXT), `team` (index 1 - INTEGER)
+
 FIELDS = {
     "pit": {
         "form": "TEXT",
@@ -38,6 +44,17 @@ FIELDS = {
 # Jinja2 syntax is allowed and required for accessing fields
 # `include_file` is a custom function that includes a file from the `templates` directory
 SIDEBAR_CONSTRUCTORS = {
+    "pit": """
+    {{ include_file('pit.html') }}
+    """
+}
+
+# Report
+# All forms MUST have a report constructor
+# Each constructor is written in HTML and CSS
+# Jinja2 syntax is allowed and required for accessing fields
+# `include_file` is a custom function that includes a file from the `templates` directory
+REPORT_CONSTRUCTORS = {
     "pit": """
     {{ include_file('pit.html') }}
     """

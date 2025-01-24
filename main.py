@@ -53,8 +53,9 @@ from PySide6.QtCore import (
     QModelIndex,
     QThread,
     QBuffer,
+    QUrl,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage
+from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage, QDesktopServices
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -515,6 +516,15 @@ class MainWindow(QMainWindow):
             view_export.clicked.connect(lambda: self.export_csv(form))
             view_bar.addWidget(view_export)
 
+            view_report = QToolButton()
+            view_report.setText("Generate Report")
+            view_report.setIcon(qtawesome.icon("mdi6.file-document-multiple-outline"))
+            view_report.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            view_report.setIconSize(QSize(28, 28))
+            view_report.setFixedHeight(32)
+            view_report.clicked.connect(lambda: self.generate_report(form))
+            view_bar.addWidget(view_report)
+
             view_side_by_side = QHBoxLayout()
             view_layout.addLayout(view_side_by_side)
 
@@ -901,11 +911,20 @@ class MainWindow(QMainWindow):
                 f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
             )
 
+            imbuffer = QBuffer()
+            QPixmap("icons/logo16.png").save(imbuffer, "PNG")
+            rowdata["logo16Base64"] = (
+                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+            )
+
             # Add include_file function to template context
             rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
 
             # Add event code
-            rowdata["event"] = self.event_entry.currentText()
+            if "event" not in rowdata:
+                rowdata["event"] = self.event_entry.currentText()
+
+            rowdata["generator"] = "sidebar"
 
             self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
@@ -1267,6 +1286,114 @@ class MainWindow(QMainWindow):
         if filepath:
             with open(filepath, "w") as file:
                 file.write(csv)
+
+    def generate_report(self, form: str):
+        # get selected row
+        if len(self.data_viewers[form].selectionModel().selectedRows()) == 0:
+            return
+        
+        rowid = (
+            self.data_viewers[form]
+            .selectionModel()
+            .selectedRows()[0]
+            .siblingAtColumn(0)
+            .data()
+        )
+
+        team = (
+            self.data_viewers[form]
+            .selectionModel()
+            .selectedRows()[0]
+            .siblingAtColumn(
+                list(constants.FIELDS[form].keys()).index("team") + 2
+            )
+            .data()
+        )
+
+        # generate template
+        template_loader = jinja2.FileSystemLoader("templates")
+        template_env = jinja2.Environment(loader=template_loader)
+
+        def include_file(name, *args):
+            """Helper function for jinja2 includes"""
+            return template_env.get_template(name).render(*args)
+        
+        template = jinja2.Template(
+            constants.REPORT_CONSTRUCTORS[form],
+            extensions=["jinja2.ext.do"],
+        )
+
+        rowdata = {}
+        for row in self.database.get_data(form):
+            if row["rowid"] == int(rowid):
+                rowdata = row
+                break
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
+            imbuffer, "PNG"
+        )
+        rowdata["warnBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
+            QSize(30, 30)
+        ).save(imbuffer, "PNG")
+        rowdata["xBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
+            QSize(30, 30)
+        ).save(imbuffer, "PNG")
+        rowdata["checkBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+    
+        imbuffer = QBuffer()
+        QPixmap("icons/logo16.png").save(imbuffer, "PNG")
+        rowdata["logo16Base64"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        # Add include_file function to template context
+        rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+
+        # Add event code
+        if "event" not in rowdata:
+            rowdata["event"] = self.event_entry.currentText()
+
+        rowdata["generator"] = "report"
+
+        # Save report
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export to HTML",
+            f"{form}_{team}_{self.event_entry.currentText()}.html",
+            "HTML File (*.html)",
+        )
+
+        if filepath:
+            with open(filepath, "w") as file:
+                file.write(template.render(rowdata))
+        else:
+            return
+
+        # ask to open
+        if (
+            QMessageBox.question(
+                self,
+                "Open Report",
+                "Would you like to open the report in your default browser?",
+                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+            
 
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""
