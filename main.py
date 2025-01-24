@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QSplitter,
+    QProgressDialog,
 )
 from PySide6.QtCore import (
     QSettings,
@@ -162,6 +163,88 @@ class DataWorker(QObject):
         return ret
 
 
+class ReportWorker(QObject):
+            finished = Signal(str)
+            progress = Signal(int)
+
+            def __init__(self, form, rowid, team, event, database, filepath):
+                super().__init__()
+                self.form = form
+                self.rowid = rowid
+                self.team = team
+                self.eventcode = event
+                self.database = database
+                self.filepath = filepath
+
+            def run(self):
+                # generate template
+                template_loader = jinja2.FileSystemLoader("templates")
+                template_env = jinja2.Environment(loader=template_loader)
+
+                def include_file(name, *args):
+                    """Helper function for jinja2 includes"""
+                    return template_env.get_template(name).render(*args)
+                
+                template = jinja2.Template(
+                    constants.REPORT_CONSTRUCTORS[self.form],
+                    extensions=["jinja2.ext.do"],
+                )
+
+                rowdata = {}
+                for row in self.database.get_data(self.form):
+                    if row["rowid"] == int(self.rowid):
+                        rowdata = row
+                        break
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
+                    imbuffer, "PNG"
+                )
+                rowdata["warnBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["xBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["checkBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+                
+                imbuffer = QBuffer()
+                QPixmap("icons/logo16.png").save(imbuffer, "PNG")
+                rowdata["logo16Base64"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                # Add include_file function to template context
+                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+
+                # Add event code
+                if "event" not in rowdata:
+                    rowdata["event"] = self.event
+
+                rowdata["generator"] = "report"
+
+                if self.filepath:
+                    with open(self.filepath, "w") as file:
+                        file.write(minify_html.minify(template.render(rowdata), minify_js=True, minify_css=True))
+                else:
+                    self.finished.emit("")
+                    return
+
+                self.finished.emit(self.filepath)
+
+
 class MainWindow(QMainWindow):
     """Main Window"""
 
@@ -184,6 +267,7 @@ class MainWindow(QMainWindow):
         self.data_worker = None
         self.api_worker = None
         self.worker_thread = None
+        self.progress_dialog: QProgressDialog | None = None
 
         self.is_scanning = False
 
@@ -560,8 +644,10 @@ class MainWindow(QMainWindow):
             self.data_viewers[form] = view
 
         # * ASSIGN * #
+        assign = assigner.AssignerWidget(app, self.sbapi)
+        assign.on_api_error.connect(self.on_api_error)
         self.app_widget.insertWidget(
-            self.ASSIGN_IDX, assigner.AssignerWidget(app, self.sbapi)
+            self.ASSIGN_IDX, assign
         )
 
         # * PICTURES * #
@@ -1292,6 +1378,9 @@ class MainWindow(QMainWindow):
     def generate_report(self, form: str):
         # get selected row
         if len(self.data_viewers[form].selectionModel().selectedRows()) == 0:
+            QMessageBox.warning(
+            self, "No Row Selected", "Please select a row to generate a report for", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok
+            )
             return
         
         rowid = (
@@ -1307,95 +1396,51 @@ class MainWindow(QMainWindow):
             .selectionModel()
             .selectedRows()[0]
             .siblingAtColumn(
-                list(constants.FIELDS[form].keys()).index("team") + 2
+            list(constants.FIELDS[form].keys()).index("team") + 2
             )
             .data()
         )
 
-        # generate template
-        template_loader = jinja2.FileSystemLoader("templates")
-        template_env = jinja2.Environment(loader=template_loader)
+        # Create a progress dialog
 
-        def include_file(name, *args):
-            """Helper function for jinja2 includes"""
-            return template_env.get_template(name).render(*args)
-        
-        template = jinja2.Template(
-            constants.REPORT_CONSTRUCTORS[form],
-            extensions=["jinja2.ext.do"],
-        )
-
-        rowdata = {}
-        for row in self.database.get_data(form):
-            if row["rowid"] == int(rowid):
-                rowdata = row
-                break
-
-        imbuffer = QBuffer()
-        qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
-            imbuffer, "PNG"
-        )
-        rowdata["warnBase64Icon"] = (
-            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-        )
-
-        imbuffer = QBuffer()
-        qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
-            QSize(30, 30)
-        ).save(imbuffer, "PNG")
-        rowdata["xBase64Icon"] = (
-            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-        )
-
-        imbuffer = QBuffer()
-        qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
-            QSize(30, 30)
-        ).save(imbuffer, "PNG")
-        rowdata["checkBase64Icon"] = (
-            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-        )
-    
-        imbuffer = QBuffer()
-        QPixmap("icons/logo16.png").save(imbuffer, "PNG")
-        rowdata["logo16Base64"] = (
-            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-        )
-
-        # Add include_file function to template context
-        rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
-
-        # Add event code
-        if "event" not in rowdata:
-            rowdata["event"] = self.event_entry.currentText()
-
-        rowdata["generator"] = "report"
-
-        # Save report
         filepath, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export to HTML",
-            f"{form}_{team}_{self.event_entry.currentText()}.html",
-            "HTML File (*.html)",
-        )
+                    None,
+                    "Export to HTML",
+                    f"{form}_{team}_{self.event_entry.currentText()}.html",
+                    "HTML File (*.html)",
+                )
 
         if filepath:
-            with open(filepath, "w") as file:
-                file.write(minify_html.minify(template.render(rowdata), minify_js=True, minify_css=True))
-        else:
-            return
+            self.progress_dialog = QProgressDialog("Generating report...", "Cancel", 0, 0, self)
+            self.progress_dialog.setMinimumDuration(0)
+            self.progress_dialog.setValue(0)
+            self.progress_dialog.show()
+            
 
-        # ask to open
-        if (
-            QMessageBox.question(
+            self.worker_thread = QThread()
+            self.data_worker = ReportWorker(form, rowid, team, self.event_entry.currentText(), self.database, filepath)
+            self.data_worker.finished.connect(self.on_report_finished)
+            self.worker_thread.started.connect(self.data_worker.run)
+            self.data_worker.moveToThread(self.worker_thread)
+            self.data_worker.finished.connect(self.worker_thread.quit)
+            self.worker_thread.start()
+            
+
+    def on_report_finished(self, filepath):
+        if self.progress_dialog:
+            self.progress_dialog.close()
+        if filepath:
+            if (
+                QMessageBox.question(
                 self,
                 "Open Report",
                 "Would you like to open the report in your default browser?",
                 QMessageBox.StandardButton.Yes,
                 QMessageBox.StandardButton.No,
-            )
-            == QMessageBox.StandardButton.Yes):
-            QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
-            
+                )
+                == QMessageBox.StandardButton.Yes):
+                    QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+        
 
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""

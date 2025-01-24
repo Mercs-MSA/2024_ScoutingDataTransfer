@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QMenu,
+    QProgressDialog,
 )
 
 import utils
@@ -98,19 +99,24 @@ class MatchMatchWorker(QObject):
             )
             self.finished.emit(matches)
             self.pit_teams.emit(pit_teams)
-        except Exception:
+        except (Exception, UserWarning):
             traceback.print_exc()
             self.on_error.emit(traceback.format_exc())
             self.finished.emit([])
 
 
 class AssignerWidget(QTabWidget):
+    on_api_error = Signal(str)
+
     def __init__(
         self, app: QApplication | QCoreApplication, sbapi: statbotics.Statbotics
     ):
         super().__init__()
         self.app = app
         self.sbapi = sbapi
+        self.progress_dialog: QProgressDialog | None = None
+
+        self.on_api_error.connect(lambda: self.progress_dialog.close() if self.progress_dialog else None)
 
         self.assign_pit_widget = QWidget()
         self.addTab(self.assign_pit_widget, "Pit")
@@ -586,7 +592,7 @@ class AssignerWidget(QTabWidget):
 
             self.api_worker = PitTeamWorker(self.sbapi, text)
             self.api_worker.finished.connect(self.on_pit_generate_statbotics)
-            self.api_worker.on_error.connect(self.on_api_error)
+            self.api_worker.on_error.connect(self.on_api_error.emit)
             self.api_worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(self.api_worker.run)
 
@@ -610,7 +616,7 @@ class AssignerWidget(QTabWidget):
             self.api_worker = MatchMatchWorker(self.sbapi, text)
             self.api_worker.finished.connect(self.on_match_generate_statbotics)
             self.api_worker.pit_teams.connect(self.on_pit_teams)
-            self.api_worker.on_error.connect(self.on_api_error)
+            self.api_worker.on_error.connect(self.on_api_error.emit)
             self.api_worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(self.api_worker.run)
 
@@ -665,7 +671,14 @@ class AssignerWidget(QTabWidget):
                         }
                     )
 
-        for session in converted_matches:
+        self.progress_dialog = QProgressDialog(
+            "Loading Match List", "", 0, 100, self
+        )
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.show()
+
+        for idx, session in enumerate(converted_matches):
             item = QListWidgetItem()
             item.setText(
                 f"Team: {session['teamNumber']} | Match: {session['match']} | Alliance: {session['alliance']} | Position: {session['position']}"
@@ -673,7 +686,11 @@ class AssignerWidget(QTabWidget):
             item.setData(Qt.ItemDataRole.UserRole, session)
             self.assign_match_ignored_teams.addItem(item)
 
+            self.progress_dialog.setValue(round(idx / len(converted_matches) * 100))
+
             self.app.processEvents()
+
+        self.progress_dialog.close()
 
     def on_pit_teams(self, teams: list):
         self.assign_match_pit_teams = teams
