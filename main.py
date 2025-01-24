@@ -65,6 +65,8 @@ from pillow_heif import register_heif_opener
 
 import statbotics
 
+import minify_html
+
 import assigner
 import data_manager
 import data_models
@@ -1378,7 +1380,7 @@ class MainWindow(QMainWindow):
 
         if filepath:
             with open(filepath, "w") as file:
-                file.write(template.render(rowdata))
+                file.write(minify_html.minify(template.render(rowdata), minify_js=True, minify_css=True))
         else:
             return
 
