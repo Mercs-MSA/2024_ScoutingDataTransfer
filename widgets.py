@@ -119,12 +119,6 @@ class Sidebar(QFrame):
         )
         self.carousel_tools_layout.addWidget(self.edit_images)
 
-        self.team_number = QLabel("Team 0000")
-        self.team_number.setFont(
-            QFont(self.team_number.font().family(), 22, QFont.Weight.Bold)
-        )
-        self.dataview_layout.addWidget(self.team_number)
-
         if renderer == 0:
             self.html = QTextBrowser()
             self.html.setReadOnly(True)
@@ -187,7 +181,6 @@ class Sidebar(QFrame):
 
     def set_team_number(self, team_number: str | int):
         self.team = team_number
-        self.team_number.setText(f"Team {team_number}")
 
     def set_html(self, html: str):
         if isinstance(self.html, QTextBrowser):

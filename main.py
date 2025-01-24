@@ -904,6 +904,9 @@ class MainWindow(QMainWindow):
             # Add include_file function to template context
             rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
 
+            # Add event code
+            rowdata["event"] = self.event_entry.currentText()
+
             self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
             data = self.database.get_data("robot_pictures")
