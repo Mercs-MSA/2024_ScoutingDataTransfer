@@ -1,19 +1,21 @@
 <!doctype html>
 <html>
   <style>
+    /* General Styles */
     html {
       scrollbar-color: #424243 #161618;
       scrollbar-width: medium;
       background-color: #111114;
     }
-
+    body {
+      margin: 0;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
       margin: 12px 0;
       table-layout: fixed;
     }
-
     th,
     td {
       border: 1px solid #555;
@@ -26,15 +28,11 @@
       background-color: #bb4a40;
       font-weight: bold;
       color: white;
-      font-family: sans-serif;
     }
     .coral > th {
       background-color: #8a40bb;
       font-weight: bold;
-      color: white;
-      font-family: sans-serif;
     }
-
     p,
     h1,
     h2,
@@ -43,132 +41,286 @@
       color: white;
       font-family: sans-serif;
     }
+
+    /* Carousel Styles */
+    .carousel {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      gap: 10px;
+      padding-left: 20px;
+      padding-right: 20px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .carousel-item {
+      flex: none;
+      scroll-snap-align: start;
+    }
+    .carousel-item img {
+      max-height: 300px;
+      border: 2px solid #555;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .carousel-item {
+      padding: 5px;
+    }
+    .carousel-item img:hover {
+      transform: scale(1.05);
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      overflow: hidden;
+    }
+    .modal img {
+      max-width: 90%;
+      max-height: 90%;
+      border: 2px solid #555;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      animation: zoomIn 0.3s ease;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      color: white;
+      background: none;
+      border: none;
+      cursor: pointer;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .data-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: none;
+    }
+
+    .section {
+      background-color: #181818;
+      border-radius: 8px;
+      margin: 10px;
+      padding: 10px;
+      flex: 1 1 calc(33.333% - 20px);
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 1200px) {
+      .section {
+        flex: 1 1 calc(50% - 20px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .section {
+        flex: 1 1 100%;
+      }
+    }
+
+    /* Animations */
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
   </style>
+
   <body>
     <h1>Team {{team}} Pit Scouting Report</h1>
     <h2>Event: {{event}}</h2>
 
     <h4>Data</h4>
     <p>Import Timestamp {{timestamp}} UTC</p>
-
-    <h3>Robot Physical</h3>
-
-    <table>
-      <tr>
-        <th>Length</th>
-        <th>Width</th>
-        <th>Height</th>
-        <th>Weight</th>
-      </tr>
-      <tr>
-        <td>{{length}}in</td>
-        <td>{{width}}in</td>
-        <td>{{height}}in</td>
-        <td>{{weight}}lbs</td>
-      </tr>
-    </table>
-
-    <h3>Robot Mechanism</h3>
-
-    <table>
-      <tr>
-        <th>Drivebase</th>
-      </tr>
-      <tr>
-        <td>{{drivebase}}</td>
-      </tr>
-    </table>
-
-    <h3>Robot Auton</h3>
-
-    {% if autonExists %}
-    <p>The robot has an auton. Under construction</p>
-    {% else %}
-    <h2><img src="{{warnBase64Icon}}" alt="W" height="32px" /> No Auton</h2>
+    {% if generator == "report" %}
+    <h3>Images</h3>
+    <div class="carousel">
+      {% for image in images %}
+      <div class="carousel-item">
+        <img src="{{ image }}" alt="Image" onclick="openModal(this.src)" />
+      </div>
+      {% endfor %}
+    </div>
     {% endif %}
 
-    <h3>Robot Scoring</h3>
+    <div class="data-grid">
+      <div class="section">
+        <h3>Robot Physical</h3>
+        <table>
+          <tr>
+            <th>Length</th>
+            <th>Width</th>
+            <th>Height</th>
+            <th>Weight</th>
+          </tr>
+          <tr>
+            <td>{{length}}in</td>
+            <td>{{width}}in</td>
+            <td>{{height}}in</td>
+            <td>{{weight}}lbs</td>
+          </tr>
+        </table>
+      </div>
+      <div class="section">
+        <h3>Robot Mechanism</h3>
+        <table>
+          <tr>
+            <th>Drivebase</th>
+          </tr>
+          <tr>
+            <td>{{drivebase}}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="section">
+        <h3>Robot Auton</h3>
+        {% if autonExists %}
+        <p>The robot has an auton. Under construction</p>
+        {% else %}
+        <h2><img src="{{warnBase64Icon}}" alt="W" height="32px" /> No Auton</h2>
+        {% endif %}
+      </div>
+      <div class="section">
+        <h3>Robot Scoring</h3>
+        <h4>Coral</h4>
+        <table>
+          <tr class="coral">
+            <th>L1</th>
+            <th>L2</th>
+            <th>L3</th>
+            <th>L4</th>
+          </tr>
+          <tr>
+            <td>
+              <img
+                src="{{checkBase64Icon if lOne else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if lOne else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if lTwo else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if lTwo else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if lThree else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if lThree else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if lFour else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if lFour else "No"}}
+            </td>
+          </tr>
+        </table>
+        <h4>Algae</h4>
+        <br />
+        <p>Under construction</p>
+      </div>
+      <div class="section">
+        <h3>Robot Strategy</h3>
+        <br />
+        <p>Under construction</p>
+      </div>
+      <div class="section">
+        <h3>Drive Team Experience</h3>
+        <table>
+          <tr>
+            <th>Driver</th>
+            <th>Operator</th>
+            <th>Coach</th>
+          </tr>
+          <tr>
+            <td>{{driverYears}} Years</td>
+            <td>{{operatorYears}} Years</td>
+            <td>{{coachYears}} Years {{"(Adult)" if isCoachAdult}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
 
-    <h4>Coral</h4>
+    {% if generator == "report" %}
+    <p>
+      <img
+        src="{{logo16Base64}}"
+        style="vertical-align: middle"
+        alt="W"
+        height="18px"
+      />
+      Report generated by 6369 Scouting Transfer
+    </p>
+    {% endif %}
 
-    <table>
-      <tr class="coral">
-        <th>L1</th>
-        <th>L2</th>
-        <th>L3</th>
-        <th>L4</th>
-      </tr>
-      <tr>
-        <td>
-          <img
-            src="{{checkBase64Icon if lOne else xBase64Icon}}"
-            style="vertical-align:middle;"
-            alt="W"
-            height=22px"
-          />
-          {{"Yes" if lOne else "No"}}
-        </td>
-        <td>
-            <img
-              src="{{checkBase64Icon if lTwo else xBase64Icon}}"
-              style="vertical-align:middle;"
-              alt="W"
-              height=22px"
-            />
-            {{"Yes" if lTwo else "No"}}</td>
-        <td>
-            <img
-              src="{{checkBase64Icon if lThree else xBase64Icon}}"
-              style="vertical-align:middle;"
-              alt="W"
-              height=22px"
-            />
-            {{"Yes" if lThree else "No"}}</td>
-        <td>
-            <img
-              src="{{checkBase64Icon if lFour else xBase64Icon}}"
-              style="vertical-align:middle;"
-              alt="W"
-              height=22px"
-            />
-            {{"Yes" if lFour else "No"}}</td>
-      </tr>
-    </table>
-
-    <h4>Algae</h4>
-    <br />
-    <p>Under construction</p>
-
-    <h3>Robot Strategy</h3>
-    <br />
-    <p>Under construction</p>
-
-    <h3>Drive Team Experience</h3>
-
-    <table>
-        <tr>
-          <th>Driver</th>
-          <th>Operator</th>
-          <th>Coach</th>
-        </tr>
-        <tr>
-          <td>{{driverYears}} Years</td>
-          <td>{{operatorYears}} Years</td>
-          <td>{{coachYears}} Years {{"(Adult)" if isCoachAdult}}</td>
-        </tr>
-      </table>
-
-      {% if generator == "report" %}
-      <p>
+    <!-- Modal Structure -->
+    <div class="modal" id="imageModal">
+      <button class="modal-close" onclick="closeModal()">
         <img
-          src="{{logo16Base64}}"
-          style="vertical-align:middle;"
+          src="{{closeBase64Icon}}"
+          style="vertical-align: middle"
           alt="W"
-          height=18px"
+          height="30px"
         />
-        Report generated by 6369 Scouting Transfer
-      </p>
-      {% endif %}
+      </button>
+      <img id="modalImage" src="" alt="Expanded View" />
+    </div>
 
+    <script>
+      // Open modal with image
+      function openModal(imageSrc) {
+        const modal = document.getElementById("imageModal");
+        const modalImage = document.getElementById("modalImage");
+        modalImage.src = imageSrc;
+        modal.style.display = "flex";
+      }
+
+      // Close modal
+      function closeModal() {
+        const modal = document.getElementById("imageModal");
+        modal.style.display = "none";
+      }
+    </script>
   </body>
 </html>
