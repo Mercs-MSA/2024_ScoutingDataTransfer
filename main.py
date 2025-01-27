@@ -5,6 +5,7 @@ Transfer data form scouting tablets using qr code scanner
 
 import base64
 from functools import partial
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -167,7 +168,7 @@ class ReportWorker(QObject):
             finished = Signal(str)
             progress = Signal(int)
 
-            def __init__(self, form, rowid, team, event, database, filepath):
+            def __init__(self, form, rowid, team, event, database, filepath, include_pictures: bool = False):
                 super().__init__()
                 self.form = form
                 self.rowid = rowid
@@ -175,6 +176,7 @@ class ReportWorker(QObject):
                 self.eventcode = event
                 self.database = database
                 self.filepath = filepath
+                self.include_pictures = include_pictures
 
             def run(self):
                 # generate template
@@ -225,6 +227,14 @@ class ReportWorker(QObject):
                 rowdata["logo16Base64"] = (
                     f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
                 )
+                
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.close", color="#ffffff").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["closeBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
 
                 # Add include_file function to template context
                 rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
@@ -234,6 +244,20 @@ class ReportWorker(QObject):
                     rowdata["event"] = self.eventcode
 
                 rowdata["generator"] = "report"
+
+                # add images
+                if self.include_pictures:
+                    imagedata = self.database.get_data("robot_pictures")
+                    rowdata["images"] = []
+                    # get by team
+                    for image in imagedata:
+                        if image["team"] == int(self.team):
+                            data = json.loads(image["picture"])
+                            for pic in data["picture"]:
+                                rowdata["images"].append(
+                                    pic
+                                )
+                                logger.debug(f"Added image to report with MD5 - {hashlib.md5(pic.encode()).hexdigest()}")
 
                 if self.filepath:
                     with open(self.filepath, "w") as file:
@@ -1282,42 +1306,54 @@ class MainWindow(QMainWindow):
 
     def on_database_update(self):
         logger.debug("Database Updated")
-        if settings.value("csvAutoExport", defaultValue=True, type=bool):
-            if not os.path.exists(settings.value("csvDir", type=str)):
+        if settings.value("csvAutoExport", defaultValue=True, type=bool): # type: ignore
+            if not os.path.exists(settings.value("csvDir", type=str)): # type: ignore
                 try:
-                    os.makedirs(settings.value("csvDir", type=str))
+                    os.makedirs(settings.value("csvDir", type=str)) # type: ignore
                     logger.info(
-                        f"Created directory for auto-export {settings.value('csvDir', type=str)}"
+                        f"Created directory for auto-export {settings.value('csvDir', type=str)}" # type: ignore
                     )
                 except Exception as e:
                     QMessageBox.critical(
                         self,
                         "Error Creating Directory for Auto-Export",
                         f"Could not create directory: {repr(e)}",
+                        QMessageBox.StandardButton.Ok,
+                        QMessageBox.StandardButton.Ok,
                     )
                     logger.error(f"Error creating directory for auto-export: {repr(e)}")
 
-            for form in constants.FIELDS.keys():
-                if not os.path.exists(Path(settings.value("csvDir", type=str), form)):
-                    os.mkdir(Path(settings.value("csvDir", type=str), form))
-                    logger.info(
-                        f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}"
+            try:
+                for form in constants.FIELDS.keys():
+                    if not os.path.exists(Path(settings.value("csvDir", type=str), form)): # type: ignore
+                        os.mkdir(Path(settings.value("csvDir", type=str), form)) # type: ignore
+                        logger.info(
+                            f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}" # type: ignore
+                        )
+                    # save csv
+                    csv_data = self.database.to_csv(
+                        form,
+                        headers=settings.value("csvHeaders", type=bool, defaultValue=True),  # type: ignore
+                        identifiers=settings.value( # type: ignore
+                            "csvIdentifiers", type=bool, defaultValue=False
+                        ),  # type: ignore
                     )
-                # save csv
-                csv_data = self.database.to_csv(
-                    form,
-                    headers=settings.value("csvHeaders", type=bool, defaultValue=True),  # type: ignore
-                    identifiers=settings.value(
-                        "csvIdentifiers", type=bool, defaultValue=False
-                    ),  # type: ignore
+                    with open(
+                        Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w" # type: ignore
+                    ) as f:
+                        f.write(csv_data)
+                        logger.info(
+                            f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}" # type: ignore
+                        )
+            except (PermissionError) as e:
+                QMessageBox.critical(
+                    self,
+                    "Error Saving CSV",
+                    f"Could not save CSV: {repr(e)}",
+                    QMessageBox.StandardButton.Ok,
+                    QMessageBox.StandardButton.Ok,
                 )
-                with open(
-                    Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w"
-                ) as f:
-                    f.write(csv_data)
-                    logger.info(
-                        f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}"
-                    )
+                logger.error(f"Error saving CSV: {repr(e)}")
 
     def delete_db_row(
         self, form: str, rowid: int, table: data_models.ScoutingFormModel
@@ -1401,6 +1437,8 @@ class MainWindow(QMainWindow):
             .data()
         )
 
+        include_pictures = True # FIXME
+
         # Create a progress dialog
 
         filepath, _ = QFileDialog.getSaveFileName(
@@ -1418,7 +1456,7 @@ class MainWindow(QMainWindow):
             
 
             self.worker_thread = QThread()
-            self.data_worker = ReportWorker(form, rowid, team, self.event_entry.currentText(), self.database, filepath)
+            self.data_worker = ReportWorker(form, rowid, team, self.event_entry.currentText(), self.database, filepath, include_pictures)
             self.data_worker.finished.connect(self.on_report_finished)
             self.worker_thread.started.connect(self.data_worker.run)
             self.data_worker.moveToThread(self.worker_thread)
