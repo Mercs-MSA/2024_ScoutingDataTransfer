@@ -231,7 +231,7 @@ class ReportWorker(QObject):
 
                 # Add event code
                 if "event" not in rowdata:
-                    rowdata["event"] = self.event
+                    rowdata["event"] = self.eventcode
 
                 rowdata["generator"] = "report"
 
