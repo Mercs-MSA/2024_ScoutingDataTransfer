@@ -58,7 +58,7 @@
       scroll-snap-align: start;
     }
     .carousel-item img {
-      max-height: 300px;
+      max-height: 200px;
       border: 2px solid #555;
       cursor: pointer;
       transition: transform 0.3s ease;
@@ -166,7 +166,7 @@
       <p>Import Timestamp {{timestamp}} UTC</p>
     </div>
 
-    {% if generator == "report" %}
+    {% if generator == "report" and images %}
     <div class="section">
       <h3>Images</h3>
       <div class="carousel">

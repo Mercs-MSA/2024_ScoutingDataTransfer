@@ -872,6 +872,19 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.alert", color="#f44336").pixmap(QSize(24, 24))
             )
 
+        self.settings_report_box = QGroupBox("Report Generation")
+        self.settings_layout.addWidget(self.settings_report_box)
+
+        self.report_layout = QVBoxLayout()
+        self.settings_report_box.setLayout(self.report_layout)
+
+        self.report_images_checkbox = QCheckBox("Include Images")
+        self.report_images_checkbox.setChecked(
+            settings.value("reportImages", type=bool, defaultValue=False)
+        )
+        self.report_images_checkbox.stateChanged.connect(self.set_report_images)
+        self.report_layout.addWidget(self.report_images_checkbox)
+
         self.settings_dev_box = QGroupBox("Developer")
         self.settings_layout.addWidget(self.settings_dev_box)
 
@@ -1437,7 +1450,7 @@ class MainWindow(QMainWindow):
             .data()
         )
 
-        include_pictures = True # FIXME
+        include_pictures = settings.value("reportImages", type=bool, defaultValue=True)  # type: ignore
 
         # Create a progress dialog
 
@@ -1453,7 +1466,6 @@ class MainWindow(QMainWindow):
             self.progress_dialog.setMinimumDuration(0)
             self.progress_dialog.setValue(0)
             self.progress_dialog.show()
-            
 
             self.worker_thread = QThread()
             self.data_worker = ReportWorker(form, rowid, team, self.event_entry.currentText(), self.database, filepath, include_pictures)
@@ -1561,6 +1573,10 @@ class MainWindow(QMainWindow):
             )
         if settings:
             settings.setValue("csvDir", self.csv_dir_textbox.text())
+
+    def set_report_images(self, enabled: bool):
+        if settings:
+            settings.setValue("reportImages", enabled)
 
     def update_serial_ports(self):
         """
