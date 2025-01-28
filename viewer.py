@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QGraphicsScene,
     QGraphicsView,
+    QScroller,
 )
 from PySide6.QtGui import (
     QPixmap,
@@ -75,6 +76,8 @@ class ImageViewer(QWidget):
         self.view.setRenderHint(
             self.view.renderHints() | QPainter.RenderHint.SmoothPixmapTransform
         )
+
+        QScroller.grabGesture(self.view.viewport(), QScroller.TouchGesture)
 
         # Add image to main scene
         self.pixmap_item = self.scene.addPixmap(self.image)

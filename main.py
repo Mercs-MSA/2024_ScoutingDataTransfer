@@ -1530,7 +1530,6 @@ class MainWindow(QMainWindow):
                     viewport.viewport(),
                     QScroller.ScrollerGestureType.TouchGesture,
                 )
-            # scroller for robot pics
             QScroller.grabGesture(
                 self.pictures_browser_list.viewport(),
                 QScroller.ScrollerGestureType.TouchGesture,
