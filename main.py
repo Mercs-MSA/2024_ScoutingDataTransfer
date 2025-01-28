@@ -1530,6 +1530,16 @@ class MainWindow(QMainWindow):
                     viewport.viewport(),
                     QScroller.ScrollerGestureType.TouchGesture,
                 )
+            # scroller for robot pics
+            QScroller.grabGesture(
+                self.pictures_browser_list.viewport(),
+                QScroller.ScrollerGestureType.TouchGesture,
+            )
+            QScroller.grabGesture(
+                self.pictures_team_browser.list_widget.viewport(),
+                QScroller.ScrollerGestureType.TouchGesture,
+            )
+
         else:
             self.setStyleSheet("")
             for viewport in self.data_viewers.values():
