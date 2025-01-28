@@ -16,3 +16,5 @@ Collects data with a serial QR/Barcode Scanner.
 * Data preview
 * Live data editor
 * Robot picture import from PNG, JPEG, BMP, HEIC
+* Robot report export powered by HTML Jinja2 Templates
+* Easy configuration for import format
