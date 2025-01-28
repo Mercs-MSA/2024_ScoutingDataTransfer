@@ -105,10 +105,10 @@ class DataWorker(QObject):
     ):
         data = list(utils.convert_types(self.data.strip("\r\n").split(constants.SCANNER_DELIMITER)))
         form = data[0]
-        logger.info("Data transfer started on form %s", str(form))
+        logger.info(f"Data transfer started on form {form}")
 
         if form not in constants.FIELDS:
-            logger.error("Unknown form: %s", form)
+            logger.error(f"Unknown form: {form}")
             self.on_data_error.emit(constants.DataError.UNKNOWN_FORM)
             self.finished.emit(form)
             return
@@ -134,7 +134,7 @@ class DataWorker(QObject):
 
         if len(formatted_data) != len(header):
             logger.error(
-                "Data length mismatch: %s != %s", len(formatted_data), len(header)
+                f"Data length mismatch: {len(formatted_data)} != {len(header)}"
             )
             self.on_data_error.emit(constants.DataError.LENGTH_MISMATCH)
             self.finished.emit(form)
@@ -148,7 +148,7 @@ class DataWorker(QObject):
         Display a warning for importing a repeat
         """
 
-        logger.warning("Attempting to import repeated data team number: %s", team)
+        logger.warning(f"Attempting to import repeated data team number: {team}")
 
         msg = QMessageBox(win)
         msg.setIcon(QMessageBox.Icon.Warning)
@@ -1708,7 +1708,7 @@ class MainWindow(QMainWindow):
                 qtawesome.icon("mdi6.qrcode-scan", color="#03a9f4")
             )
         else:
-            logger.error("Can't connect to serial port, %s", self.serial.error().name)
+            logger.error(f"Can't connect to serial port, {self.serial.error().name}")
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText(
@@ -1862,7 +1862,7 @@ class MainWindow(QMainWindow):
         """
         Display a data rx error
         """
-        logger.error("Data rx error: %s", errcode.name)
+        logger.error(f"Data rx error: {errcode.name}")
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Critical)
         msg.setText(f"Error when recieving data:\n{errcode.name}")

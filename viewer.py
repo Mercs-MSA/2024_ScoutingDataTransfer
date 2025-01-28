@@ -16,7 +16,7 @@ from PySide6.QtGui import (
     QPainter,
     QTransform,
 )
-from PySide6.QtCore import Qt, QRectF, QPointF
+from PySide6.QtCore import QRectF
 
 import constants
 
@@ -77,7 +77,7 @@ class ImageViewer(QWidget):
             self.view.renderHints() | QPainter.RenderHint.SmoothPixmapTransform
         )
 
-        QScroller.grabGesture(self.view.viewport(), QScroller.TouchGesture)
+        QScroller.grabGesture(self.view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
 
         # Add image to main scene
         self.pixmap_item = self.scene.addPixmap(self.image)
