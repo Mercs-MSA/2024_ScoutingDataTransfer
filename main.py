@@ -103,7 +103,7 @@ class DataWorker(QObject):
         self,
         database: data_manager.DataManager,
     ):
-        data = list(utils.convert_types(self.data.strip("\r\n").split("||")))
+        data = list(utils.convert_types(self.data.strip("\r\n").split(constants.SCANNER_DELIMITER)))
         form = data[0]
         logger.info("Data transfer started on form %s", str(form))
 
@@ -1765,7 +1765,7 @@ class MainWindow(QMainWindow):
         )
         data = self.serial.readAll()
         self.data_buffer += bytes(data.data()).decode()
-        if self.data_buffer.endswith("\n"):
+        if self.data_buffer.endswith(constants.SCANNER_NEWLINE):
             self.on_data_retrieved(self.data_buffer)
             self.data_buffer = ""
 

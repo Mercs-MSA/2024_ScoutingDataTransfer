@@ -88,6 +88,14 @@ IMAGE_VIEWER_DEFAULT_ZOOM = 0.95
 # Min/max zoom values
 IMAGE_VIEWER_ZOOM_RANGE = (0.95, 3.0)
 
+# Scanner Newline Character(s)
+SCANNER_NEWLINE = "\n"
+
+# Scanner Delimiter Character(s)
+SCANNER_DELIMITER = "||"
+
+# Supported Baud Rates
+# Any values *should* work, but these are the recommended defaults
 BAUDS: typing.Final = [
     300,
     600,
@@ -106,6 +114,8 @@ BAUDS: typing.Final = [
     921600,
 ]
 
+# Serial Port Data bits
+# Usually always 8 bits
 DATA_BITS: typing.Final = {
     "5 Data Bits": QSerialPort.DataBits.Data5,
     "6 Data Bits": QSerialPort.DataBits.Data6,
@@ -113,12 +123,16 @@ DATA_BITS: typing.Final = {
     "8 Data Bits": QSerialPort.DataBits.Data8,
 }
 
+# Serial Port Stop Bits
+# Usually always 1 stop bit
 STOP_BITS: typing.Final = {
     "1 Stop Bits": QSerialPort.StopBits.OneStop,
     "1.5 Stop Bits": QSerialPort.StopBits.OneAndHalfStop,
     "2 Stop Bits": QSerialPort.StopBits.TwoStop,
 }
 
+# Serial Port Parity
+# Usually no parity
 PARITY: typing.Final = {
     "No Parity": QSerialPort.Parity.NoParity,
     "Even Parity": QSerialPort.Parity.EvenParity,
@@ -127,6 +141,8 @@ PARITY: typing.Final = {
     "Space Parity": QSerialPort.Parity.SpaceParity,
 }
 
+# Serial Port Flow Control
+# Usually no flow control
 FLOW_CONTROL: typing.Final = {
     "No Flow Control": QSerialPort.FlowControl.NoFlowControl,
     "Software FC": QSerialPort.FlowControl.SoftwareControl,
@@ -134,6 +150,8 @@ FLOW_CONTROL: typing.Final = {
 }
 
 
+# Custom theming options
+# Only dark mode is supported
 CUSTOM_COLORS_DARK: dict[str, str | dict[str, str]] | None = {
     "background": "#111114",
     "primary": "#FFB3A9",
