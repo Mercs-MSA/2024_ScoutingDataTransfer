@@ -4,7 +4,12 @@ import sys
 import os
 import hashlib
 import time
+import shutil
+
 import requests
+from platformdirs import user_data_dir
+from loguru import logger
+
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -16,8 +21,9 @@ from PySide6.QtWidgets import (
     QFrame,
     QProgressBar,
     QStackedWidget,
+    QGroupBox,
+    QScrollArea,
 )
-from platformdirs import user_data_dir
 from PySide6.QtCore import (
     QThread,
     QThreadPool,
@@ -30,11 +36,8 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QFont, QDesktopServices
 
-from loguru import logger
-from PySide6.QtWidgets import QGroupBox
-from PySide6.QtWidgets import QScrollArea
-
 import qtawesome as qta
+
 
 
 class QWidgetList(QScrollArea):
@@ -190,28 +193,28 @@ class FetchReleasesWorker(QRunnable):
                 version = release["tag_name"]
                 title = release["name"]
                 pre_release = release["prerelease"]
-                if re.match(r"^\d{4}\.\d+\.\d+", version):
-                    assets = release["assets"]
-                    apk_url = None
-                    sha1_url = None
-                    for asset in assets:
-                        if asset["name"] == "app-release.apk":
-                            apk_url = asset["browser_download_url"]
-                        elif asset["name"] == "app-release.apk.sha1":
-                            sha1_url = asset["browser_download_url"]
-
-                    if apk_url and sha1_url:
-                        release_info = {
-                            "version": version,
-                            "title": title,
-                            "prerelease": pre_release,
-                            "apk_url": apk_url,
-                            "sha1_url": sha1_url,
-                        }
-                        valid_releases.append(release_info)
-                        logger.info(f"Found release tag: {version}")
-                else:
+                assets = release["assets"]
+                apk_url = None
+                sha1_url = None
+                for asset in assets:
+                    if asset["name"] == "app-release.apk":
+                        apk_url = asset["browser_download_url"]
+                    elif asset["name"] == "app-release.apk.sha1":
+                        sha1_url = asset["browser_download_url"]
+                if (not apk_url) or (not sha1_url):
                     logger.warning(f"Invalid release tag: {version}")
+
+
+                if apk_url and sha1_url:
+                    release_info = {
+                        "version": version,
+                        "title": title,
+                        "prerelease": pre_release,
+                        "apk_url": apk_url,
+                        "sha1_url": sha1_url,
+                    }
+                    valid_releases.append(release_info)
+                    logger.info(f"Found release tag: {version}")
 
             self.signals.finished.emit(valid_releases)
         except Exception as e:
@@ -316,8 +319,8 @@ class Downloader(QWidget):
         for release in releases:
             release_item = ReleaseItem(
                 False,
-                release["version"],
                 release["title"],
+                release["version"],
                 release["prerelease"],
                 release["apk_url"],
                 release["sha1_url"],
@@ -448,10 +451,31 @@ class Downloader(QWidget):
                 if os.path.isfile(apk_path):
                     release_item = ReleaseItem(True, version, version, False, "", "")
                     release_item.show_file.connect(partial(self.show_file, version_path))
+                    release_item.delete.connect(partial(self.delete_version, version))
                     self.downloaded_releases.add_widget(release_item)
 
     def show_file(self, path: str):
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def delete_version(self, version: str):
+        reply = QMessageBox.question(
+            self,
+            "Delete Version",
+            f"Are you sure you want to delete version {version}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                shutil.rmtree(os.path.join(self.app_dir, version))
+                logger.info(f"Deleted version {version}")
+                self.refresh_downloaded()
+            except Exception as e:
+                logger.error(f"Failed to delete version {version}: {repr(e)}")
+                QMessageBox.critical(
+                    self, "Error", f"Failed to delete version {version}: {repr(e)}"
+                )
+        self.refresh_downloaded()
 
     def verify_sha1(self, file_path, sha1_path):
         with open(sha1_path, "r") as sha1_file:
@@ -522,7 +546,7 @@ class ReleaseItem(QFrame):
             button_layout = QHBoxLayout()
             layout.addLayout(button_layout)
 
-            self.install_button = QPushButton("Install")
+            self.install_button = QPushButton("Install to Android")
             self.install_button.clicked.connect(self.install.emit)
             self.install_button.setMinimumHeight(48)
             button_layout.addWidget(self.install_button)
