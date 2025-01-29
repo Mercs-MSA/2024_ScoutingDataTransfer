@@ -77,7 +77,9 @@ class ImageViewer(QWidget):
             self.view.renderHints() | QPainter.RenderHint.SmoothPixmapTransform
         )
 
-        QScroller.grabGesture(self.view.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+        QScroller.grabGesture(
+            self.view.viewport(), QScroller.ScrollerGestureType.TouchGesture
+        )
 
         # Add image to main scene
         self.pixmap_item = self.scene.addPixmap(self.image)

@@ -12,9 +12,9 @@ from PySide6.QtCore import QSize
 # Update this to add more tables (forms), or database fields (form items)
 
 #!# IMPORTANT
-#*# Unsupported field names (used internally by the program)
+# *# Unsupported field names (used internally by the program)
 ### - rowid, timestamp, warnBase64Icon, xBase64Icon, checkBase64Icon, logo16Base64, include_file, generator
-#*# Required fields: `form` (index 0 - TEXT), `team` (index 1 - INTEGER)
+# *# Required fields: `form` (index 0 - TEXT), `team` (index 1 - INTEGER)
 
 FIELDS = {
     "pit": {
@@ -93,6 +93,13 @@ SCANNER_NEWLINE = "\n"
 
 # Scanner Delimiter Character(s)
 SCANNER_DELIMITER = "||"
+
+# Enable Assignment Generator
+# Whether or not to enable the assignment generator using the Statbotics API
+ENABLE_ASSIGNMENT_GENERATOR = False
+
+# Enable the ADB-powered tablet management features
+ENAGLE_APPMGMT = True
 
 # Supported Baud Rates
 # Any values *should* work, but these are the recommended defaults

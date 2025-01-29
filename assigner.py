@@ -116,7 +116,9 @@ class AssignerWidget(QTabWidget):
         self.sbapi = sbapi
         self.progress_dialog: QProgressDialog | None = None
 
-        self.on_api_error.connect(lambda: self.progress_dialog.close() if self.progress_dialog else None)
+        self.on_api_error.connect(
+            lambda: self.progress_dialog.close() if self.progress_dialog else None
+        )
 
         self.assign_pit_widget = QWidget()
         self.addTab(self.assign_pit_widget, "Pit")
@@ -671,9 +673,7 @@ class AssignerWidget(QTabWidget):
                         }
                     )
 
-        self.progress_dialog = QProgressDialog(
-            "Loading Match List", "", 0, 100, self
-        )
+        self.progress_dialog = QProgressDialog("Loading Match List", "", 0, 100, self)
         self.progress_dialog.setCancelButton(None)
         self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.show()

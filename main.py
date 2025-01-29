@@ -57,7 +57,16 @@ from PySide6.QtCore import (
     QBuffer,
     QUrl,
 )
-from PySide6.QtGui import QCloseEvent, QPixmap, QIcon, QCursor, QAction, QFont, QImage, QDesktopServices
+from PySide6.QtGui import (
+    QCloseEvent,
+    QPixmap,
+    QIcon,
+    QCursor,
+    QAction,
+    QFont,
+    QImage,
+    QDesktopServices,
+)
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 import qdarktheme
 import qtawesome
@@ -73,6 +82,7 @@ import assigner
 import data_manager
 import data_models
 import constants
+import installer
 import nav
 import utils
 import viewer
@@ -103,7 +113,11 @@ class DataWorker(QObject):
         self,
         database: data_manager.DataManager,
     ):
-        data = list(utils.convert_types(self.data.strip("\r\n").split(constants.SCANNER_DELIMITER)))
+        data = list(
+            utils.convert_types(
+                self.data.strip("\r\n").split(constants.SCANNER_DELIMITER)
+            )
+        )
         form = data[0]
         logger.info(f"Data transfer started on form {form}")
 
@@ -165,114 +179,127 @@ class DataWorker(QObject):
 
 
 class ReportWorker(QObject):
-            finished = Signal(str)
-            progress = Signal(int)
+    finished = Signal(str)
+    progress = Signal(int)
 
-            def __init__(self, form, rowid, team, event, database, filepath, include_pictures: bool = False):
-                super().__init__()
-                self.form = form
-                self.rowid = rowid
-                self.team = team
-                self.eventcode = event
-                self.database = database
-                self.filepath = filepath
-                self.include_pictures = include_pictures
+    def __init__(
+        self,
+        form,
+        rowid,
+        team,
+        event,
+        database,
+        filepath,
+        include_pictures: bool = False,
+    ):
+        super().__init__()
+        self.form = form
+        self.rowid = rowid
+        self.team = team
+        self.eventcode = event
+        self.database = database
+        self.filepath = filepath
+        self.include_pictures = include_pictures
 
-            def run(self):
-                # generate template
-                template_loader = jinja2.FileSystemLoader("templates")
-                template_env = jinja2.Environment(loader=template_loader)
+    def run(self):
+        # generate template
+        template_loader = jinja2.FileSystemLoader("templates")
+        template_env = jinja2.Environment(loader=template_loader)
 
-                def include_file(name, *args):
-                    """Helper function for jinja2 includes"""
-                    return template_env.get_template(name).render(*args)
-                
-                template = jinja2.Template(
-                    constants.REPORT_CONSTRUCTORS[self.form],
-                    extensions=["jinja2.ext.do"],
+        def include_file(name, *args):
+            """Helper function for jinja2 includes"""
+            return template_env.get_template(name).render(*args)
+
+        template = jinja2.Template(
+            constants.REPORT_CONSTRUCTORS[self.form],
+            extensions=["jinja2.ext.do"],
+        )
+
+        rowdata = {}
+        for row in self.database.get_data(self.form):
+            if row["rowid"] == int(self.rowid):
+                rowdata = row
+                break
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
+            imbuffer, "PNG"
+        )
+        rowdata["warnBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(QSize(30, 30)).save(
+            imbuffer, "PNG"
+        )
+        rowdata["xBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(QSize(30, 30)).save(
+            imbuffer, "PNG"
+        )
+        rowdata["checkBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        imbuffer = QBuffer()
+        QPixmap("icons/logo16.png").save(imbuffer, "PNG")
+        rowdata["logo16Base64"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        imbuffer = QBuffer()
+        qtawesome.icon("mdi6.close", color="#ffffff").pixmap(QSize(30, 30)).save(
+            imbuffer, "PNG"
+        )
+        rowdata["closeBase64Icon"] = (
+            f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+        )
+
+        # Add include_file function to template context
+        rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+
+        # Add event code
+        if "event" not in rowdata:
+            rowdata["event"] = self.eventcode
+
+        rowdata["generator"] = "report"
+
+        # add images
+        if self.include_pictures:
+            imagedata = self.database.get_data("robot_pictures")
+            rowdata["images"] = []
+            # get by team
+            for image in imagedata:
+                if image["team"] == int(self.team):
+                    data = json.loads(image["picture"])
+                    for pic in data["picture"]:
+                        rowdata["images"].append(pic)
+                        logger.debug(
+                            f"Added image to report with MD5 - {hashlib.md5(pic.encode()).hexdigest()}"
+                        )
+
+        if self.filepath:
+            with open(self.filepath, "w") as file:
+                file.write(
+                    minify_html.minify(
+                        template.render(rowdata), minify_js=True, minify_css=True
+                    )
                 )
+        else:
+            self.finished.emit("")
+            return
 
-                rowdata = {}
-                for row in self.database.get_data(self.form):
-                    if row["rowid"] == int(self.rowid):
-                        rowdata = row
-                        break
-
-                imbuffer = QBuffer()
-                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
-                    imbuffer, "PNG"
-                )
-                rowdata["warnBase64Icon"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-
-                imbuffer = QBuffer()
-                qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
-                    QSize(30, 30)
-                ).save(imbuffer, "PNG")
-                rowdata["xBase64Icon"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-
-                imbuffer = QBuffer()
-                qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
-                    QSize(30, 30)
-                ).save(imbuffer, "PNG")
-                rowdata["checkBase64Icon"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-                
-                imbuffer = QBuffer()
-                QPixmap("icons/logo16.png").save(imbuffer, "PNG")
-                rowdata["logo16Base64"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-                
-                imbuffer = QBuffer()
-                qtawesome.icon("mdi6.close", color="#ffffff").pixmap(
-                    QSize(30, 30)
-                ).save(imbuffer, "PNG")
-                rowdata["closeBase64Icon"] = (
-                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-                )
-
-                # Add include_file function to template context
-                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
-
-                # Add event code
-                if "event" not in rowdata:
-                    rowdata["event"] = self.eventcode
-
-                rowdata["generator"] = "report"
-
-                # add images
-                if self.include_pictures:
-                    imagedata = self.database.get_data("robot_pictures")
-                    rowdata["images"] = []
-                    # get by team
-                    for image in imagedata:
-                        if image["team"] == int(self.team):
-                            data = json.loads(image["picture"])
-                            for pic in data["picture"]:
-                                rowdata["images"].append(
-                                    pic
-                                )
-                                logger.debug(f"Added image to report with MD5 - {hashlib.md5(pic.encode()).hexdigest()}")
-
-                if self.filepath:
-                    with open(self.filepath, "w") as file:
-                        file.write(minify_html.minify(template.render(rowdata), minify_js=True, minify_css=True))
-                else:
-                    self.finished.emit("")
-                    return
-
-                self.finished.emit(self.filepath)
+        self.finished.emit(self.filepath)
 
 
 class MainWindow(QMainWindow):
     """Main Window"""
 
-    HOME_IDX, ASSIGN_IDX, PICTURES_IDX, SETTINGS_IDX, ABOUT_IDX = range(5)
+    HOME_IDX, ASSIGN_IDX, APPMGMT_IDX, PICTURES_IDX, SETTINGS_IDX, ABOUT_IDX = range(6)
 
     def __init__(self) -> None:
         super().__init__()
@@ -362,8 +389,29 @@ class MainWindow(QMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextUnderIcon
         )
         self.nav_button_assign.clicked.connect(lambda: self.nav(self.ASSIGN_IDX))
-        self.nav_layout.addWidget(self.nav_button_assign)
+        if constants.ENABLE_ASSIGNMENT_GENERATOR:
+            self.nav_layout.addWidget(self.nav_button_assign)
         self.navigation_buttons.append(self.nav_button_assign)
+
+        self.nav_button_appmgmt = QToolButton()
+        self.nav_button_appmgmt.setCheckable(True)
+        self.nav_button_appmgmt.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
+        )
+        self.nav_button_appmgmt.setText("Tablet\nAppMgmt")
+        self.nav_button_appmgmt.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
+        self.nav_button_appmgmt.setIconSize(QSize(40, 40))
+        self.nav_button_appmgmt.setIcon(qtawesome.icon("mdi6.application-export"))
+        self.nav_button_appmgmt.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        )
+        self.nav_button_appmgmt.clicked.connect(lambda: self.nav(self.APPMGMT_IDX))
+        if constants.ENAGLE_APPMGMT:
+            self.nav_layout.addWidget(self.nav_button_appmgmt)
+        self.navigation_buttons.append(self.nav_button_appmgmt)
+        
 
         self.nav_layout.addStretch()
 
@@ -668,11 +716,20 @@ class MainWindow(QMainWindow):
             self.data_viewers[form] = view
 
         # * ASSIGN * #
-        assign = assigner.AssignerWidget(app, self.sbapi)
-        assign.on_api_error.connect(self.on_api_error)
-        self.app_widget.insertWidget(
-            self.ASSIGN_IDX, assign
-        )
+
+        if constants.ENABLE_ASSIGNMENT_GENERATOR:
+            assign = assigner.AssignerWidget(app, self.sbapi)
+            assign.on_api_error.connect(self.on_api_error)
+            self.app_widget.insertWidget(self.ASSIGN_IDX, assign)
+        else:
+            self.app_widget.insertWidget(self.ASSIGN_IDX, QWidget())
+
+        # * AppMgmt * #
+        if constants.ENAGLE_APPMGMT:
+            self.appmgmt_widget = installer.Downloader()
+            self.app_widget.insertWidget(self.APPMGMT_IDX, self.appmgmt_widget)
+        else:
+            self.app_widget.insertWidget(self.APPMGMT_IDX, QWidget())
 
         # * PICTURES * #
         self.pictures_widget = QWidget()
@@ -1319,12 +1376,12 @@ class MainWindow(QMainWindow):
 
     def on_database_update(self):
         logger.debug("Database Updated")
-        if settings.value("csvAutoExport", defaultValue=True, type=bool): # type: ignore
-            if not os.path.exists(settings.value("csvDir", type=str)): # type: ignore
+        if settings.value("csvAutoExport", defaultValue=True, type=bool):  # type: ignore
+            if not os.path.exists(settings.value("csvDir", type=str)):  # type: ignore
                 try:
-                    os.makedirs(settings.value("csvDir", type=str)) # type: ignore
+                    os.makedirs(settings.value("csvDir", type=str))  # type: ignore
                     logger.info(
-                        f"Created directory for auto-export {settings.value('csvDir', type=str)}" # type: ignore
+                        f"Created directory for auto-export {settings.value('csvDir', type=str)}"  # type: ignore
                     )
                 except Exception as e:
                     QMessageBox.critical(
@@ -1338,27 +1395,32 @@ class MainWindow(QMainWindow):
 
             try:
                 for form in constants.FIELDS.keys():
-                    if not os.path.exists(Path(settings.value("csvDir", type=str), form)): # type: ignore
-                        os.mkdir(Path(settings.value("csvDir", type=str), form)) # type: ignore
+                    if not os.path.exists(
+                        Path(settings.value("csvDir", type=str), form)
+                    ):  # type: ignore
+                        os.mkdir(Path(settings.value("csvDir", type=str), form))  # type: ignore
                         logger.info(
-                            f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}" # type: ignore
+                            f"Created directory for auto-export {Path(settings.value('csvDir', type=str), form)}"  # type: ignore
                         )
                     # save csv
                     csv_data = self.database.to_csv(
                         form,
-                        headers=settings.value("csvHeaders", type=bool, defaultValue=True),  # type: ignore
-                        identifiers=settings.value( # type: ignore
+                        headers=settings.value(
+                            "csvHeaders", type=bool, defaultValue=True
+                        ),  # type: ignore
+                        identifiers=settings.value(  # type: ignore
                             "csvIdentifiers", type=bool, defaultValue=False
                         ),  # type: ignore
                     )
                     with open(
-                        Path(settings.value("csvDir", type=str), form) / f"{form}.csv", "w" # type: ignore
+                        Path(settings.value("csvDir", type=str), form) / f"{form}.csv",
+                        "w",  # type: ignore
                     ) as f:
                         f.write(csv_data)
                         logger.info(
-                            f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}" # type: ignore
+                            f"Saved {form} to {Path(settings.value('csvDir', type=str), form, f'{form}.csv')}"  # type: ignore
                         )
-            except (PermissionError) as e:
+            except PermissionError as e:
                 QMessageBox.critical(
                     self,
                     "Error Saving CSV",
@@ -1428,10 +1490,14 @@ class MainWindow(QMainWindow):
         # get selected row
         if len(self.data_viewers[form].selectionModel().selectedRows()) == 0:
             QMessageBox.warning(
-            self, "No Row Selected", "Please select a row to generate a report for", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok
+                self,
+                "No Row Selected",
+                "Please select a row to generate a report for",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
             )
             return
-        
+
         rowid = (
             self.data_viewers[form]
             .selectionModel()
@@ -1444,9 +1510,7 @@ class MainWindow(QMainWindow):
             self.data_viewers[form]
             .selectionModel()
             .selectedRows()[0]
-            .siblingAtColumn(
-            list(constants.FIELDS[form].keys()).index("team") + 2
-            )
+            .siblingAtColumn(list(constants.FIELDS[form].keys()).index("team") + 2)
             .data()
         )
 
@@ -1455,26 +1519,35 @@ class MainWindow(QMainWindow):
         # Create a progress dialog
 
         filepath, _ = QFileDialog.getSaveFileName(
-                    None,
-                    "Export to HTML",
-                    f"{form}_{team}_{self.event_entry.currentText()}.html",
-                    "HTML File (*.html)",
-                )
+            None,
+            "Export to HTML",
+            f"{form}_{team}_{self.event_entry.currentText()}.html",
+            "HTML File (*.html)",
+        )
 
         if filepath:
-            self.progress_dialog = QProgressDialog("Generating report...", "Cancel", 0, 0, self)
+            self.progress_dialog = QProgressDialog(
+                "Generating report...", "Cancel", 0, 0, self
+            )
             self.progress_dialog.setMinimumDuration(0)
             self.progress_dialog.setValue(0)
             self.progress_dialog.show()
 
             self.worker_thread = QThread()
-            self.data_worker = ReportWorker(form, rowid, team, self.event_entry.currentText(), self.database, filepath, include_pictures)
+            self.data_worker = ReportWorker(
+                form,
+                rowid,
+                team,
+                self.event_entry.currentText(),
+                self.database,
+                filepath,
+                include_pictures,
+            )
             self.data_worker.finished.connect(self.on_report_finished)
             self.worker_thread.started.connect(self.data_worker.run)
             self.data_worker.moveToThread(self.worker_thread)
             self.data_worker.finished.connect(self.worker_thread.quit)
             self.worker_thread.start()
-            
 
     def on_report_finished(self, filepath):
         if self.progress_dialog:
@@ -1482,15 +1555,15 @@ class MainWindow(QMainWindow):
         if filepath:
             if (
                 QMessageBox.question(
-                self,
-                "Open Report",
-                "Would you like to open the report in your default browser?",
-                QMessageBox.StandardButton.Yes,
-                QMessageBox.StandardButton.No,
+                    self,
+                    "Open Report",
+                    "Would you like to open the report in your default browser?",
+                    QMessageBox.StandardButton.Yes,
+                    QMessageBox.StandardButton.No,
                 )
-                == QMessageBox.StandardButton.Yes):
-                    QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
-        
+                == QMessageBox.StandardButton.Yes
+            ):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
 
     def nav(self, page: int):
         """Navigate to a page in app_widget using buttons"""
