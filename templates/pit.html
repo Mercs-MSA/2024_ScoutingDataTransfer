@@ -33,6 +33,11 @@
       background-color: #8a40bb;
       font-weight: bold;
     }
+    .algae > th {
+      background-color: #40bb6b;
+      font-weight: bold;
+      color: black;
+    }
     p,
     h1,
     h2,
@@ -268,8 +273,42 @@
           </tr>
         </table>
         <h4>Algae</h4>
-        <br />
-        <p>Under construction</p>
+        <table>
+          <tr class="algae">
+            <th>Processor</th>
+            <th>Barge</th>
+            <th>Descore</th>
+          </tr>
+          <tr>
+            <td>
+              <img
+                src="{{checkBase64Icon if processor else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if processor else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if barge else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if barge else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if descore else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if descore else "No"}}
+            </td>
+          </tr>
+        </table>
       </div>
       <div class="section">
         <h3>Robot Strategy</h3>
