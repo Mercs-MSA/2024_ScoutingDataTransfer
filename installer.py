@@ -18,8 +18,17 @@ from PySide6.QtWidgets import (
     QStackedWidget,
 )
 from platformdirs import user_data_dir
-from PySide6.QtCore import QThread, QThreadPool, Signal, Qt, QRunnable, QObject, QSize
-from PySide6.QtGui import QFont
+from PySide6.QtCore import (
+    QThread,
+    QThreadPool,
+    Signal,
+    Qt,
+    QRunnable,
+    QObject,
+    QSize,
+    QUrl,
+)
+from PySide6.QtGui import QFont, QDesktopServices
 
 from loguru import logger
 from PySide6.QtWidgets import QGroupBox
@@ -27,26 +36,27 @@ from PySide6.QtWidgets import QScrollArea
 
 import qtawesome as qta
 
+
 class QWidgetList(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
-        
+
         self.setWidgetResizable(True)
         self.container = QWidget()
         self.root_layout = QVBoxLayout(self.container)
         self.root_layout.setSpacing(5)
         self.root_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self.stack = QStackedWidget()
         self.root_layout.addWidget(self.stack)
         self.setWidget(self.container)
-        
+
         self.list_widget = QWidget()
         self.list_layout = QVBoxLayout(self.list_widget)
         self.list_layout.setSpacing(5)
         self.list_layout.setContentsMargins(0, 0, 0, 0)
         self.stack.addWidget(self.list_widget)
-        
+
         self.loading_widget = QWidget()
         self.loading_layout = QVBoxLayout(self.loading_widget)
         self.loading_label = QLabel("Please Wait...")
@@ -60,9 +70,9 @@ class QWidgetList(QScrollArea):
         self.loading_layout.addWidget(self.loading_label)
         self.loading_widget.setLayout(self.loading_layout)
         self.stack.addWidget(self.loading_widget)
-        
+
         self.list_layout.addStretch()
-        
+
     def add_widget(self, widget: QWidget):
         """Add a widget to the list."""
         self.list_layout.insertWidget(self.list_layout.count() - 1, widget)
@@ -121,7 +131,8 @@ class ApkDownloadWorker(QRunnable):
             self.signals.finished.emit([self.version, self.name, True])
         except Exception as e:
             self.signals.finished.emit([self.version, self.name, False])
-        time.sleep(0.1) # not sure why this is needed
+        time.sleep(0.1)  # not sure why this is needed
+
 
 class CheckSumDownloadWorker(QRunnable):
     def __init__(self, url, path, version, name) -> None:
@@ -148,15 +159,18 @@ class ApkDownloadSignals(QObject):
     error = Signal(str)
     progress = Signal(int)
 
+
 class ChecksumDownloadSignals(QObject):
     finished = Signal(list)
     error = Signal(str)
     progress = Signal(int)
 
+
 class FetchSignals(QObject):
     finished = Signal(list)
     error = Signal(str)
     progress = Signal(int)
+
 
 class FetchReleasesWorker(QRunnable):
     def __init__(self) -> None:
@@ -227,7 +241,7 @@ class Chip(QWidget):
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # background color, rounded corners, padding, etc.
-        r, g, b = tuple(int(self.color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+        r, g, b = tuple(int(self.color.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
         self.setStyleSheet(
             f"background-color: rgba({r}, {g}, {b}, 0.5); border-radius: 11px; padding: 2px;"
         )
@@ -315,7 +329,11 @@ class Downloader(QWidget):
 
     def download_release(self, release: dict, progress_bar: QProgressBar | None):
         if release["version"] in [dl.rsplit("-", 1)[0] for dl in self.downloads.keys()]:
-            QMessageBox.warning(self, "Download", f"Another download is running for tag: {release['version']}")
+            QMessageBox.warning(
+                self,
+                "Download",
+                f"Another download is running for tag: {release['version']}",
+            )
             return
 
         logger.info(f"Downloading release {release['version']}")
@@ -361,7 +379,9 @@ class Downloader(QWidget):
         )
         self.worker_pool.start(worker)
 
-    def download_checksum(self, version, url, path, name, progressbar: QProgressBar | None):
+    def download_checksum(
+        self, version, url, path, name, progressbar: QProgressBar | None
+    ):
         worker = CheckSumDownloadWorker(url, path, version, name)
         worker.signals.progress.connect(
             lambda prog: self.update_progress(version, prog, name)
@@ -385,7 +405,9 @@ class Downloader(QWidget):
     def on_download_finished(self, version, name, success):
         if not success:
             logger.error(f"Download failed for tag {version}, {name}")
-            QMessageBox.critical(self, "Error", f"Download failed for {version} - {name}")
+            QMessageBox.critical(
+                self, "Error", f"Download failed for {version} - {name}"
+            )
             return
 
         logger.info(f"Download finished for tag {version}, {name}")
@@ -425,7 +447,11 @@ class Downloader(QWidget):
                 apk_path = os.path.join(version_path, "app-release.apk")
                 if os.path.isfile(apk_path):
                     release_item = ReleaseItem(True, version, version, False, "", "")
+                    release_item.show_file.connect(partial(self.show_file, version_path))
                     self.downloaded_releases.add_widget(release_item)
+
+    def show_file(self, path: str):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def verify_sha1(self, file_path, sha1_path):
         with open(sha1_path, "r") as sha1_file:
@@ -442,6 +468,8 @@ class Downloader(QWidget):
 class ReleaseItem(QFrame):
     download = Signal()
     install = Signal()
+    delete = Signal()
+    show_file = Signal()
 
     def __init__(
         self,
@@ -491,12 +519,30 @@ class ReleaseItem(QFrame):
             self.progress_bar = None
             self.release_chips.addWidget(Chip("local", "#8bc34a"))
 
+            button_layout = QHBoxLayout()
+            layout.addLayout(button_layout)
+
             self.install_button = QPushButton("Install")
             self.install_button.clicked.connect(self.install.emit)
             self.install_button.setMinimumHeight(48)
-            layout.addWidget(self.install_button)
+            button_layout.addWidget(self.install_button)
+
+            self.show_file_button = QPushButton()
+            self.show_file_button.setIcon(qta.icon("mdi6.file-eye-outline"))
+            self.show_file_button.setIconSize(QSize(32, 32))
+            self.show_file_button.setFixedSize(QSize(48, 48))
+            self.show_file_button.clicked.connect(self.show_file.emit)
+            button_layout.addWidget(self.show_file_button)
+
+            self.delete_button = QPushButton()
+            self.delete_button.setIcon(qta.icon("mdi6.delete"))
+            self.delete_button.setIconSize(QSize(32, 32))
+            self.delete_button.setFixedSize(QSize(48, 48))
+            self.delete_button.clicked.connect(self.delete.emit)
+            button_layout.addWidget(self.delete_button)
 
         self.release_chips.addStretch()
+
 
 if __name__ == "__main__":
     import qdarktheme

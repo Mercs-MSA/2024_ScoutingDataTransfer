@@ -413,7 +413,6 @@ class MainWindow(QMainWindow):
             self.nav_layout.addWidget(self.nav_button_appmgmt)
             self.nav_layout.addStretch()
         self.navigation_buttons.append(self.nav_button_appmgmt)
-        
 
         self.nav_button_pictures = QToolButton()
         self.nav_button_pictures.setCheckable(True)
