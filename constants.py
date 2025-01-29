@@ -99,7 +99,7 @@ SCANNER_DELIMITER = "||"
 
 # Enable Assignment Generator
 # Whether or not to enable the assignment generator using the Statbotics API
-ENABLE_ASSIGNMENT_GENERATOR = False
+ENABLE_ASSIGNMENT_GENERATOR = True
 
 # Enable the ADB-powered tablet management features
 ENAGLE_APPMGMT = True

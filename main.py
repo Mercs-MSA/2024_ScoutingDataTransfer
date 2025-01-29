@@ -391,6 +391,7 @@ class MainWindow(QMainWindow):
         self.nav_button_assign.clicked.connect(lambda: self.nav(self.ASSIGN_IDX))
         if constants.ENABLE_ASSIGNMENT_GENERATOR:
             self.nav_layout.addWidget(self.nav_button_assign)
+            self.nav_layout.addStretch()
         self.navigation_buttons.append(self.nav_button_assign)
 
         self.nav_button_appmgmt = QToolButton()
@@ -410,10 +411,9 @@ class MainWindow(QMainWindow):
         self.nav_button_appmgmt.clicked.connect(lambda: self.nav(self.APPMGMT_IDX))
         if constants.ENAGLE_APPMGMT:
             self.nav_layout.addWidget(self.nav_button_appmgmt)
+            self.nav_layout.addStretch()
         self.navigation_buttons.append(self.nav_button_appmgmt)
         
-
-        self.nav_layout.addStretch()
 
         self.nav_button_pictures = QToolButton()
         self.nav_button_pictures.setCheckable(True)

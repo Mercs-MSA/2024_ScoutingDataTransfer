@@ -3,6 +3,7 @@ import re
 import sys
 import os
 import hashlib
+import time
 import requests
 from PySide6.QtWidgets import (
     QApplication,
@@ -10,13 +11,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QLabel,
-    QTabWidget,
-    QListWidget,
     QMessageBox,
     QHBoxLayout,
     QFrame,
-    QListWidgetItem,
     QProgressBar,
+    QStackedWidget,
 )
 from platformdirs import user_data_dir
 from PySide6.QtCore import QThread, QThreadPool, Signal, Qt, QRunnable, QObject, QSize
@@ -24,6 +23,72 @@ from PySide6.QtGui import QFont
 
 from loguru import logger
 from PySide6.QtWidgets import QGroupBox
+from PySide6.QtWidgets import QScrollArea
+
+import qtawesome as qta
+
+class QWidgetList(QScrollArea):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        self.setWidgetResizable(True)
+        self.container = QWidget()
+        self.root_layout = QVBoxLayout(self.container)
+        self.root_layout.setSpacing(5)
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.stack = QStackedWidget()
+        self.root_layout.addWidget(self.stack)
+        self.setWidget(self.container)
+        
+        self.list_widget = QWidget()
+        self.list_layout = QVBoxLayout(self.list_widget)
+        self.list_layout.setSpacing(5)
+        self.list_layout.setContentsMargins(0, 0, 0, 0)
+        self.stack.addWidget(self.list_widget)
+        
+        self.loading_widget = QWidget()
+        self.loading_layout = QVBoxLayout(self.loading_widget)
+        self.loading_label = QLabel("Please Wait...")
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_spinner = qta.IconWidget()
+        self.animation = qta.Spin(self.loading_spinner)
+        self.loading_spinner.setIconSize(QSize(128, 128))
+        self.loading_spinner.setIcon(qta.icon("msc.loading", animation=self.animation))
+        self.loading_spinner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_layout.addWidget(self.loading_spinner)
+        self.loading_layout.addWidget(self.loading_label)
+        self.loading_widget.setLayout(self.loading_layout)
+        self.stack.addWidget(self.loading_widget)
+        
+        self.list_layout.addStretch()
+        
+    def add_widget(self, widget: QWidget):
+        """Add a widget to the list."""
+        self.list_layout.insertWidget(self.list_layout.count() - 1, widget)
+
+    def remove_widget(self, widget: QWidget):
+        """Remove a specific widget from the list."""
+        self.list_layout.removeWidget(widget)
+        widget.setParent(None)
+
+    def clear_widgets(self):
+        """Remove all widgets from the list."""
+        while self.list_layout.count() - 1:
+            item = self.list_layout.takeAt(0)
+            if item.widget():
+                item.widget().setParent(None)
+
+    def set_spacing(self, spacing: int):
+        """Set spacing between widgets."""
+        self.list_layout.setSpacing(spacing)
+
+    def set_loading(self, loading: bool):
+        """Show or hide the loading screen."""
+        if loading:
+            self.stack.setCurrentWidget(self.loading_widget)
+        else:
+            self.stack.setCurrentWidget(self.list_widget)
 
 
 class ApkDownloadWorker(QRunnable):
@@ -37,7 +102,7 @@ class ApkDownloadWorker(QRunnable):
 
     def run(self):
         try:
-            response = requests.get(self.url, stream=True)
+            response = requests.get(self.url, stream=True, timeout=5)
             total_length = response.headers.get("content-length")
             if total_length is None:
                 self.signals.finished.emit([self.version, self.name, False])
@@ -56,6 +121,7 @@ class ApkDownloadWorker(QRunnable):
             self.signals.finished.emit([self.version, self.name, True])
         except Exception as e:
             self.signals.finished.emit([self.version, self.name, False])
+        time.sleep(0.1) # not sure why this is needed
 
 class CheckSumDownloadWorker(QRunnable):
     def __init__(self, url, path, version, name) -> None:
@@ -68,7 +134,7 @@ class CheckSumDownloadWorker(QRunnable):
 
     def run(self):
         try:
-            response = requests.get(self.url, stream=True)
+            response = requests.get(self.url, stream=True, timeout=5)
             with open(self.path, "wb") as file:
                 file.write(response.content)
 
@@ -99,9 +165,10 @@ class FetchReleasesWorker(QRunnable):
 
     def run(self):
         repo = "Mercs-MSA/2024_ScoutingDataCollection"
+        logger.debug(f"Fetching releases from {repo}")
         try:
             releases_url = f"https://api.github.com/repos/{repo}/releases"
-            response = requests.get(releases_url)
+            response = requests.get(releases_url, timeout=5)
             releases = response.json()
             valid_releases = []
 
@@ -147,27 +214,22 @@ class Chip(QWidget):
         self.color = color
         self.initUI()
         self.setFixedWidth(self.sizeHint().width())
-        self.setFixedHeight(24)
+        self.setFixedHeight(40)
 
     def initUI(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(4, 0, 4, 0)
         self.setLayout(layout)
 
         self.label = QLabel(self.label)
         layout.addWidget(self.label)
 
-        # determine text color based on bg
-        if sum(int(self.color.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)) > 382:
-            text_color = "#000000"
-        else:
-            text_color = "#ffffff"
-        self.label.setStyleSheet(f"color: {text_color}; font-weight: bold;")
+        self.label.setStyleSheet("font-weight: bold;")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # background color, rounded corners, padding, etc.
+        r, g, b = tuple(int(self.color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
         self.setStyleSheet(
-            f"background-color: {self.color}; border-radius: 11px; padding: 2px;"
+            f"background-color: rgba({r}, {g}, {b}, 0.5); border-radius: 11px; padding: 2px;"
         )
 
 
@@ -181,7 +243,7 @@ class Downloader(QWidget):
         logger.info(f"Download path: {self.app_dir}")
 
         self.worker_pool = QThreadPool()
-        self.worker_pool.setMaxThreadCount(4)
+        self.worker_pool.setMaxThreadCount(16)
         self.worker: QThread | None = None
 
         self.initUI()
@@ -204,7 +266,8 @@ class Downloader(QWidget):
         downloadable_layout = QVBoxLayout()
         downloadable_group.setLayout(downloadable_layout)
 
-        self.downloadable_releases = QListWidget(self)
+        self.downloadable_releases = QWidgetList(self)
+        self.downloadable_releases.set_spacing(4)
         downloadable_layout.addWidget(self.downloadable_releases)
 
         downloaded_group = QGroupBox("Downloaded Releases", self)
@@ -213,13 +276,16 @@ class Downloader(QWidget):
         downloaded_layout = QVBoxLayout()
         downloaded_group.setLayout(downloaded_layout)
 
-        self.downloaded_releases = QListWidget(self)
+        self.downloaded_releases = QWidgetList(self)
+        self.downloaded_releases.set_spacing(4)
         downloaded_layout.addWidget(self.downloaded_releases)
 
         self.setLayout(layout)
 
     def fetch_releases(self):
         if not self.worker or not self.worker.isRunning():
+            self.downloadable_releases.clear_widgets()
+            self.downloadable_releases.set_loading(True)
             worker = FetchReleasesWorker()
             worker.signals.error.connect(
                 lambda error: QMessageBox.warning(
@@ -231,7 +297,8 @@ class Downloader(QWidget):
 
     def on_releases_fetched(self, releases):
         self.releases = releases
-        self.downloadable_releases.clear()
+        self.downloadable_releases.clear_widgets()
+        self.downloadable_releases.set_loading(False)
         for release in releases:
             release_item = ReleaseItem(
                 False,
@@ -244,13 +311,7 @@ class Downloader(QWidget):
             release_item.download.connect(
                 partial(self.download_release, release, release_item.progress_bar)
             )
-            release_item.download.connect(
-                lambda: item.setSizeHint(QSize(release_item.sizeHint().width(), release_item.sizeHint().height()+30))
-            )
-            item = QListWidgetItem()
-            self.downloadable_releases.addItem(item)
-            self.downloadable_releases.setItemWidget(item, release_item)
-            item.setSizeHint(release_item.sizeHint())
+            self.downloadable_releases.add_widget(release_item)
 
     def download_release(self, release: dict, progress_bar: QProgressBar | None):
         if release["version"] in [dl.rsplit("-", 1)[0] for dl in self.downloads.keys()]:
@@ -318,7 +379,7 @@ class Downloader(QWidget):
 
     def update_progress(self, version, value, name):
         self.downloads[f"{version}-{name}"]["progress"] = value
-        logger.debug(f"Download progress of {name}:{version} -> {value}")
+        # logger.debug(f"Download progress of {name}:{version} -> {value}")
         pass
 
     def on_download_finished(self, version, name, success):
@@ -334,7 +395,7 @@ class Downloader(QWidget):
                 return
         # at this stage, all reqd downloads are done
 
-        self.fetch_releases()
+        self.refresh_downloaded()
 
         # verify checksum
         ok = self.verify_sha1(
@@ -357,17 +418,14 @@ class Downloader(QWidget):
             )
 
     def refresh_downloaded(self):
-        self.downloaded_releases.clear()
+        self.downloaded_releases.clear_widgets()
         for version in os.listdir(self.app_dir):
             version_path = os.path.join(self.app_dir, version)
             if os.path.isdir(version_path):
                 apk_path = os.path.join(version_path, "app-release.apk")
                 if os.path.isfile(apk_path):
                     release_item = ReleaseItem(True, version, version, False, "", "")
-                    item = QListWidgetItem()
-                    self.downloaded_releases.addItem(item)
-                    self.downloaded_releases.setItemWidget(item, release_item)
-                    item.setSizeHint(QSize(release_item.sizeHint().width(), release_item.sizeHint().height() + 40))
+                    self.downloaded_releases.add_widget(release_item)
 
     def verify_sha1(self, file_path, sha1_path):
         with open(sha1_path, "r") as sha1_file:
@@ -414,11 +472,11 @@ class ReleaseItem(QFrame):
         layout.addLayout(self.release_chips)
 
         if not downloaded:
-            self.version_chip = Chip(tag, "#4caf50")
+            self.version_chip = Chip(tag, "#8bc34a")
             self.release_chips.addWidget(self.version_chip)
 
             if prerelease:
-                self.pre_chip = Chip("Pre-Release")
+                self.pre_chip = Chip("Pre-Release", "#ffeb3b")
                 self.release_chips.addWidget(self.pre_chip)
 
             self.download_button = QPushButton("Download")
@@ -431,7 +489,7 @@ class ReleaseItem(QFrame):
             layout.addWidget(self.progress_bar)
         else:
             self.progress_bar = None
-            self.release_chips.addWidget(Chip("local", "#4caf50"))
+            self.release_chips.addWidget(Chip("local", "#8bc34a"))
 
             self.install_button = QPushButton("Install")
             self.install_button.clicked.connect(self.install.emit)
