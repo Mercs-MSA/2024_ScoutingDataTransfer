@@ -670,7 +670,7 @@ class MainWindow(QMainWindow):
             view_export.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             view_export.setIconSize(QSize(28, 28))
             view_export.setFixedHeight(32)
-            view_export.clicked.connect(lambda: self.export_csv(form))
+            view_export.clicked.connect(partial(self.export_csv, form))
             view_bar.addWidget(view_export)
 
             view_report = QToolButton()
@@ -679,7 +679,7 @@ class MainWindow(QMainWindow):
             view_report.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             view_report.setIconSize(QSize(28, 28))
             view_report.setFixedHeight(32)
-            view_report.clicked.connect(lambda: self.generate_report(form))
+            view_report.clicked.connect(partial(self.generate_report, form))
             view_bar.addWidget(view_report)
 
             view_side_by_side = QHBoxLayout()
@@ -698,7 +698,7 @@ class MainWindow(QMainWindow):
 
             view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             view.customContextMenuRequested.connect(
-                lambda: table_menu(form, model, view)
+                partial(table_menu, form, model, view)
             )
             view_side_by_side.addWidget(view, 7)
 
@@ -708,8 +708,8 @@ class MainWindow(QMainWindow):
             view_side_by_side.addWidget(sidebar, 3)
             self.data_sidebars[form] = sidebar
             old = view.selectionChanged
-            view.selectionChanged = lambda selected, deselected: selection_change(
-                old, form, view, sidebar, selected, deselected
+            view.selectionChanged = partial(
+                selection_change, old, form, view, sidebar
             )
 
             self.data_viewers[form] = view

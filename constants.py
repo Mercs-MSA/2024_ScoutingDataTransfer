@@ -38,6 +38,13 @@ FIELDS = {
         "isCoachAdult": "BOOLEAN",
         "drivebase": "TEXT",
         "autonExists": "BOOLEAN",
+    },
+    "match": {
+        "form": "TEXT",
+        "team": "INTEGER",
+        "alliance": "INTEGER",
+        "match": "INTEGER",
+        "scouters": "TEXT",
     }
 }
 
