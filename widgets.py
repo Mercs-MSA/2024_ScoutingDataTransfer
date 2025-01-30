@@ -297,3 +297,29 @@ class QWidgetList(QScrollArea):
             self.stack.setCurrentWidget(self.loading_widget)
         else:
             self.stack.setCurrentWidget(self.list_widget)
+
+class Chip(QWidget):
+    # Small widget that displays a single piece of data
+    def __init__(self, label, color: str = "#FFB3A9"):
+        super().__init__()
+        self.label = label
+        self.color = color
+        self.initUI()
+        self.setFixedWidth(self.sizeHint().width())
+        self.setFixedHeight(40)
+
+    def initUI(self):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        self.label = QLabel(self.label)
+        layout.addWidget(self.label)
+
+        self.label.setStyleSheet("font-weight: bold;")
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # background color, rounded corners, padding, etc.
+        r, g, b = tuple(int(self.color.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+        self.setStyleSheet(
+            f"background-color: rgba({r}, {g}, {b}, 0.5); border-radius: 11px; padding: 2px;"
+        )

@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWizardPage,
     QListWidget,
     QListWidgetItem,
+    QTextEdit,
 )
 from PySide6.QtCore import (
     QThread,
@@ -50,7 +51,7 @@ import qtawesome as qta
 
 import constants
 import shared_resources
-from widgets import QWidgetList
+from widgets import QWidgetList, Chip
 
 
 class ApkDownloadWorker(QRunnable):
@@ -104,6 +105,7 @@ class CheckSumDownloadWorker(QRunnable):
             self.signals.finished.emit([self.version, self.name, True])
         except Exception as e:
             self.signals.finished.emit([self.version, self.name, False])
+        time.sleep(0.1)  # not sure why this is needed
 
 
 class ApkDownloadSignals(QObject):
@@ -131,6 +133,9 @@ class AdbDeviceSearchSignals(QObject):
     finished = Signal(list)
     error = Signal(str)
 
+class InstallerSignals(QObject):
+    finished = Signal(bool)
+    log = Signal(str)
 
 class FetchReleasesWorker(QRunnable):
     def __init__(self) -> None:
@@ -227,33 +232,34 @@ class AdbDeviceSearchWorker(QRunnable):
         except Exception as e:
             self.signals.error.emit(repr(e))
 
-
-class Chip(QWidget):
-    # Small widget that displays a single piece of data
-    def __init__(self, label, color: str = "#FFB3A9"):
+class ApkInstallWorker(QRunnable):
+    def __init__(self, devices: list[dict], apk_path: str) -> None:
         super().__init__()
-        self.label = label
-        self.color = color
-        self.initUI()
-        self.setFixedWidth(self.sizeHint().width())
-        self.setFixedHeight(40)
+        self.devices = devices
+        self.apk_path = apk_path
+        self.signals = InstallerSignals()
 
-    def initUI(self):
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-
-        self.label = QLabel(self.label)
-        layout.addWidget(self.label)
-
-        self.label.setStyleSheet("font-weight: bold;")
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # background color, rounded corners, padding, etc.
-        r, g, b = tuple(int(self.color.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
-        self.setStyleSheet(
-            f"background-color: rgba({r}, {g}, {b}, 0.5); border-radius: 11px; padding: 2px;"
-        )
-
+    def run(self):
+        success = True
+        for device_info in self.devices:
+            device: ppadb.device.Device = device_info["device"]
+            try:
+                logger.info(f"Installing APK on device {device.serial}")
+                self.signals.log.emit(f"Installing on {device.serial}...")
+                if device.get_package_version_name(constants.COLLECTION_APP_ID):
+                    self.signals.log.emit(f"Device contains app {constants.COLLECTION_APP_ID}, uninstalling first")
+                    device.uninstall(constants.COLLECTION_APP_ID)
+                    self.signals.log.emit("App uninstalled")
+                result = device.install(self.apk_path, downgrade=True)
+                if result:
+                    self.signals.log.emit(f"Successfully installed on {device.serial}")
+                else:
+                    self.signals.log.emit(f"Failed to install on {device.serial}")
+                    success = False
+            except Exception as e:
+                self.signals.log.emit(f"Error installing on {device.serial}: {repr(e)}")
+                success = False
+        self.signals.finished.emit(success)
 
 class InstallerWizard(QWizard):
     class InitPage(QWizardPage):
@@ -346,32 +352,130 @@ class InstallerWizard(QWizard):
         def populate_device_list(self, devices: list[dict]):
             for device in devices:
                 item = QListWidgetItem(f"{device['serial']} - Scouting App {device['app']}")
-                item.setData(Qt.ItemDataRole.UserRole, device["device"])
+                item.setData(Qt.ItemDataRole.UserRole, device)
                 self.device_list.addItem(item)
 
-        def get_devices(self):
+        def get_devices(self) -> list[dict]:
             output = []
             for selection in self.device_list.selectedItems():
                 output.append(selection.data(Qt.ItemDataRole.UserRole))
+            return output
 
         def isComplete(self) -> bool:
             return len(self.device_list.selectedIndexes()) > 0
+        
+    class InstallerPage(QWizardPage):
+        def __init__(self, resources: shared_resources.InstallerSharedResources, parent: QWidget | None) -> None:
+            super().__init__(parent)
+            self.setTitle("Android Install")
+            self.setSubTitle("Install apps on target(s)")
+            self.setCommitPage(True)
+            
+            self.resources = resources
+            self.devices = []
+
+            layout = QVBoxLayout()
+            self.setLayout(layout)
+
+            self.device_list = QListWidget(self)
+            self.device_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+            layout.addWidget(self.device_list)
+
+            self.install_button = QPushButton("Install to Above Devices")
+            self.install_button.setFont(QFont(self.install_button.font().family(), 14))
+            self.install_button.setMinimumHeight(48)
+            self.install_button.clicked.connect(self.on_install)
+            layout.addWidget(self.install_button)
+
+        def set_devices(self, devices: list[dict]):
+            self.devices = devices
+            self.device_list.clear()
+            for device in devices:
+                item = QListWidgetItem(f"{device['serial']} - Scouting App {device['app']}")
+                self.device_list.addItem(item)
+
+        def on_install(self):
+            self.wizard().next()
+
+    class InstallingPage(QWizardPage):
+        def __init__(self, resources: shared_resources.InstallerSharedResources, apk: str, devices: list[dict], parent: QWidget | None = None) -> None:
+            super().__init__(parent)
+            self.resources = resources
+            self.devices = []
+            self.apk = apk
+            self.setTitle("Installing")
+            self.setSubTitle("Installing App")
+
+            self.root_layout = QVBoxLayout()
+            self.setLayout(self.root_layout)
+
+            self.top_layout = QHBoxLayout()
+            self.root_layout.addLayout(self.top_layout)
+
+            self.top_spinner = qta.IconWidget()
+            self.animation = qta.Spin(self.top_spinner)
+            self.top_spinner.setIconSize(QSize(32, 32))
+            self.top_spinner.setIcon(qta.icon("msc.loading", animation=self.animation))
+            self.top_layout.addWidget(self.top_spinner)
+            
+            self.top_label = QLabel("Installing on Devices")
+            self.top_layout.addWidget(self.top_label)
+
+            self.top_layout.addStretch()
+
+            self.logs = QTextEdit()
+            self.logs.setStyleSheet("background: #0d0d0d")
+            self.logs.setReadOnly(True)
+            self.root_layout.addWidget(self.logs)
+
+        def on_install_finished(self, success: bool):
+            if success:
+                self.top_spinner.setIcon(qta.icon("mdi6.check", color="green"))
+                self.top_label.setText("Install complete!")
+            else:
+                self.top_spinner.setIcon(qta.icon("mdi6.alert", color="red"))
+                self.top_label.setText("Install failed!")
+            logger.info("Install completed")
+
+        def set_devices(self, devs: list[dict]):
+            self.devices = devs
+
+        def start(self):
+            # start up install worker
+            self.install_worker = ApkInstallWorker(self.devices, self.apk)
+            self.install_worker.signals.log.connect(self.logs.append)
+            self.install_worker.signals.finished.connect(self.on_install_finished)
+            if self.resources.worker_pool:
+                self.resources.worker_pool.start(self.install_worker)
+            else:
+                logger.critical("Worker Pool is null, can't start install worker")
 
 
-    def __init__(self, resourses: shared_resources.InstallerSharedResources, parent: QWidget | None = None) -> None:
+    def __init__(self, resources: shared_resources.InstallerSharedResources, apk: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setWindowTitle("Installer")
 
         self.setPixmap(QWizard.WizardPixmap.BannerPixmap, self.generate_banner())
         self.setPixmap(
-            QWizard.WizardPixmap.LogoPixmap, qta.icon("mdi6.application-export").pixmap(64, 64)
+            QWizard.WizardPixmap.LogoPixmap, qta.icon("mdi.android-debug-bridge").pixmap(64, 64)
         )
 
-        self.selector = self.TabletSelectPage(resourses, self)
+        self.selector = self.TabletSelectPage(resources, self)
+        self.installer = self.InstallerPage(resources, self)
+        self.installing = self.InstallingPage(resources, apk, self.selector.get_devices(), self)
 
-        self.setPage(0, self.InitPage(resourses, self))
+        self.setPage(0, self.InitPage(resources, self))
         self.setPage(1, self.selector)
+        self.setPage(2, self.installer)
+        self.setPage(3, self.installing)
+        self.currentIdChanged.connect(self.on_page_change)
+
+    def on_page_change(self, page: int):
+        self.installer.set_devices(self.selector.get_devices())
+        self.installing.set_devices(self.selector.get_devices())
+        if page == 3:
+            self.installing.start()
 
     def generate_banner(self):
         px = QPixmap(QSize(self.width(), 84))
@@ -625,7 +729,7 @@ class Downloader(QWidget):
         self.refresh_downloaded()
 
     def install_adb(self, version: str):
-        wizard = InstallerWizard(self.resources)
+        wizard = InstallerWizard(self.resources, os.path.join(self.app_dir, version, "app-release.apk"))
         wizard.exec()
 
     def verify_sha1(self, file_path, sha1_path):
