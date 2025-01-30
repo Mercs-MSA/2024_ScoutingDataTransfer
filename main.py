@@ -3,6 +3,7 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
+import time
 import pybase64 as base64
 from functools import partial
 import hashlib
@@ -1109,34 +1110,17 @@ class MainWindow(QMainWindow):
 
             self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
-            data = self.database.get_data("robot_pictures")
+            data = self.database.get_pictures(self.data_viewers[sidebar]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(
+                        list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                    )
+                    .data())
 
-            if int(
-                self.data_viewers[sidebar]
-                .selectionModel()
-                .selectedRows()[0]
-                .siblingAtColumn(
-                    list(constants.FIELDS[sidebar].keys()).index("team") + 2
-                )
-                .data()
-            ) in [x["team"] for x in data]:
+            if data:
                 pms = []
-                pics = json.loads(
-                    [
-                        x
-                        for x in data
-                        if x["team"]
-                        == int(
-                            self.data_viewers[sidebar]
-                            .selectionModel()
-                            .selectedRows()[0]
-                            .siblingAtColumn(
-                                list(constants.FIELDS[sidebar].keys()).index("team") + 2
-                            )
-                            .data()
-                        )
-                    ][0]["picture"]
-                )["picture"]
+                pics = json.loads(data["picture"])["picture"]
                 for x in pics:
                     pm = QPixmap()
                     pm.loadFromData(base64.b64decode(x.split(",")[1]))

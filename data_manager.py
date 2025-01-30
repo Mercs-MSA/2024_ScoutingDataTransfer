@@ -184,6 +184,33 @@ class DataManager(QObject):
                 row[field] = self.query.value(field)
             data.append(row)
         return data
+    
+    def get_pictures(self, team: int) -> dict[str, Any] | None:
+        """Get all data from a form
+
+        Args:
+            form (str): Name of form/table
+
+        Returns:
+            list[dict[str, Any]]: List of data
+        """
+        if not self.query:
+            self.on_message.emit(
+                "DB not initialized\nCreate a new database in settings",
+                MessageType.FATAL,
+            )
+            return {}
+
+        query = f"SELECT * FROM robot_pictures WHERE team={team}"
+        self.query.exec(query)
+        if not self.query.next():
+            return None
+        row = {}
+        row["rowid"] = self.query.value("rowid")
+        row["timestamp"] = self.query.value("timestamp")
+        row["team"] = self.query.value("team")
+        row["picture"] = self.query.value("picture")
+        return row
 
     def add_robot_pictures(self, team: int, pictures: list[bytes]):
         """Add robot pictures to database

@@ -40,6 +40,7 @@ FIELDS = {
         "isCoachAdult": "BOOLEAN",
         "drivebase": "TEXT",
         "autonExists": "BOOLEAN",
+        "notes": "TEXT",
     },
     "match": {
         "form": "TEXT",

@@ -51,6 +51,14 @@
       font-family: sans-serif;
     }
 
+    .notes {
+      white-space: pre-line;
+      background-color: #0d0d0d;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
     /* Carousel Styles */
     .carousel {
       display: flex;
@@ -115,18 +123,20 @@
     }
 
     .data-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: none;
+      column-count: 3; /* Three masonry columns */
+      column-gap: 10px; /* Space between columns */
+      padding: 10px;
     }
 
     .section {
       background-color: #181818;
       border-radius: 8px;
-      margin: 10px;
       padding: 10px;
-      flex: 1 1 calc(33.333% - 20px);
       box-sizing: border-box;
+      display: inline-block;
+      width: 100%;
+      break-inside: avoid;
+      margin-top: 10px;
     }
 
     .footer {
@@ -135,14 +145,14 @@
     }
 
     @media (max-width: 1200px) {
-      .section {
-        flex: 1 1 calc(50% - 20px);
+      .data-grid {
+        column-count: 2;
       }
     }
 
     @media (max-width: 768px) {
-      .section {
-        flex: 1 1 100%;
+      .data-grid {
+        column-count: 1;
       }
     }
 
@@ -157,6 +167,7 @@
         opacity: 1;
       }
     }
+
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -342,9 +353,10 @@
         </table>
       </div>
       <div class="section">
-        <h3>Robot Strategy</h3>
-        <br />
-        <p>Under construction</p>
+        <h3>Notes</h3>
+        <p class="notes">
+          {{ notes | replace('**', '\n') if notes else "No Notes"}}
+        </p>
       </div>
       <div class="section">
         <h3>Drive Team Experience</h3>
