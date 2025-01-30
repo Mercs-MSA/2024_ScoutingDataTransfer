@@ -390,7 +390,7 @@ class Downloader(QWidget):
 
         self.releases = []
         self.downloads: dict[str, dict] = {}
-        self.app_dir = user_data_dir("scouting_transfer", "mercs")
+        self.app_dir = user_data_dir("scouting_transfer", "mercs", ensure_exists=True)
         logger.info(f"Download path: {self.app_dir}")
 
         self.resources = shared_resources.InstallerSharedResources()
