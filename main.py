@@ -3,7 +3,7 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
-import base64
+import pybase64 as base64
 from functools import partial
 import hashlib
 import io
@@ -1139,9 +1139,7 @@ class MainWindow(QMainWindow):
                 )["picture"]
                 for x in pics:
                     pm = QPixmap()
-                    pm.loadFromData(
-                        base64.b64decode(x.replace("data:image/png;base64,", ""))
-                    )
+                    pm.loadFromData(base64.b64decode(x.split(",")[1]))
                     pms.append(pm)
 
                 self.data_sidebars[sidebar].set_pixmaps(pms)

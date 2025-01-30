@@ -10,3 +10,4 @@ minify-html~=0.15.0
 platformdirs~=4.3.6
 requests~=2.32.3
 pure-python-adb~=0.3.0.dev0
+pybase64~=1.4.0

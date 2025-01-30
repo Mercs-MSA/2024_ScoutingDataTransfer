@@ -38,6 +38,10 @@
       font-weight: bold;
       color: black;
     }
+    .climb > th {
+      background-color: #4067bb;
+      font-weight: bold;
+    }
     p,
     h1,
     h2,
@@ -306,6 +310,33 @@
                 height="22px"
               />
               {{"Yes" if descore else "No"}}
+            </td>
+          </tr>
+        </table>
+        <h4>Endgame / Climb</h4>
+        <table>
+          <tr class="climb">
+            <th>Deep Climb</th>
+            <th>Shallow Climb</th>
+          </tr>
+          <tr>
+            <td>
+              <img
+                src="{{checkBase64Icon if deepClimb else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if deepClimb else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if shallowClimb else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if shallowClimb else "No"}}
             </td>
           </tr>
         </table>

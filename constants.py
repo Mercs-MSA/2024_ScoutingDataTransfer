@@ -32,6 +32,8 @@ FIELDS = {
         "processor": "BOOLEAN",
         "barge": "BOOLEAN",
         "descore": "BOOLEAN",
+        "deepClimb": "BOOLEAN",
+        "shallowClimb": "BOOLEAN",
         "driverYears": "INTEGER",
         "operatorYears": "INTEGER",
         "coachYears": "INTEGER",
