@@ -3,6 +3,7 @@ import os
 import hashlib
 import time
 import shutil
+import subprocess
 
 import ppadb.client
 import ppadb.device
@@ -189,6 +190,9 @@ class AdbSpinupWorker(QRunnable):
         try:
             if not self.resources.debug_client:
                 logger.debug(f"Starting ADB client {self.host}:{self.port}")
+                result = subprocess.run(["adb", "start-server"], capture_output=True, text=True)
+                if result.returncode != 0:
+                    raise RuntimeError(f"Failed to start adb server: {result.stderr}")
                 self.resources.debug_client = ppadb.client.Client(self.host, self.port)
                 self.resources.debug_client.create_connection()
                 self.signals.finished.emit(self.resources.debug_client)
