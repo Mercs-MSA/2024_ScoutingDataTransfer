@@ -165,3 +165,6 @@ qual/
 playoff/
 pit/
 *.sqlite
+
+# cProfile
+*.prof
