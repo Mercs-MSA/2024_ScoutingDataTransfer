@@ -1,17 +1,16 @@
 from functools import partial
-import re
-import sys
 import os
 import hashlib
 import time
 import shutil
 
+import ppadb.client
+import ppadb.device
 import requests
 from platformdirs import user_data_dir
 from loguru import logger
 
 from PySide6.QtWidgets import (
-    QApplication,
     QWidget,
     QVBoxLayout,
     QPushButton,
@@ -20,9 +19,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QFrame,
     QProgressBar,
-    QStackedWidget,
     QGroupBox,
-    QScrollArea,
+    QWizard,
+    QWizardPage,
+    QListWidget,
+    QListWidgetItem,
 )
 from PySide6.QtCore import (
     QThread,
@@ -33,75 +34,22 @@ from PySide6.QtCore import (
     QObject,
     QSize,
     QUrl,
+    QPoint,
 )
-from PySide6.QtGui import QFont, QDesktopServices
+from PySide6.QtGui import (
+    QFont,
+    QDesktopServices,
+    QPixmap,
+    QLinearGradient,
+    QPainter,
+    QColor,
+)
 
 import qtawesome as qta
 
-
-
-class QWidgetList(QScrollArea):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.setWidgetResizable(True)
-        self.container = QWidget()
-        self.root_layout = QVBoxLayout(self.container)
-        self.root_layout.setSpacing(5)
-        self.root_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.stack = QStackedWidget()
-        self.root_layout.addWidget(self.stack)
-        self.setWidget(self.container)
-
-        self.list_widget = QWidget()
-        self.list_layout = QVBoxLayout(self.list_widget)
-        self.list_layout.setSpacing(5)
-        self.list_layout.setContentsMargins(0, 0, 0, 0)
-        self.stack.addWidget(self.list_widget)
-
-        self.loading_widget = QWidget()
-        self.loading_layout = QVBoxLayout(self.loading_widget)
-        self.loading_label = QLabel("Please Wait...")
-        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.loading_spinner = qta.IconWidget()
-        self.animation = qta.Spin(self.loading_spinner)
-        self.loading_spinner.setIconSize(QSize(128, 128))
-        self.loading_spinner.setIcon(qta.icon("msc.loading", animation=self.animation))
-        self.loading_spinner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.loading_layout.addWidget(self.loading_spinner)
-        self.loading_layout.addWidget(self.loading_label)
-        self.loading_widget.setLayout(self.loading_layout)
-        self.stack.addWidget(self.loading_widget)
-
-        self.list_layout.addStretch()
-
-    def add_widget(self, widget: QWidget):
-        """Add a widget to the list."""
-        self.list_layout.insertWidget(self.list_layout.count() - 1, widget)
-
-    def remove_widget(self, widget: QWidget):
-        """Remove a specific widget from the list."""
-        self.list_layout.removeWidget(widget)
-        widget.setParent(None)
-
-    def clear_widgets(self):
-        """Remove all widgets from the list."""
-        while self.list_layout.count() - 1:
-            item = self.list_layout.takeAt(0)
-            if item.widget():
-                item.widget().setParent(None)
-
-    def set_spacing(self, spacing: int):
-        """Set spacing between widgets."""
-        self.list_layout.setSpacing(spacing)
-
-    def set_loading(self, loading: bool):
-        """Show or hide the loading screen."""
-        if loading:
-            self.stack.setCurrentWidget(self.loading_widget)
-        else:
-            self.stack.setCurrentWidget(self.list_widget)
+import constants
+import shared_resources
+from widgets import QWidgetList
 
 
 class ApkDownloadWorker(QRunnable):
@@ -174,6 +122,14 @@ class FetchSignals(QObject):
     error = Signal(str)
     progress = Signal(int)
 
+class AdbSpinupSignals(QObject):
+    finished = Signal(ppadb.client.Client)
+    error = Signal(str)
+
+class AdbDeviceSearchSignals(QObject):
+    finished = Signal(list)
+    error = Signal(str)
+
 
 class FetchReleasesWorker(QRunnable):
     def __init__(self) -> None:
@@ -204,7 +160,6 @@ class FetchReleasesWorker(QRunnable):
                 if (not apk_url) or (not sha1_url):
                     logger.warning(f"Invalid release tag: {version}")
 
-
                 if apk_url and sha1_url:
                     release_info = {
                         "version": version,
@@ -221,6 +176,52 @@ class FetchReleasesWorker(QRunnable):
             self.signals.error.emit(repr(e))
             self.signals.finished.emit([])
             logger.error(f"Error fetching releases: {repr(e)}")
+
+class AdbSpinupWorker(QRunnable):
+    def __init__(self, resources: shared_resources.InstallerSharedResources, host: str = "127.0.0.1", port: int = 5037) -> None:
+        super().__init__()
+        self.host = host
+        self.port = port
+        self.resources = resources
+        self.signals = AdbSpinupSignals()
+
+    def run(self):
+        try:
+            if not self.resources.debug_client:
+                logger.debug(f"Starting ADB client {self.host}:{self.port}")
+                self.resources.debug_client = ppadb.client.Client(self.host, self.port)
+                self.resources.debug_client.create_connection()
+                self.signals.finished.emit(self.resources.debug_client)
+            else:
+                logger.debug(f"Client already exists {self.host}:{self.port}, reconnecting")
+                self.resources.debug_client.create_connection()
+                self.signals.finished.emit(self.resources.debug_client)
+        except Exception as e:
+            self.signals.error.emit(repr(e))
+            logger.error(f"Failed to start ADB client, {repr(e)}")
+
+class AdbDeviceSearchWorker(QRunnable):
+    def __init__(self, resources: shared_resources.InstallerSharedResources) -> None:
+        super().__init__()
+        self.resources = resources
+        self.signals = AdbDeviceSearchSignals()
+
+    def run(self):
+        if not self.resources.debug_client:
+            self.signals.error.emit("ADB client is null")
+            self.signals.finished.emit([])
+            return
+        output = []
+        try:
+            devices = self.resources.debug_client.devices()
+            logger.debug(f"Found {len(devices)} devices")
+            device: ppadb.device.Device
+            for device in devices:
+                appver = device.get_package_version_name(constants.COLLECTION_APP_ID)
+                output.append({"device": device, "serial": device.serial, "app": appver})
+            self.signals.finished.emit(output)
+        except Exception as e:
+            self.signals.error.emit(repr(e))
 
 
 class Chip(QWidget):
@@ -250,6 +251,139 @@ class Chip(QWidget):
         )
 
 
+class InstallerWizard(QWizard):
+    class InitPage(QWizardPage):
+        def __init__(self, resources: shared_resources.InstallerSharedResources, parent=None):
+            super().__init__(parent)
+            self.resources = resources
+
+            self.setTitle("ADB Server Setup")
+            self.setSubTitle("Startup a new ADB server instance")
+            self.setCommitPage(True)
+
+            # spinup ADB client
+            self.spinup_worker = AdbSpinupWorker(self.resources)
+            self.spinup_worker.signals.finished.connect(self.set_client)
+            self.spinup_worker.signals.error.connect(self.on_error)
+            if self.resources.worker_pool:
+                self.resources.worker_pool.start(self.spinup_worker)
+            else:
+                logger.critical("Worker Pool is null, can't spinup ADB client")
+
+            layout = QVBoxLayout()
+            self.setLayout(layout)
+
+            self.spinner = qta.IconWidget()
+            self.spinner.setIconSize(QSize(64, 64))
+            self.animation = qta.Spin(self.spinner)
+            self.spinner.setIcon(qta.icon("msc.loading", animation=self.animation))
+            self.spinner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(self.spinner)
+            
+            self.wait_label = QLabel("Please wait for ADB connection...")
+            self.wait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(self.wait_label)
+            
+            
+        def set_client(self, client: ppadb.client.Client):
+            self.resources.debug_client = client
+            logger.debug(f"Client started, {client}")
+            self.wizard().next()
+
+        def on_error(self, error: str):
+            QMessageBox.critical(self, "Error", f"Failed to spin up ADB client: {error}", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+            self.wizard().reject()
+
+    class TabletSelectPage(QWizardPage):
+        def __init__(self, resources: shared_resources.InstallerSharedResources, parent: QWidget | None = None) -> None:
+            super().__init__(parent)
+
+            self.setTitle("Select a Tablet")
+            self.setSubTitle("Select a target for the application")
+
+            self.resources = resources
+
+            layout = QVBoxLayout()
+            self.setLayout(layout)
+
+            self.device_list = QListWidget(self)
+            self.device_list.setSelectionBehavior(QListWidget.SelectionBehavior.SelectItems)
+            self.device_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+            self.device_list.itemSelectionChanged.connect(self.completeChanged)
+            self.device_list.setSpacing(2)
+            layout.addWidget(self.device_list)
+
+            self.refresh_button = QPushButton("Refresh Device List")
+            self.refresh_button.clicked.connect(self.refresh_devices)
+            layout.addWidget(self.refresh_button)
+
+            self.refresh_devices()
+
+        def refresh_devices(self):
+            if not self.resources.debug_client:
+                return
+            
+            self.device_list.clear()
+            try:
+                self.device_search_worker = AdbDeviceSearchWorker(self.resources)
+                self.device_search_worker.signals.finished.connect(self.populate_device_list)
+                self.device_search_worker.signals.error.connect(self.on_error)
+                if self.resources.worker_pool:
+                    self.resources.worker_pool.start(self.device_search_worker)
+                else:
+                    logger.critical("Worker Pool is null, can't search for devices")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to list devices: {repr(e)}")
+
+        def on_error(self, error: str):
+            QMessageBox.critical(self, "Error", f"An error occured during an ADB action: {error}", QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+            self.wizard().reject()
+
+        def populate_device_list(self, devices: list[dict]):
+            for device in devices:
+                item = QListWidgetItem(f"{device['serial']} - Scouting App {device['app']}")
+                item.setData(Qt.ItemDataRole.UserRole, device["device"])
+                self.device_list.addItem(item)
+
+        def get_devices(self):
+            output = []
+            for selection in self.device_list.selectedItems():
+                output.append(selection.data(Qt.ItemDataRole.UserRole))
+
+        def isComplete(self) -> bool:
+            return len(self.device_list.selectedIndexes()) > 0
+
+
+    def __init__(self, resourses: shared_resources.InstallerSharedResources, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+        self.setWindowTitle("Installer")
+
+        self.setPixmap(QWizard.WizardPixmap.BannerPixmap, self.generate_banner())
+        self.setPixmap(
+            QWizard.WizardPixmap.LogoPixmap, qta.icon("mdi6.application-export").pixmap(64, 64)
+        )
+
+        self.selector = self.TabletSelectPage(resourses, self)
+
+        self.setPage(0, self.InitPage(resourses, self))
+        self.setPage(1, self.selector)
+
+    def generate_banner(self):
+        px = QPixmap(QSize(self.width(), 84))
+        px.fill(Qt.GlobalColor.transparent)
+
+        g = QLinearGradient(QPoint(0, 0), QPoint(self.width(), 84))
+        g.setColorAt(0, QColor("#A91717"))
+        g.setColorAt(1, Qt.GlobalColor.transparent)
+
+        painter = QPainter(px)
+        painter.fillRect(px.rect(), g)
+        painter.end()
+
+        return px
+
+
 class Downloader(QWidget):
     def __init__(self):
         super().__init__()
@@ -259,9 +393,12 @@ class Downloader(QWidget):
         self.app_dir = user_data_dir("scouting_transfer", "mercs")
         logger.info(f"Download path: {self.app_dir}")
 
-        self.worker_pool = QThreadPool()
-        self.worker_pool.setMaxThreadCount(16)
+        self.resources = shared_resources.InstallerSharedResources()
+        self.resources.worker_pool = QThreadPool()
+
+        self.resources.worker_pool.setMaxThreadCount(16)
         self.worker: QThread | None = None
+
 
         self.initUI()
 
@@ -310,7 +447,8 @@ class Downloader(QWidget):
                 )
             )
             worker.signals.finished.connect(self.on_releases_fetched)
-            self.worker_pool.start(worker)
+            if self.resources.worker_pool:
+                self.resources.worker_pool.start(worker)
 
     def on_releases_fetched(self, releases):
         self.releases = releases
@@ -380,7 +518,8 @@ class Downloader(QWidget):
         worker.signals.finished.connect(
             lambda result: self.on_download_finished(result[0], result[1], result[2])
         )
-        self.worker_pool.start(worker)
+        if self.resources.worker_pool:
+            self.resources.worker_pool.start(worker)
 
     def download_checksum(
         self, version, url, path, name, progressbar: QProgressBar | None
@@ -398,7 +537,8 @@ class Downloader(QWidget):
         worker.signals.finished.connect(
             lambda result: self.on_download_finished(result[0], result[1], result[2])
         )
-        self.worker_pool.start(worker)
+        if self.resources.worker_pool:
+            self.resources.worker_pool.start(worker)
 
     def update_progress(self, version, value, name):
         self.downloads[f"{version}-{name}"]["progress"] = value
@@ -450,8 +590,11 @@ class Downloader(QWidget):
                 apk_path = os.path.join(version_path, "app-release.apk")
                 if os.path.isfile(apk_path):
                     release_item = ReleaseItem(True, version, version, False, "", "")
-                    release_item.show_file.connect(partial(self.show_file, version_path))
+                    release_item.show_file.connect(
+                        partial(self.show_file, version_path)
+                    )
                     release_item.delete.connect(partial(self.delete_version, version))
+                    release_item.install.connect(partial(self.install_adb, version))
                     self.downloaded_releases.add_widget(release_item)
 
     def show_file(self, path: str):
@@ -476,6 +619,10 @@ class Downloader(QWidget):
                     self, "Error", f"Failed to delete version {version}: {repr(e)}"
                 )
         self.refresh_downloaded()
+
+    def install_adb(self, version: str):
+        wizard = InstallerWizard(self.resources)
+        wizard.exec()
 
     def verify_sha1(self, file_path, sha1_path):
         with open(sha1_path, "r") as sha1_file:
@@ -566,14 +713,3 @@ class ReleaseItem(QFrame):
             button_layout.addWidget(self.delete_button)
 
         self.release_chips.addStretch()
-
-
-if __name__ == "__main__":
-    import qdarktheme
-
-    app = QApplication(sys.argv)
-    qdarktheme.setup_theme("dark")
-    main_window = Downloader()
-    main_window.resize(640, 480)
-    main_window.show()
-    sys.exit(app.exec())

@@ -104,6 +104,9 @@ ENABLE_ASSIGNMENT_GENERATOR = True
 # Enable the ADB-powered tablet management features
 ENAGLE_APPMGMT = True
 
+# Collection app ID
+COLLECTION_APP_ID = "com.mercs.scouting"
+
 # Supported Baud Rates
 # Any values *should* work, but these are the recommended defaults
 BAUDS: typing.Final = [

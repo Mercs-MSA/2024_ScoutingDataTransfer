@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QTextBrowser,
     QStackedWidget,
     QWidget,
+    QScrollArea,
 )
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -232,3 +233,67 @@ class TeamEntryWidget(QFrame):
     def mousePressEvent(self, event):
         self.clicked.emit(self.team_number.text())
         super().mousePressEvent(event)
+
+
+class QWidgetList(QScrollArea):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWidgetResizable(True)
+        self.container = QWidget()
+        self.root_layout = QVBoxLayout(self.container)
+        self.root_layout.setSpacing(5)
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.stack = QStackedWidget()
+        self.root_layout.addWidget(self.stack)
+        self.setWidget(self.container)
+
+        self.list_widget = QWidget()
+        self.list_layout = QVBoxLayout(self.list_widget)
+        self.list_layout.setSpacing(5)
+        self.list_layout.setContentsMargins(0, 0, 0, 0)
+        self.stack.addWidget(self.list_widget)
+
+        self.loading_widget = QWidget()
+        self.loading_layout = QVBoxLayout(self.loading_widget)
+        self.loading_label = QLabel("Please Wait...")
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_spinner = qta.IconWidget()
+        self.animation = qta.Spin(self.loading_spinner)
+        self.loading_spinner.setIconSize(QSize(128, 128))
+        self.loading_spinner.setIcon(qta.icon("msc.loading", animation=self.animation))
+        self.loading_spinner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_layout.addWidget(self.loading_spinner)
+        self.loading_layout.addWidget(self.loading_label)
+        self.loading_widget.setLayout(self.loading_layout)
+        self.stack.addWidget(self.loading_widget)
+
+        self.list_layout.addStretch()
+
+    def add_widget(self, widget: QWidget):
+        """Add a widget to the list."""
+        self.list_layout.insertWidget(self.list_layout.count() - 1, widget)
+
+    def remove_widget(self, widget: QWidget):
+        """Remove a specific widget from the list."""
+        self.list_layout.removeWidget(widget)
+        widget.setParent(None)
+
+    def clear_widgets(self):
+        """Remove all widgets from the list."""
+        while self.list_layout.count() - 1:
+            item = self.list_layout.takeAt(0)
+            if item.widget():
+                item.widget().setParent(None)
+
+    def set_spacing(self, spacing: int):
+        """Set spacing between widgets."""
+        self.list_layout.setSpacing(spacing)
+
+    def set_loading(self, loading: bool):
+        """Show or hide the loading screen."""
+        if loading:
+            self.stack.setCurrentWidget(self.loading_widget)
+        else:
+            self.stack.setCurrentWidget(self.list_widget)
