@@ -18,3 +18,19 @@ Collects data with a serial QR/Barcode Scanner.
 - Robot picture import from PNG, JPEG, BMP, HEIC
 - Robot report export powered by HTML Jinja2 Templates
 - Easy configuration for import format
+- Deploy [Collection App](https://github.com/Mercs-MSA/2024_ScoutingDataCollection) to tablets over ADB
+
+## Requirements
+
+### System Requirements
+
+ADB must be installed to the current PATH
+
+#### Fedora
+ADB is provided with the `android-tools` package
+
+### Python Requirements
+
+This app requires Python 3.11 or newer
+
+Install modules with `pip install -r requirements.txt`
