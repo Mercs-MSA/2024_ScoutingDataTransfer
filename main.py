@@ -693,9 +693,7 @@ class MainWindow(QMainWindow):
             view.setModel(model)
             view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 
-            view.dataChanged = lambda *args, **kwargs: table_data_edit(
-                form, *args, **kwargs
-            )
+            view.dataChanged = partial(table_data_edit, form) # type: ignore
 
             view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             view.customContextMenuRequested.connect(

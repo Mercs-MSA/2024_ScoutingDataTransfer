@@ -54,9 +54,20 @@ class ScoutingFormModel(QStandardItemModel):
                 if isinstance(value, float) and math.isnan(value):
                     icon = qtawesome.icon("mdi6.null")
                 elif self._column_types[i] == "BOOLEAN":
-                    icon = qtawesome.icon(
-                        "mdi6.circle", color="#4caf50" if value else "#f44336"
-                    )
+                    print(value, type(value))
+                    if value == 1:
+                        icon = qtawesome.icon(
+                            "mdi6.circle", color="#4caf50"
+                        )
+                    elif value == 0:
+                        icon = qtawesome.icon(
+                            "mdi6.circle", color="#f44336"
+                        )
+                    else:
+                        icon = qtawesome.icon(
+                            "mdi6.circle", color="#efefef"
+                        )
+
                 elif isinstance(value, float):
                     icon = qtawesome.icon("mdi6.decimal")
                 elif isinstance(value, int):
