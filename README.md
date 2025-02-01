@@ -27,6 +27,7 @@ Collects data with a serial QR/Barcode Scanner.
 ADB must be installed to the current PATH
 
 #### Fedora
+
 ADB is provided with the `android-tools` package
 
 ### Python Requirements

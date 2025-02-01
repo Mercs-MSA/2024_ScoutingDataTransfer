@@ -44,7 +44,6 @@ class ScoutingFormModel(QStandardItemModel):
         for row in data:
             items = []
             for i, value in enumerate(list(row.values())):
-                # print(list(row.keys()))
                 if not list(row.keys())[i] == self.headerData(
                     i, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole
                 ):
@@ -54,7 +53,6 @@ class ScoutingFormModel(QStandardItemModel):
                 if isinstance(value, float) and math.isnan(value):
                     icon = qtawesome.icon("mdi6.null")
                 elif self._column_types[i] == "BOOLEAN":
-                    print(value, type(value))
                     if value == 1:
                         icon = qtawesome.icon(
                             "mdi6.circle", color="#4caf50"

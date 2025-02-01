@@ -228,12 +228,102 @@
           <tr>
             <td>{{drivebase}}</td>
           </tr>
+          <h4>Repairability: {{repairability}} Stars</h4>
         </table>
       </div>
       <div class="section">
         <h3>Robot Auton</h3>
-        {% if autonExists %}
-        <p>The robot has an auton. Under construction</p>
+        {% if autonExists and justExit %}
+        <h4>
+          <img src="{{warnBase64Icon}}" alt="W" height="32px" /> Exit only Auton
+        </h4>
+
+        <h4>Starting Position Abilities</h4>
+        <table>
+          <tr>
+            <th>Left</th>
+            <th>Middle</th>
+            <th>Right</th>
+          </tr>
+          <tr>
+            <td>
+              <img
+                src="{{checkBase64Icon if canAutoLeft else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if canAutoLeft else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if canAutoMid else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if canAutoMid else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if canAutoRight else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if canAutoRight else "No"}}
+            </td>
+          </tr>
+        </table>
+
+        <h4>Auto Strategy</h4>
+        <p class="notes">
+          {{ autonStrategy | replace('**', '\n') if notes else "No Notes"}}
+        </p>
+        {% elif autonExists %}
+
+        <h4>Starting Position Abilities</h4>
+        <table>
+          <tr>
+            <th>Left</th>
+            <th>Middle</th>
+            <th>Right</th>
+          </tr>
+          <tr>
+            <td>
+              <img
+                src="{{checkBase64Icon if canAutoLeft else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if canAutoLeft else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if canAutoMid else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if canAutoMid else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if canAutoRight else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if canAutoRight else "No"}}
+            </td>
+          </tr>
+        </table>
+
+        <h4>Auto Strategy</h4>
+        <p class="notes">
+          {{ autonStrategy | replace('**', '\n') if notes else "No Notes"}}
+        </p>
         {% else %}
         <h2><img src="{{warnBase64Icon}}" alt="W" height="32px" /> No Auton</h2>
         {% endif %}
@@ -353,10 +443,55 @@
         </table>
       </div>
       <div class="section">
-        <h3>Notes</h3>
-        <p class="notes">
-          {{ notes | replace('**', '\n') if notes else "No Notes"}}
-        </p>
+        <h3>Strategy</h3>
+
+        <h4>Cycle Roles</h4>
+        <table>
+          <tr>
+            <th>Coral</th>
+            <th>Algae</th>
+            <th>Defense</th>
+            <th>Feed</th>
+          </tr>
+          <tr>
+            <td>
+              <img
+                src="{{checkBase64Icon if coralCycle else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if coralCycle else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if algaeCycle else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if algaeCycle else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if defense else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if defense else "No"}}
+            </td>
+            <td>
+              <img
+                src="{{checkBase64Icon if feed else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if feed else "No"}}
+            </td>
+          </tr>
+        </table>
       </div>
       <div class="section">
         <h3>Drive Team Experience</h3>
@@ -372,6 +507,12 @@
             <td>{{coachYears}} Years {{"(Adult)" if isCoachAdult}}</td>
           </tr>
         </table>
+      </div>
+      <div class="section">
+        <h3>Comments</h3>
+        <p class="notes">
+          {{ notes | replace('**', '\n') if notes else "No Notes"}}
+        </p>
       </div>
     </div>
 

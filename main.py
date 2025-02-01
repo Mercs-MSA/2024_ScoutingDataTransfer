@@ -1049,86 +1049,91 @@ class MainWindow(QMainWindow):
                     .data()
                 )
 
-            template_loader = jinja2.FileSystemLoader("templates")
-            template_env = jinja2.Environment(loader=template_loader)
+            try:
 
-            def include_file(name, *args):
-                """Helper function for jinja2 includes"""
-                return template_env.get_template(name).render(*args)
+                template_loader = jinja2.FileSystemLoader("templates")
+                template_env = jinja2.Environment(loader=template_loader)
 
-            template = jinja2.Template(
-                constants.SIDEBAR_CONSTRUCTORS[sidebar],
-                extensions=["jinja2.ext.do"],
-            )
+                def include_file(name, *args):
+                    """Helper function for jinja2 includes"""
+                    return template_env.get_template(name).render(*args)
 
-            rowdata = {}
-            for row in self.database.get_data(sidebar):
-                if row["rowid"] == int(rowid):
-                    rowdata = row
-                    break
-
-            imbuffer = QBuffer()
-            qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
-                imbuffer, "PNG"
-            )
-            rowdata["warnBase64Icon"] = (
-                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-            )
-
-            imbuffer = QBuffer()
-            qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
-                QSize(30, 30)
-            ).save(imbuffer, "PNG")
-            rowdata["xBase64Icon"] = (
-                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-            )
-
-            imbuffer = QBuffer()
-            qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
-                QSize(30, 30)
-            ).save(imbuffer, "PNG")
-            rowdata["checkBase64Icon"] = (
-                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-            )
-
-            imbuffer = QBuffer()
-            QPixmap("icons/logo16.png").save(imbuffer, "PNG")
-            rowdata["logo16Base64"] = (
-                f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
-            )
-
-            # Add include_file function to template context
-            rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
-
-            # Add event code
-            if "event" not in rowdata:
-                rowdata["event"] = self.event_entry.currentText()
-
-            rowdata["generator"] = "sidebar"
-
-            self.data_sidebars[sidebar].set_html(template.render(rowdata))
-
-            data = self.database.get_pictures(self.data_viewers[sidebar]
-                    .selectionModel()
-                    .selectedRows()[0]
-                    .siblingAtColumn(
-                        list(constants.FIELDS[sidebar].keys()).index("team") + 2
-                    )
-                    .data())
-
-            if data:
-                pms = []
-                pics = json.loads(data["picture"])["picture"]
-                for x in pics:
-                    pm = QPixmap()
-                    pm.loadFromData(base64.b64decode(x.split(",")[1]))
-                    pms.append(pm)
-
-                self.data_sidebars[sidebar].set_pixmaps(pms)
-            else:
-                self.data_sidebars[sidebar].set_pixmaps(
-                    [QPixmap("icons/generic_robot.png")]
+                template = jinja2.Template(
+                    constants.SIDEBAR_CONSTRUCTORS[sidebar],
+                    extensions=["jinja2.ext.do"],
                 )
+
+                rowdata = {}
+                for row in self.database.get_data(sidebar):
+                    if row["rowid"] == int(rowid):
+                        rowdata = row
+                        break
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
+                    imbuffer, "PNG"
+                )
+                rowdata["warnBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.close-thick", color="#f44336").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["xBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                imbuffer = QBuffer()
+                qtawesome.icon("mdi6.check-bold", color="#8bc34a").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
+                rowdata["checkBase64Icon"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                imbuffer = QBuffer()
+                QPixmap("icons/logo16.png").save(imbuffer, "PNG")
+                rowdata["logo16Base64"] = (
+                    f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
+                )
+
+                # Add include_file function to template context
+                rowdata["include_file"] = lambda *args: include_file(*args, rowdata)
+
+                # Add event code
+                if "event" not in rowdata:
+                    rowdata["event"] = self.event_entry.currentText()
+
+                rowdata["generator"] = "sidebar"
+
+                self.data_sidebars[sidebar].set_html(template.render(rowdata))
+
+                data = self.database.get_pictures(self.data_viewers[sidebar]
+                        .selectionModel()
+                        .selectedRows()[0]
+                        .siblingAtColumn(
+                            list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                        )
+                        .data())
+
+                if data:
+                    pms = []
+                    pics = json.loads(data["picture"])["picture"]
+                    for x in pics:
+                        pm = QPixmap()
+                        pm.loadFromData(base64.b64decode(x.split(",")[1]))
+                        pms.append(pm)
+
+                    self.data_sidebars[sidebar].set_pixmaps(pms)
+                else:
+                    self.data_sidebars[sidebar].set_pixmaps(
+                        [QPixmap("icons/generic_robot.png")]
+                    )
+            except (jinja2.exceptions.TemplateSyntaxError, jinja2.exceptions.TemplatesNotFound, jinja2.exceptions.TemplateError) as e:
+                self.data_sidebars[sidebar].set_html("Failure to load template!")
+                logger.error(f"Failed to load template; {repr(e)}")
 
     def reload_picture_teams(self):
         self.pictures_team_browser.clear_teams()
