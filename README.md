@@ -35,3 +35,11 @@ ADB is provided with the `android-tools` package
 This app requires Python 3.11 or newer
 
 Install modules with `pip install -r requirements.txt`
+
+### Note about Python 3.13
+
+If using Py 3.13, `cargo`, the Rust package manager is required for building the `minify-html` dependency.
+
+**It will take a while to install the `minify-html` dependency as it will build from source**
+
+You may also need the `--ignore-requires-python` pip argument to successfully install the `pyqtdarktheme` fork.
