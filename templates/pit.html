@@ -278,6 +278,31 @@
           </tr>
         </table>
 
+        <h4>Auton Coral</h4>
+        <table>
+          <tr class="coral">
+            <th>L1</th>
+            <th>L2</th>
+            <th>L3</th>
+            <th>L4</th>
+          </tr>
+          <tr>
+            <td>
+              {{ autonL1Num }}
+            </td>
+            <td>
+              {{ autonL2Num }}
+            </td>
+            <td>
+              {{ autonL3Num }}
+            </td>
+            <td>
+              {{ autonL4Num }}
+            </td>
+          </tr>
+        </table>
+        
+
         <h4>Auto Strategy</h4>
         <p class="notes">
           {{ autonStrategy | replace('**', '\n') if notes else "No Notes"}}
