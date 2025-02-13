@@ -140,11 +140,12 @@ class DataManager(QObject):
         fields = constants.FIELDS[table]
         values = ", ".join(
             [
-                f"'{data[field]}'" if isinstance(data[field], str) else str(data[field])
+                f"'{data[field]}'" if isinstance(data[field], str) else "NULL" if data[field] is None else str(data[field])
                 for field in fields.keys()
             ]
         )
         query = f"INSERT INTO {table} ({', '.join(fields.keys())}) VALUES ({values})"
+        print(query)
         if not self.query.exec(query):
             self.on_message.emit(
                 f"Failed to insert data: {self.query.lastError().text()}",

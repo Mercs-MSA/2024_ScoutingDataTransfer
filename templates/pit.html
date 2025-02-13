@@ -209,13 +209,11 @@
             <th>Length</th>
             <th>Width</th>
             <th>Height</th>
-            <th>Weight</th>
           </tr>
           <tr>
-            <td>{{length}}in</td>
-            <td>{{width}}in</td>
-            <td>{{height}}in</td>
-            <td>{{weight}}lbs</td>
+            <td>{{length if length else "Data Incomplete"}}in</td>
+            <td>{{width if width else "Data Incomplete"}}in</td>
+            <td>{{height if height else "Data Incomplete"}}in</td>
           </tr>
         </table>
       </div>
@@ -226,61 +224,21 @@
             <th>Drivebase</th>
           </tr>
           <tr>
-            <td>{{drivebase}}</td>
+            <td>{{drivebase if drivebase else "Data Incomplete"}}</td>
           </tr>
-          <h4>Repairability: {{repairability}} Stars</h4>
+          <h4>Repairability: {{repairability if repairability else "Data Incomplete"}} Stars</h4>
         </table>
       </div>
       <div class="section">
         <h3>Robot Auton</h3>
-        {% if autonExists and justExit %}
-        <h4>
-          <img src="{{warnBase64Icon}}" alt="W" height="32px" /> Exit only Auton
-        </h4>
+        {% if autonExists %}
 
-        <h4>Starting Position Abilities</h4>
-        <table>
-          <tr>
-            <th>Left</th>
-            <th>Middle</th>
-            <th>Right</th>
-          </tr>
-          <tr>
-            <td>
-              <img
-                src="{{checkBase64Icon if canAutoLeft else xBase64Icon}}"
-                style="vertical-align: middle"
-                alt="W"
-                height="22px"
-              />
-              {{"Yes" if canAutoLeft else "No"}}
-            </td>
-            <td>
-              <img
-                src="{{checkBase64Icon if canAutoMid else xBase64Icon}}"
-                style="vertical-align: middle"
-                alt="W"
-                height="22px"
-              />
-              {{"Yes" if canAutoMid else "No"}}
-            </td>
-            <td>
-              <img
-                src="{{checkBase64Icon if canAutoRight else xBase64Icon}}"
-                style="vertical-align: middle"
-                alt="W"
-                height="22px"
-              />
-              {{"Yes" if canAutoRight else "No"}}
-            </td>
-          </tr>
-        </table>
-
-        <h4>Auto Strategy</h4>
-        <p class="notes">
-          {{ autonStrategy | replace('**', '\n') if notes else "No Notes"}}
-        </p>
-        {% elif autonExists %}
+        <h4><img
+          src="{{checkBase64Icon if canAutoLeft else xBase64Icon}}"
+          alt="W"
+          style="vertical-align: center;"
+          height="36px"
+        />Exit</h4>
 
         <h4>Starting Position Abilities</h4>
         <table>
@@ -492,6 +450,8 @@
             </td>
           </tr>
         </table>
+        <h4>Human Player Preferred Position</h4>
+        <p>{{ humanPlayerLocation if humanPlayerLocation else "Data Incomplete" }}</p>
       </div>
       <div class="section">
         <h3>Drive Team Experience</h3>
@@ -502,9 +462,9 @@
             <th>Coach</th>
           </tr>
           <tr>
-            <td>{{driverYears}} Years</td>
-            <td>{{operatorYears}} Years</td>
-            <td>{{coachYears}} Years {{"(Adult)" if isCoachAdult}}</td>
+            <td>{{driverYears if driverYears else "Data Incomplete"}} Years</td>
+            <td>{{operatorYears if operatorYears else "Data Incomplete"}} Years</td>
+            <td>{{coachYears if coachYears else "Data Incomplete"}} Years {{"(Adult)" if isCoachAdult}}</td>
           </tr>
         </table>
       </div>

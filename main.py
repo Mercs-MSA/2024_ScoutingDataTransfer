@@ -593,7 +593,7 @@ class MainWindow(QMainWindow):
             self.reload_sidebars()
 
         def table_menu(
-            form: str, model: data_models.ScoutingFormModel, table: QTableView
+            form: str, model: data_models.ScoutingFormModel, table: QTableView, *_args
         ):
             if table.selectedIndexes():
                 menu = QMenu(self)
@@ -606,6 +606,7 @@ class MainWindow(QMainWindow):
                         .selectedRows()[0]
                         .siblingAtColumn(0)
                         .data(),
+                        table,
                         model,
                     )
                     if QMessageBox.question(
@@ -1147,52 +1148,54 @@ class MainWindow(QMainWindow):
         self.load_team_pictures_panel(team)
 
     def load_team_pictures_panel(self, team: int | str):
-        data = self.database.get_data("robot_pictures")
-        if int(team) in [x["team"] for x in data]:
-            self.pictures_right_pane.setCurrentIndex(1)
-            self.pictures_right_team_label.setText(f"Team {team}")
-            self.pictures_browser_list.clear()
-            for image in json.loads(
-                [x for x in data if x["team"] == int(team)][0]["picture"]
-            )["picture"]:
-                # create pixmap from base64
-                pixmap = QPixmap()
-                pixmap.loadFromData(
-                    base64.b64decode(image.replace("data:image/png;base64,", ""))
-                )
-                item = QListWidgetItem()
-                item.setSizeHint(
-                    QSize(300, constants.PICTURE_BROWSER_MAX_RESOLUTION.height() + 20)
-                )
-                item.setIcon(QIcon(pixmap))
-
-                widget = QWidget()
-
-                layout = QVBoxLayout()
-                widget.setLayout(layout)
-
-                top_layout = QHBoxLayout()
-                layout.addLayout(top_layout)
-
-                image_text = QLabel(f"Robot Image\nTeam {team}")
-                image_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                top_layout.addWidget(image_text)
-
-                # delete, view buttons
-                delete_button = QPushButton("Delete")
-                delete_button.clicked.connect(
-                    partial(self.delete_picture, int(team), image)
-                )
-                layout.addWidget(delete_button)
-
-                view_button = QPushButton("View")
-                view_button.clicked.connect(partial(self.view_image, int(team), image))
-                layout.addWidget(view_button)
-
-                self.pictures_browser_list.addItem(item)
-                self.pictures_browser_list.setItemWidget(item, widget)
-        else:
+        data = self.database.get_pictures(int(team))
+        if not data:
             self.add_new_picture_team()
+            return
+
+        self.pictures_right_pane.setCurrentIndex(1)
+        self.pictures_right_team_label.setText(f"Team {team}")
+        self.pictures_browser_list.clear()
+        for image in json.loads(
+            data["picture"]
+        )["picture"]:
+            # create pixmap from base64
+            pixmap = QPixmap()
+            pixmap.loadFromData(
+                base64.b64decode(image.replace("data:image/png;base64,", ""))
+            )
+            item = QListWidgetItem()
+            item.setSizeHint(
+                QSize(300, constants.PICTURE_BROWSER_MAX_RESOLUTION.height() + 20)
+            )
+            item.setIcon(QIcon(pixmap))
+
+            widget = QWidget()
+
+            layout = QVBoxLayout()
+            widget.setLayout(layout)
+
+            top_layout = QHBoxLayout()
+            layout.addLayout(top_layout)
+
+            image_text = QLabel(f"Robot Image\nTeam {team}")
+            image_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            top_layout.addWidget(image_text)
+
+            # delete, view buttons
+            delete_button = QPushButton("Delete")
+            delete_button.clicked.connect(
+                partial(self.delete_picture, int(team), image)
+            )
+            layout.addWidget(delete_button)
+
+            view_button = QPushButton("View")
+            view_button.clicked.connect(partial(self.view_image, int(team), image))
+            layout.addWidget(view_button)
+
+            self.pictures_browser_list.addItem(item)
+            self.pictures_browser_list.setItemWidget(item, widget)
+
 
     def view_image(self, team: int | str, data: str):
         team = int(team)
@@ -1415,11 +1418,14 @@ class MainWindow(QMainWindow):
                 logger.error(f"Error saving CSV: {repr(e)}")
 
     def delete_db_row(
-        self, form: str, rowid: int, table: data_models.ScoutingFormModel
+        self, form: str, rowid: int, table: QTableView, model: data_models.ScoutingFormModel
     ):
-        logger.debug(f"Deleted row {rowid} from {form} with rowid {rowid}")
+        logger.debug(f"Deleting row {rowid} from {form} with rowid {rowid}")
         self.database.delete_row(form, rowid)
-        table.load_data(self.database.get_data(form))
+        logger.debug(f"Deleted row {rowid} from {form} with rowid {rowid}")
+        model.removeRow(table.selectionModel()
+                        .selectedRows()[0].row())
+        logger.debug(f"Reloaded table after DEL row {rowid} from {form} with rowid {rowid}")
 
     def select_sqlite_file(self):
         filepath, _ = QFileDialog.getSaveFileName(
