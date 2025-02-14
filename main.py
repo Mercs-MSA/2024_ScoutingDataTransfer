@@ -1064,11 +1064,9 @@ class MainWindow(QMainWindow):
                     extensions=["jinja2.ext.do"],
                 )
 
-                rowdata = {}
-                for row in self.database.get_data(sidebar):
-                    if row["rowid"] == int(rowid):
-                        rowdata = row
-                        break
+                rowdata = self.database.get_datapoint(sidebar, int(rowid))
+                if not rowdata:
+                    return
 
                 imbuffer = QBuffer()
                 qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(

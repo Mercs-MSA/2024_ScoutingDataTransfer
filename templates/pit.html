@@ -216,9 +216,6 @@
             <td>{{height if height else "Data Incomplete"}}in</td>
           </tr>
         </table>
-      </div>
-      <div class="section">
-        <h3>Robot Mechanism</h3>
         <table>
           <tr>
             <th>Drivebase</th>
@@ -226,8 +223,32 @@
           <tr>
             <td>{{drivebase if drivebase else "Data Incomplete"}}</td>
           </tr>
-          <h4>Repairability: {{repairability if repairability else "Data Incomplete"}} Stars</h4>
         </table>
+
+        <h4>Repairability: {{repairability if repairability else "Data Incomplete"}} Stars</h4>
+      
+        <h4>
+          Robot Type:
+          {% if kitbotType == "not" %}
+          Custom
+          {% elif kitbotType == "wcp" %}
+          WCP
+          {% elif kitbotType == "rev" %}
+          REV
+          {% elif kitbotType == "kitbot" %}
+          FIRST KitBot
+          {% elif kitbotType == "everybot" %}
+          Everybot
+          {% else %}
+          Unknown (there is a data issue somewhere)
+          {% endif %}
+        
+        </h4>
+        {% if not kitbotType == "not" and isModifiedKit %}
+        <h4>Kitbot is Modified</h4>
+        {% endif %}
+        
+        
       </div>
       <div class="section">
         <h3>Robot Auton</h3>
@@ -302,6 +323,29 @@
           </tr>
         </table>
         
+        <h4>Auton Algae</h4>
+        <table>
+          <tr class="algae">
+            <th>Upper Descore</th>
+            <th>Lower Descore</th>
+            <th>Processor</th>
+            <th>Net</th>
+          </tr>
+          <tr>
+            <td>
+              {{ autonUpperAlgaeDescore }}
+            </td>
+            <td>
+              {{ autonLowerAlgaeDescore }}
+            </td>
+            <td>
+              {{ autonProcessor }}
+            </td>
+            <td>
+              {{ autonNetScore }}
+            </td>
+          </tr>
+        </table>
 
         <h4>Auto Strategy</h4>
         <p class="notes">

@@ -186,6 +186,38 @@ class DataManager(QObject):
             data.append(row)
         return data
     
+
+    def get_datapoint(self, form: str, rowid: int) -> dict[str, Any] | None:
+        """Get all data from a form
+
+        Args:
+            form (str): Name of form/table
+
+        Returns:
+            list[dict[str, Any]]: List of data
+        """
+        if not self.query:
+            self.on_message.emit(
+                "DB not initialized\nCreate a new database in settings",
+                MessageType.FATAL,
+            )
+            return {}
+
+        query = f"SELECT * FROM {form} WHERE rowid={rowid}"
+        self.query.exec(query)
+        if not self.query.next():
+            return None
+        row = {}
+        row["rowid"] = self.query.value("rowid")
+        row["timestamp"] = self.query.value("timestamp")
+        for field in (
+            constants.FIELDS[form]
+            if form != "robot_pictures"
+            else ["team", "picture"]
+        ):
+            row[field] = self.query.value(field)
+        return row
+    
     def get_pictures(self, team: int) -> dict[str, Any] | None:
         """Get all data from a form
 
