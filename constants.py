@@ -23,7 +23,7 @@ FIELDS = {
         "scouters": "TEXT",
         "width": "INTEGER",
         "length": "INTEGER",
-        "height": "INTEGER",
+        "weight": "INTEGER",
         "lOne": "BOOLEAN",
         "lTwo": "BOOLEAN",
         "lThree": "BOOLEAN",
