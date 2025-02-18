@@ -65,9 +65,44 @@ FIELDS = {
     "match": {
         "form": "TEXT",
         "team": "INTEGER",
-        "alliance": "INTEGER",
+        "scouter": "TEXT",
+        "alliance": "TEXT",
         "match": "INTEGER",
-        "scouters": "TEXT",
+        "startPos": "TEXT",
+        "autoL4Scored": "INTEGER",
+        "autoL4Missed": "INTEGER",
+        "autoL3Scored": "INTEGER",
+        "autoL3Missed": "INTEGER",
+        "autoL2Scored": "INTEGER",
+        "autoL2Missed": "INTEGER",
+        "autoL1Scored": "INTEGER",
+        "autoL1Missed": "INTEGER",
+        "autoNetScored": "INTEGER",
+        "autoNetMissed": "INTEGER",
+        "autoAlgaeDescored": "INTEGER",
+        "autoProcessorScored": "INTEGER",
+        "autoProcessorMissed": "INTEGER",
+        "teleL4Scored": "INTEGER",
+        "teleL4Missed": "INTEGER",
+        "teleL3Scored": "INTEGER",
+        "teleL3Missed": "INTEGER",
+        "teleL2Scored": "INTEGER",
+        "teleL2Missed": "INTEGER",
+        "teleL1Scored": "INTEGER",
+        "teleL1Missed": "INTEGER",
+        "teleNetScored": "INTEGER",
+        "teleNetMissed": "INTEGER",
+        "teleNetScoredHuman": "INTEGER",
+        "teleNetMissedHuman": "INTEGER",
+        "teleAlgaeDescored": "INTEGER",
+        "teleProcessorScored": "INTEGER",
+        "teleProcessorMissed": "INTEGER",
+        "endgamePos": "TEXT",
+        "climbTime": "INTEGER",
+        "yellowCard": "BOOLEAN",
+        "redCard": "BOOLEAN",
+        "noShow": "BOOLEAN",
+        "disabled": "BOOLEAN"
     }
 }
 
@@ -79,6 +114,9 @@ FIELDS = {
 SIDEBAR_CONSTRUCTORS = {
     "pit": """
     {{ include_file('pit.html') }}
+    """,
+    "match": """
+    {{ include_file('match.html') }}
     """
 }
 
@@ -90,6 +128,9 @@ SIDEBAR_CONSTRUCTORS = {
 REPORT_CONSTRUCTORS = {
     "pit": """
     {{ include_file('pit.html') }}
+    """,
+    "match": """
+    {{ include_file('match.html') }}
     """
 }
 

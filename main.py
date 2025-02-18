@@ -1502,6 +1502,35 @@ class MainWindow(QMainWindow):
             .data()
         )
 
+        if (form=="match"):
+            noShow = (
+                self.data_viewers[form]
+                .selectionModel()
+                .selectedRows()[0]
+                .siblingAtColumn(list(constants.FIELDS[form].keys()).index("noShow") + 2)
+                .data()
+            )
+            match = (
+                self.data_viewers[form]
+                .selectionModel()
+                .selectedRows()[0]
+                .siblingAtColumn(list(constants.FIELDS[form].keys()).index("match") + 2)
+                .data()
+            ) + "_"
+            if (not noShow):
+                start = "_"+(
+                    self.data_viewers[form]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(list(constants.FIELDS[form].keys()).index("startPos") + 2)
+                    .data()
+                )
+            else:
+                start = "_noShow"
+        else:
+            match = ""
+            start = ""
+
         include_pictures = settings.value("reportImages", type=bool, defaultValue=True)  # type: ignore
 
         # Create a progress dialog
@@ -1509,7 +1538,7 @@ class MainWindow(QMainWindow):
         filepath, _ = QFileDialog.getSaveFileName(
             None,
             "Export to HTML",
-            f"{form}_{team}_{self.event_entry.currentText()}.html",
+            f"{form}_{match}{team}{start}_{self.event_entry.currentText()}.html",
             "HTML File (*.html)",
         )
 

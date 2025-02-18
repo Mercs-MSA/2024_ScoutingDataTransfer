@@ -1,0 +1,499 @@
+<!doctype html>
+<html>
+  <style>
+    /* General Styles */
+    html {
+      scrollbar-color: #424243 #161618;
+      scrollbar-width: medium;
+      background-color: #111114;
+    }
+    body {
+      margin: 0;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0;
+      table-layout: fixed;
+    }
+    th,
+    td {
+      border: 1px solid #555;
+      padding: 6px;
+      text-align: left;
+      color: white;
+      font-family: sans-serif;
+    }
+    th {
+      background-color: #bb4a40;
+      font-weight: bold;
+      color: white;
+    }
+    .coral > th {
+      background-color: #8a40bb;
+      font-weight: bold;
+    }
+    .algae > th {
+      background-color: #40bb6b;
+      font-weight: bold;
+      color: black;
+    }
+    .climb > th {
+      background-color: #4067bb;
+      font-weight: bold;
+    }
+    p,
+    h1,
+    h2,
+    h3,
+    h4 {
+      color: white;
+      font-family: sans-serif;
+    }
+
+    .notes {
+      white-space: pre-line;
+      background-color: #0d0d0d;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    /* Carousel Styles */
+    .carousel {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      gap: 10px;
+      padding-left: 20px;
+      padding-right: 20px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .carousel-item {
+      flex: none;
+      scroll-snap-align: start;
+    }
+    .carousel-item img {
+      max-height: 200px;
+      border: 2px solid #555;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .carousel-item {
+      padding: 5px;
+    }
+    .carousel-item img:hover {
+      transform: scale(1.05);
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      overflow: hidden;
+    }
+    .modal img {
+      max-width: 90%;
+      max-height: 90%;
+      border: 2px solid #555;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      animation: zoomIn 0.3s ease;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      color: white;
+      background: none;
+      border: none;
+      cursor: pointer;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .data-grid {
+      column-count: 3; /* Three masonry columns */
+      column-gap: 10px; /* Space between columns */
+      padding: 10px;
+    }
+
+    .section {
+      background-color: #181818;
+      border-radius: 8px;
+      padding: 10px;
+      box-sizing: border-box;
+      display: inline-block;
+      width: 100%;
+      break-inside: avoid;
+      margin-top: 10px;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: center;
+    }
+
+    @media (max-width: 1200px) {
+      .data-grid {
+        column-count: 2;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .data-grid {
+        column-count: 1;
+      }
+    }
+
+    /* Animations */
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+
+  <body>
+    <div class="section">
+      <h1>
+        Team {{team}}{{" Match Scouting Report" if generator == "report" else ""}}
+      </h1>
+      <h2>Event: {{event}}</h2>
+      <h2>Match: {{match}}</h2>
+      <h4>Data</h4>
+      <p>Import Timestamp {{timestamp}} UTC</p>
+    </div>
+
+    {% if generator == "report" and images %}
+    <div class="section">
+      <h3>Images</h3>
+      <div class="carousel">
+        {% for image in images %}
+        <div class="carousel-item">
+          <img src="{{ image }}" alt="Image" onclick="openModal(this.src)" />
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="data-grid">
+      {% if noShow == false %}
+      <div class="section">
+        <h3>Autonomous</h3>
+        <h4>Start Pos</h4>
+        <table>
+          <tr>
+            <th>Left</th>
+            <th>Middle</th>
+            <th>Right</th>
+          </tr>
+          <tr>
+            <td style="text-align: center;">{% if startPos == "left" %}
+              <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            /> {% endif %}</td>
+            <td style="text-align: center;">{% if startPos == "middle" %}
+              <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            /> {% endif %}</td>
+            <td style="text-align: center;">{% if startPos == "right" %}
+              <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            /> {% endif %}</td>
+          </tr>
+        </table>
+        <h4>Auton. Coral Scoring</h4>
+        <table>
+          <tr class = "coral">
+            <th></th>
+            <th>Scored</th>
+            <th>Missed</th>
+          </tr>
+          <tr>
+            <td><b>L4</b></td>
+            <td>{{autoL4Scored}}</td>
+            <td>{{autoL4Missed}}</td>
+          </tr>
+          <tr>
+            <td><b>L3</b></td>
+            <td>{{autoL3Scored}}</td>
+            <td>{{autoL3Missed}}</td>
+          </tr>
+          <tr>
+            <td><b>L2</b></td>
+            <td>{{autoL2Scored}}</td>
+            <td>{{autoL2Missed}}</td>
+          </tr>
+          <tr>
+            <td><b>L1</b></td>
+            <td>{{autoL1Scored}}</td>
+            <td>{{autoL1Missed}}</td>
+          </tr>
+        </table>
+        <h4>Auton. Algae Scoring</h4>
+        <table>
+          <tr class = "algae">
+            <th>Algae Descored</th>
+          </tr>
+          <tr>
+            <td>{{autoAlgaeDescored}}</td>
+          </tr>
+        </table>
+        <table>
+          <tr class = "algae">
+            <th>Processor Scored</th>
+            <th>Processor Missed</th>
+          </tr>
+          <tr>
+            <td>{{autoProcessorScored}}</td>
+            <td>{{autoProcessorMissed}}</td>
+          </tr>
+        </table>
+        <table>
+          <tr class = "algae">
+            <th>Net Scored</th>
+            <th>Net Missed</th>
+          </tr>
+          <tr>
+            <td>{{autoNetScored}}</td>
+            <td>{{autoNetMissed}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h3>TeleOp</h3>
+        <h4>TeleOp Coral Scoring</h4>
+        <table>
+          <tr class = "coral">
+            <th></th>
+            <th>Scored</th>
+            <th>Missed</th>
+          </tr>
+          <tr>
+            <td><b>L4</b></td>
+            <td>{{teleL4Scored}}</td>
+            <td>{{teleL4Missed}}</td>
+          </tr>
+          <tr>
+            <td><b>L3</b></td>
+            <td>{{teleL3Scored}}</td>
+            <td>{{teleL3Missed}}</td>
+          </tr>
+          <tr>
+            <td><b>L2</b></td>
+            <td>{{teleL2Scored}}</td>
+            <td>{{teleL2Missed}}</td>
+          </tr>
+          <tr>
+            <td><b>L1</b></td>
+            <td>{{teleL1Scored}}</td>
+            <td>{{teleL1Missed}}</td>
+          </tr>
+        </table>
+        <h4>TeleOp Algae Scoring</h4>
+        <table>
+          <tr class = "algae">
+            <th>Algae Descored</th>
+          </tr>
+          <tr>
+            <td>{{teleAlgaeDescored}}</td>
+          </tr>
+        </table>
+        <table>
+          <tr class = "algae">
+            <th>Processor Scored</th>
+            <th>Processor Missed</th>
+          </tr>
+          <tr>
+            <td>{{teleProcessorScored}}</td>
+            <td>{{teleProcessorMissed}}</td>
+          </tr>
+        </table>
+        <table>
+          <tr class = "algae">
+            <th>Net Scored</th>
+            <th>Net Missed</th>
+          </tr>
+          <tr>
+            <td>{{teleNetScored}}</td>
+            <td>{{teleNetMissed}}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="section">
+        <h3>Endgame</h3>
+        <h4>Climb/Park</h4>
+        <table>
+          <tr>
+            <th>Shallow Climb</th>
+            <th>Deep Climb</th>
+            <th>Park</th>
+            <th>None</th>
+          </tr>
+          <tr>
+            <td style="text-align: center;">
+              {% if endgamePos == "shallow" %}
+                <p style="vertical-align: middle;">{{climbTime}}s</p>
+                <img
+                  src="{{checkBase64Icon}}"
+                  alt="W"
+                  style="vertical-align: center;"
+                  height="36px"
+                /> 
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if endgamePos == "deep" %}
+                <p style="vertical-align: middle;">{{climbTime}}s</p>
+                <img
+                  src="{{checkBase64Icon}}"
+                  alt="W"
+                  style="vertical-align: center;"
+                  height="36px"
+                /> 
+              {% endif %}
+            </td>
+            <td style="text-align: center;">{% if endgamePos == "park" %}
+              <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            /> {% endif %}</td>
+            <td style="text-align: center;">{% if endgamePos == "none" %}
+              <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            /> {% endif %}</td>
+          </tr>
+        </table>
+        <h4>Extras</h4>
+        <table>
+          <tr>
+            <th style="background-color: rgb(239, 219, 38);">Yellow Card?</th>
+            <td>
+              <img
+                src="{{checkBase64Icon if yellowCard else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if yellowCard else "No"}}
+            </td>
+          </tr>
+          <tr>
+            <th style="background-color: rgb(240, 73, 67);">Red Card?</th>
+            <td>
+              <img
+                src="{{checkBase64Icon if redCard else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if redCard else "No"}}
+            </td>
+          </tr>
+          <tr>
+            <th>Disabled?</th>
+            <td>
+              <img
+                src="{{checkBase64Icon if disabled else xBase64Icon}}"
+                style="vertical-align: middle"
+                alt="W"
+                height="22px"
+              />
+              {{"Yes" if disabled else "No"}}
+            </td>
+          </tr>
+        </table>
+      </div>
+      {% else %}
+      <div class="section">
+        <h2><img src="{{warnBase64Icon}}" alt="W" height="32px" />DIDN'T SHOW UP</h2>
+      </div>
+      {% endif %}
+    </div>
+    
+
+    <div class="footer">
+      {% if generator == "report" %}
+      <p>
+        <img
+          src="{{logo16Base64}}"
+          style="vertical-align: middle"
+          alt="Logo"
+          height="18px"
+        />
+        Report generated by 6369 Scouting Transfer
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- Modal Structure -->
+    <div class="modal" id="imageModal">
+      <button class="modal-close" onclick="closeModal()">
+        <img
+          src="{{closeBase64Icon}}"
+          style="vertical-align: middle"
+          alt="X"
+          height="30px"
+        />
+      </button>
+      <img id="modalImage" src="" alt="Expanded View" />
+    </div>
+
+    <script>
+      // Open modal with image
+      function openModal(imageSrc) {
+        const modal = document.getElementById("imageModal");
+        const modalImage = document.getElementById("modalImage");
+        modalImage.src = imageSrc;
+        modal.style.display = "flex";
+      }
+
+      // Close modal
+      function closeModal() {
+        const modal = document.getElementById("imageModal");
+        modal.style.display = "none";
+      }
+    </script>
+  </body>
+</html>
