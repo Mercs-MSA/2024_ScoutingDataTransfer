@@ -139,6 +139,23 @@
       margin-top: 10px;
     }
 
+    .header {
+      display: flex;
+      justify-content: center;
+      font-family: sans-serif;
+      font-weight: bolder;
+    }
+
+    .blue {
+      color: white;
+      background: #1f1fef;
+    }
+
+    .red {
+      color: black;
+      background: #ef1f1f;
+    }
+
     .footer {
       display: flex;
       justify-content: center;
@@ -179,6 +196,15 @@
   </style>
 
   <body>
+    <div class="header {{ alliance }}">
+      {{ alliance | title}}
+      {{ "1" if startPos == "left" else "2" if startPos == "middle" else "3" }} 
+      - 
+      {{ team }}
+      -
+      Match {{ match }}
+    </div>
+
     <div class="section">
       <h1>
         Team {{team}}{{" Match Scouting Report" if generator == "report" else ""}}
@@ -324,6 +350,15 @@
             <td><b>L1</b></td>
             <td>{{teleL1Scored}}</td>
             <td>{{teleL1Missed}}</td>
+          </tr>
+        </table>
+        <h4>TeleOp Coral Dropped</h4>
+        <table>
+          <tr class = "coral">
+            <th>Dropped</th>
+          </tr>
+          <tr>
+            <td>{{teleCoralDropped}}</td>
           </tr>
         </table>
         <h4>TeleOp Algae Scoring</h4>

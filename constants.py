@@ -60,7 +60,7 @@ FIELDS = {
         "autonProcessor": "INTEGER",
         "autonNetScore": "INTEGER",
         "kitbotType": "TEXT",
-        "isModifiedKit": "BOOLEAN"
+        "isModifiedKit": "BOOLEAN",
     },
     "match": {
         "form": "TEXT",
@@ -92,6 +92,7 @@ FIELDS = {
         "teleL1Missed": "INTEGER",
         "teleNetScored": "INTEGER",
         "teleNetMissed": "INTEGER",
+        "teleCoralDropped": "INTEGER",
         "teleAlgaeDescored": "INTEGER",
         "teleProcessorScored": "INTEGER",
         "teleProcessorMissed": "INTEGER",
@@ -102,7 +103,7 @@ FIELDS = {
         "noShow": "BOOLEAN",
         "disabled": "BOOLEAN",
         "comments": "TEXT",
-    }
+    },
 }
 
 # Sidebar
@@ -116,7 +117,7 @@ SIDEBAR_CONSTRUCTORS = {
     """,
     "match": """
     {{ include_file('match.html') }}
-    """
+    """,
 }
 
 # Report
@@ -130,7 +131,7 @@ REPORT_CONSTRUCTORS = {
     """,
     "match": """
     {{ include_file('match.html') }}
-    """
+    """,
 }
 
 # Sidebar Renderer

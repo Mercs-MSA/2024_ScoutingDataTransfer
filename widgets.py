@@ -298,6 +298,7 @@ class QWidgetList(QScrollArea):
         else:
             self.stack.setCurrentWidget(self.list_widget)
 
+
 class Chip(QWidget):
     # Small widget that displays a single piece of data
     def __init__(self, label, color: str = "#FFB3A9"):

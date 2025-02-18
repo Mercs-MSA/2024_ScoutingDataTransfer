@@ -3,7 +3,6 @@
 Transfer data form scouting tablets using qr code scanner
 """
 
-import time
 import pybase64 as base64
 from functools import partial
 import hashlib
@@ -694,7 +693,7 @@ class MainWindow(QMainWindow):
             view.setModel(model)
             view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 
-            view.dataChanged = partial(table_data_edit, form) # type: ignore
+            view.dataChanged = partial(table_data_edit, form)  # type: ignore
 
             view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             view.customContextMenuRequested.connect(
@@ -708,9 +707,7 @@ class MainWindow(QMainWindow):
             view_side_by_side.addWidget(sidebar, 3)
             self.data_sidebars[form] = sidebar
             old = view.selectionChanged
-            view.selectionChanged = partial(
-                selection_change, old, form, view, sidebar
-            )
+            view.selectionChanged = partial(selection_change, old, form, view, sidebar)
 
             self.data_viewers[form] = view
 
@@ -1051,7 +1048,6 @@ class MainWindow(QMainWindow):
                 )
 
             try:
-
                 template_loader = jinja2.FileSystemLoader("templates")
                 template_env = jinja2.Environment(loader=template_loader)
 
@@ -1069,9 +1065,9 @@ class MainWindow(QMainWindow):
                     return
 
                 imbuffer = QBuffer()
-                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(QSize(30, 30)).save(
-                    imbuffer, "PNG"
-                )
+                qtawesome.icon("mdi6.alert", color="#ffeb3b").pixmap(
+                    QSize(30, 30)
+                ).save(imbuffer, "PNG")
                 rowdata["warnBase64Icon"] = (
                     f"data:image/png;base64,{imbuffer.data().toBase64().data().decode()}"
                 )
@@ -1109,13 +1105,15 @@ class MainWindow(QMainWindow):
 
                 self.data_sidebars[sidebar].set_html(template.render(rowdata))
 
-                data = self.database.get_pictures(self.data_viewers[sidebar]
-                        .selectionModel()
-                        .selectedRows()[0]
-                        .siblingAtColumn(
-                            list(constants.FIELDS[sidebar].keys()).index("team") + 2
-                        )
-                        .data())
+                data = self.database.get_pictures(
+                    self.data_viewers[sidebar]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(
+                        list(constants.FIELDS[sidebar].keys()).index("team") + 2
+                    )
+                    .data()
+                )
 
                 if data:
                     pms = []
@@ -1130,7 +1128,11 @@ class MainWindow(QMainWindow):
                     self.data_sidebars[sidebar].set_pixmaps(
                         [QPixmap("icons/generic_robot.png")]
                     )
-            except (jinja2.exceptions.TemplateSyntaxError, jinja2.exceptions.TemplatesNotFound, jinja2.exceptions.TemplateError) as e:
+            except (
+                jinja2.exceptions.TemplateSyntaxError,
+                jinja2.exceptions.TemplatesNotFound,
+                jinja2.exceptions.TemplateError,
+            ) as e:
                 self.data_sidebars[sidebar].set_html("Failure to load template!")
                 logger.error(f"Failed to load template; {repr(e)}")
 
@@ -1154,9 +1156,7 @@ class MainWindow(QMainWindow):
         self.pictures_right_pane.setCurrentIndex(1)
         self.pictures_right_team_label.setText(f"Team {team}")
         self.pictures_browser_list.clear()
-        for image in json.loads(
-            data["picture"]
-        )["picture"]:
+        for image in json.loads(data["picture"])["picture"]:
             # create pixmap from base64
             pixmap = QPixmap()
             pixmap.loadFromData(
@@ -1193,7 +1193,6 @@ class MainWindow(QMainWindow):
 
             self.pictures_browser_list.addItem(item)
             self.pictures_browser_list.setItemWidget(item, widget)
-
 
     def view_image(self, team: int | str, data: str):
         team = int(team)
@@ -1416,14 +1415,19 @@ class MainWindow(QMainWindow):
                 logger.error(f"Error saving CSV: {repr(e)}")
 
     def delete_db_row(
-        self, form: str, rowid: int, table: QTableView, model: data_models.ScoutingFormModel
+        self,
+        form: str,
+        rowid: int,
+        table: QTableView,
+        model: data_models.ScoutingFormModel,
     ):
         logger.debug(f"Deleting row {rowid} from {form} with rowid {rowid}")
         self.database.delete_row(form, rowid)
         logger.debug(f"Deleted row {rowid} from {form} with rowid {rowid}")
-        model.removeRow(table.selectionModel()
-                        .selectedRows()[0].row())
-        logger.debug(f"Reloaded table after DEL row {rowid} from {form} with rowid {rowid}")
+        model.removeRow(table.selectionModel().selectedRows()[0].row())
+        logger.debug(
+            f"Reloaded table after DEL row {rowid} from {form} with rowid {rowid}"
+        )
 
     def select_sqlite_file(self):
         filepath, _ = QFileDialog.getSaveFileName(
@@ -1502,13 +1506,17 @@ class MainWindow(QMainWindow):
             .data()
         )
 
-        if (form=="match"):
-            noShow = (
-                self.data_viewers[form]
-                .selectionModel()
-                .selectedRows()[0]
-                .siblingAtColumn(list(constants.FIELDS[form].keys()).index("noShow") + 2)
-                .data()
+        if form == "match":
+            no_show = int(
+                (
+                    self.data_viewers[form]
+                    .selectionModel()
+                    .selectedRows()[0]
+                    .siblingAtColumn(
+                        list(constants.FIELDS[form].keys()).index("noShow") + 2
+                    )
+                    .data()
+                )
             )
             match = (
                 self.data_viewers[form]
@@ -1517,16 +1525,18 @@ class MainWindow(QMainWindow):
                 .siblingAtColumn(list(constants.FIELDS[form].keys()).index("match") + 2)
                 .data()
             ) + "_"
-            if (not noShow):
-                start = "_"+(
+            if no_show:
+                start = "_noShow"
+            else:
+                start = "_" + (
                     self.data_viewers[form]
                     .selectionModel()
                     .selectedRows()[0]
-                    .siblingAtColumn(list(constants.FIELDS[form].keys()).index("startPos") + 2)
+                    .siblingAtColumn(
+                        list(constants.FIELDS[form].keys()).index("startPos") + 2
+                    )
                     .data()
                 )
-            else:
-                start = "_noShow"
         else:
             match = ""
             start = ""
@@ -1888,7 +1898,9 @@ class MainWindow(QMainWindow):
 
             self.worker_thread.start()
         else:
-            QMessageBox.warning(self, "Scanner", "Scanner is currently scanning, scan rejected")
+            QMessageBox.warning(
+                self, "Scanner", "Scanner is currently scanning, scan rejected"
+            )
 
     def fetch_events(self):
         if self.worker_thread and self.worker_thread.isRunning():

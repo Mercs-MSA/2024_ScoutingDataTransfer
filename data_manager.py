@@ -140,7 +140,11 @@ class DataManager(QObject):
         fields = constants.FIELDS[table]
         values = ", ".join(
             [
-                f"'{data[field]}'" if isinstance(data[field], str) else "NULL" if data[field] is None else str(data[field])
+                f"'{data[field]}'"
+                if isinstance(data[field], str)
+                else "NULL"
+                if data[field] is None
+                else str(data[field])
                 for field in fields.keys()
             ]
         )
@@ -185,7 +189,6 @@ class DataManager(QObject):
                 row[field] = self.query.value(field)
             data.append(row)
         return data
-    
 
     def get_datapoint(self, form: str, rowid: int) -> dict[str, Any] | None:
         """Get all data from a form
@@ -211,13 +214,11 @@ class DataManager(QObject):
         row["rowid"] = self.query.value("rowid")
         row["timestamp"] = self.query.value("timestamp")
         for field in (
-            constants.FIELDS[form]
-            if form != "robot_pictures"
-            else ["team", "picture"]
+            constants.FIELDS[form] if form != "robot_pictures" else ["team", "picture"]
         ):
             row[field] = self.query.value(field)
         return row
-    
+
     def get_pictures(self, team: int) -> dict[str, Any] | None:
         """Get all data from a form
 
