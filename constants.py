@@ -92,8 +92,6 @@ FIELDS = {
         "teleL1Missed": "INTEGER",
         "teleNetScored": "INTEGER",
         "teleNetMissed": "INTEGER",
-        "teleNetScoredHuman": "INTEGER",
-        "teleNetMissedHuman": "INTEGER",
         "teleAlgaeDescored": "INTEGER",
         "teleProcessorScored": "INTEGER",
         "teleProcessorMissed": "INTEGER",
@@ -102,7 +100,8 @@ FIELDS = {
         "yellowCard": "BOOLEAN",
         "redCard": "BOOLEAN",
         "noShow": "BOOLEAN",
-        "disabled": "BOOLEAN"
+        "disabled": "BOOLEAN",
+        "comments": "TEXT",
     }
 }
 

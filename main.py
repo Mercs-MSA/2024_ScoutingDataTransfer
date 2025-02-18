@@ -1887,6 +1887,8 @@ class MainWindow(QMainWindow):
             self.data_worker.finished.connect(self.worker_thread.quit)
 
             self.worker_thread.start()
+        else:
+            QMessageBox.warning(self, "Scanner", "Scanner is currently scanning, scan rejected")
 
     def fetch_events(self):
         if self.worker_thread and self.worker_thread.isRunning():
@@ -1976,7 +1978,10 @@ class MainWindow(QMainWindow):
 
     def emulate_scan(self):
         with open("example_scan.txt", "r", encoding="utf-8") as file:
-            self.on_data_retrieved(file.read().strip("\r\n ") + "\r\n")
+            scans = file.readlines()
+            for scan in scans:
+                print(scan)
+                self.on_data_retrieved(scan.strip("\r\n ") + "\r\n")
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """
