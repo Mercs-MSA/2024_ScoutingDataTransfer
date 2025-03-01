@@ -92,7 +92,6 @@ FIELDS = {
         "teleL1Missed": "INTEGER",
         "teleNetScored": "INTEGER",
         "teleNetMissed": "INTEGER",
-        "teleCoralDropped": "INTEGER",
         "teleAlgaeDescored": "INTEGER",
         "teleProcessorScored": "INTEGER",
         "teleProcessorMissed": "INTEGER",
