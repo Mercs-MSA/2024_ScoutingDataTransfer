@@ -101,6 +101,8 @@ FIELDS = {
         "redCard": "BOOLEAN",
         "noShow": "BOOLEAN",
         "disabled": "BOOLEAN",
+        "penalties": "INTEGER",
+        "isMarkedForReview": "BOOLEAN",
         "comments": "TEXT",
     },
 }
