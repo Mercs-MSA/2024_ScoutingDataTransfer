@@ -156,6 +156,11 @@
       background: #ef1f1f;
     }
 
+    .yellow {
+      color: black;
+      background: #fefe00;
+    }
+
     .footer {
       display: flex;
       justify-content: center;
@@ -204,6 +209,12 @@
       -
       Match {{ match }}
     </div>
+
+    {% if isMarkedForReview %}
+    <div class="header yellow">
+      DATA IS MARKED FOR ADMIN REVIEW
+    </div>
+    {% endif %}
 
     <div class="section">
       <h1>
