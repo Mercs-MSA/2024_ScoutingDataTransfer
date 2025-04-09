@@ -274,6 +274,25 @@
             /> {% endif %}</td>
           </tr>
         </table>
+        <h4>Leave</h4>
+        <p>
+          {% if autoLeave == true %}
+            <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            />
+          {% else %}
+            <img
+              src="{{xBase64Icon}}"
+              alt="X"
+              style="vertical-align: center;"
+              height="36px"
+            />
+          {% endif %}
+          {{leave}}
+        </p>
         <h4>Auton. Coral Scoring</h4>
         <table>
           <tr class = "coral">
