@@ -156,6 +156,11 @@
       background: #ef1f1f;
     }
 
+    .yellow {
+      color: black;
+      background: #fefe00;
+    }
+
     .footer {
       display: flex;
       justify-content: center;
@@ -204,6 +209,12 @@
       -
       Match {{ match }}
     </div>
+
+    {% if isMarkedForReview %}
+    <div class="header yellow">
+      DATA IS MARKED FOR ADMIN REVIEW
+    </div>
+    {% endif %}
 
     <div class="section">
       <h1>
@@ -263,6 +274,25 @@
             /> {% endif %}</td>
           </tr>
         </table>
+        <h4>Leave</h4>
+        <p>
+          {% if autoLeave == true %}
+            <img
+              src="{{checkBase64Icon}}"
+              alt="W"
+              style="vertical-align: center;"
+              height="36px"
+            />
+          {% else %}
+            <img
+              src="{{xBase64Icon}}"
+              alt="X"
+              style="vertical-align: center;"
+              height="36px"
+            />
+          {% endif %}
+          {{leave}}
+        </p>
         <h4>Auton. Coral Scoring</h4>
         <table>
           <tr class = "coral">

@@ -33,6 +33,7 @@ FIELDS = {
         "descore": "BOOLEAN",
         "deepClimb": "BOOLEAN",
         "shallowClimb": "BOOLEAN",
+        "groundIntake": "BOOLEAN",
         "coralCycle": "BOOLEAN",
         "algaeCycle": "BOOLEAN",
         "defense": "BOOLEAN",
