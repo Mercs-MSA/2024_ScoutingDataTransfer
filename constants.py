@@ -144,7 +144,7 @@ REPORT_CONSTRUCTORS = {
 
 # Sidebar Renderer
 # 0 = Basic html text renderer, 1 = Web renderer
-SIDEBAR_RENDERER = 1
+SIDEBAR_RENDERER = 0
 
 # Picture Save Max Resolution
 # Max resolution for saving pictures, will use original image's aspect ratio
@@ -178,7 +178,7 @@ SCANNER_DELIMITER = "||"
 
 # Enable Assignment Generator
 # Whether or not to enable the assignment generator using the Statbotics API
-ENABLE_ASSIGNMENT_GENERATOR = True
+ENABLE_ASSIGNMENT_GENERATOR = False
 
 # Enable the ADB-powered tablet management features
 ENAGLE_APPMGMT = True

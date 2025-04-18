@@ -92,7 +92,7 @@ from utils import report_versions
 
 import jinja2
 
-__version__: typing.Final = "2025.4.0"
+__version__: typing.Final = "2025.4.1-worldsfix"
 
 settings: QSettings | None = None
 win: QMainWindow | None = None
